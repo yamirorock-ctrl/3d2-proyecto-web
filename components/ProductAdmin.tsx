@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Product } from '../types';
 
 interface Props {
@@ -6,9 +6,10 @@ interface Props {
   onSave: (p: Product) => void;
   product?: Product | null;
   nextId?: number;
+  categories?: string[];
 }
 
-const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId }) => {
+const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categories = [] }) => {
   const [form, setForm] = useState<Product>(product ?? {
     id: nextId ?? 0,
     name: '',
@@ -17,6 +18,9 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId }) => 
     image: '',
     description: ''
   });
+  const [categoryMode, setCategoryMode] = useState<'select'|'other'>('select');
+  const uniqueCats = useMemo(() => Array.from(new Set((categories || []).filter(Boolean))), [categories]);
+  const [localCats, setLocalCats] = useState<string[]>(uniqueCats);
   const [previewSrc, setPreviewSrc] = useState<string>(product?.image ?? '');
 
   useEffect(() => {
@@ -24,8 +28,70 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId }) => 
   }, [product]);
 
   useEffect(() => {
+    // determine category mode on mount/update
+    if (product && product.category) {
+      if (uniqueCats.includes(product.category)) {
+        setCategoryMode('select');
+        setForm(prev => ({ ...prev, category: product.category }));
+      } else {
+        setCategoryMode('other');
+        setForm(prev => ({ ...prev, category: product.category }));
+      }
+    } else {
+      setCategoryMode(uniqueCats.length ? 'select' : 'other');
+      // do not auto-select a category for new product; leave empty so user chooses
+      setForm(prev => ({ ...prev, category: '' }));
+    }
+  }, [product, uniqueCats]);
+
+  useEffect(() => {
+    // keep localCats in sync when prop changes
+    setLocalCats(Array.from(new Set((categories || []).filter(Boolean))));
+  }, [categories]);
+
+  const handleAddCategory = () => {
+    const name = prompt('Nombre de la nueva categoría:');
+    if (!name) return;
+    const clean = name.trim();
+    if (!clean) return alert('Nombre inválido');
+    try {
+      const raw = localStorage.getItem('categories');
+      const arr = raw ? JSON.parse(raw) as string[] : [];
+      if (!arr.includes(clean)) arr.push(clean);
+      localStorage.setItem('categories', JSON.stringify(arr));
+      // update localCats so select shows it immediately
+      setLocalCats(prev => Array.from(new Set([...prev, clean])));
+      setCategoryMode('select');
+      setForm(prev => ({ ...prev, category: clean }));
+    } catch (e) { console.error(e); }
+  };
+
+  const handleRemoveCategory = (catToRemove?: string) => {
+    const target = catToRemove ?? form.category;
+    if (!target) return alert('No hay categoría seleccionada');
+    if (!confirm(`Eliminar categoría "${target}" de la lista? Esto no modificará productos existentes.`)) return;
+    try {
+      const raw = localStorage.getItem('categories');
+      const arr = raw ? JSON.parse(raw) as string[] : [];
+      const next = arr.filter(c => c !== target);
+      localStorage.setItem('categories', JSON.stringify(next));
+      const newLocal = localCats.filter(c => c !== target);
+      setLocalCats(newLocal);
+      // if current form category was removed, clear it
+      if (form.category === target) {
+        setForm(prev => ({ ...prev, category: '' }));
+        setCategoryMode(newLocal.length > 0 ? 'select' : 'other');
+      }
+      alert('Categoría eliminada.');
+    } catch (e) { console.error(e); }
+  };
+
+  useEffect(() => {
     setPreviewSrc(form.image ?? '');
   }, [form.image]);
+
+  // Build options ensuring current category is present
+  const options = Array.from(new Set([...localCats, form.category].filter(Boolean)));
 
   const handleChange = (k: keyof Product, v: any) => {
     setForm(prev => ({ ...prev, [k]: v }));
@@ -42,6 +108,13 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId }) => 
       alert('El precio debe ser mayor a 0');
       return;
     }
+    // Ensure category is set
+    const finalCategory = form.category;
+    if (!finalCategory || finalCategory.trim().length === 0) {
+      alert('La categoría es obligatoria');
+      return;
+    }
+    form.category = finalCategory;
     // Ensure id is set
     if (!form.id) form.id = nextId ?? Date.now();
     onSave(form);
@@ -79,7 +152,38 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId }) => 
           </div>
           <div>
             <label htmlFor="product-category" className="block text-sm font-medium text-slate-700">Categoría</label>
-            <input id="product-category" name="category" autoComplete="off" value={form.category} onChange={e=>handleChange('category', e.target.value)} className="mt-1 block w-full rounded-md border-gray-200" />
+            {localCats.length > 0 ? (
+              <>
+                <div className="flex gap-2 items-center">
+                  <select id="product-category-select" value={form.category || '__none'} onChange={e => {
+                    const v = e.target.value;
+                    if (v === '__other') {
+                      setCategoryMode('other');
+                      setForm(prev => ({ ...prev, category: '' }));
+                    } else if (v === '__none') {
+                      setCategoryMode(localCats.length ? 'select' : 'other');
+                      setForm(prev => ({ ...prev, category: '' }));
+                    } else {
+                      setCategoryMode('select');
+                      setForm(prev => ({ ...prev, category: v }));
+                    }
+                  }} className="mt-1 block w-full rounded-md border-gray-200 p-2">
+                    <option value="__none">-- Seleccionar categoría --</option>
+                    {options.map(c => <option key={c} value={c}>{c}</option>)}
+                    <option value="__other">Otra...</option>
+                  </select>
+                  <div className="flex gap-2">
+                    <button type="button" onClick={handleAddCategory} className="ml-2 px-3 py-1 rounded-md bg-emerald-50 text-emerald-700 text-sm">Agregar</button>
+                    <button type="button" onClick={()=>handleRemoveCategory()} className="ml-2 px-3 py-1 rounded-md bg-red-50 text-red-700 text-sm">Quitar</button>
+                  </div>
+                </div>
+                {categoryMode === 'other' && (
+                  <input id="product-category" name="category" autoComplete="off" value={form.category} onChange={e=>handleChange('category', e.target.value)} className="mt-2 block w-full rounded-md border-gray-200" placeholder="Nueva categoría" />
+                )}
+              </>
+            ) : (
+              <input id="product-category" name="category" autoComplete="off" value={form.category} onChange={e=>handleChange('category', e.target.value)} className="mt-1 block w-full rounded-md border-gray-200" />
+            )}
           </div>
           <div>
             <label htmlFor="product-image" className="block text-sm font-medium text-slate-700">Imagen (URL)</label>
