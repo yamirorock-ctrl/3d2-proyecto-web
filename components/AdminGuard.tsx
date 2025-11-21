@@ -1,13 +1,13 @@
 import React from 'react';
 import { Navigate } from 'react-router-dom';
-import { isSessionAuthenticated } from '../utils/auth';
+import { isAuthenticated } from '../utils/auth';
 
 interface Props {
   children: React.ReactNode;
 }
 
 const AdminGuard: React.FC<Props> = ({ children }) => {
-  if (!isSessionAuthenticated()) {
+  if (!isAuthenticated()) {
     return <Navigate to="/admin/login" replace />;
   }
   return <>{children}</>;

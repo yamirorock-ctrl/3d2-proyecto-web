@@ -3,7 +3,7 @@ import { Product } from '../types';
 import ProductAdmin from './ProductAdmin';
 import { Trash2, Edit, Plus, ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { clearSessionAuthenticated } from '../utils/auth';
+import { clearAuthenticated } from '../utils/auth';
 
 interface Props {
   products: Product[];
@@ -20,7 +20,7 @@ const AdminPage: React.FC<Props> = ({ products, onAdd, onEdit, onDelete }) => {
   const storedUser = localStorage.getItem('admin_user');
 
   const handleLogout = () => {
-    clearSessionAuthenticated();
+    clearAuthenticated();
     navigate('/admin/login');
   };
 
