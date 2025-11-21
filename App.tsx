@@ -4,7 +4,8 @@ import Navbar from './components/Navbar';
 import ProductCard from './components/ProductCard';
 import CartDrawer from './components/CartDrawer';
 import ChatAssistant from './components/ChatAssistant';
-import AdminPanel from './components/AdminPanel';
+import AdminPage from './components/AdminPage';
+import { Routes, Route, useNavigate } from 'react-router-dom';
 import { CheckCircle2, ArrowLeft, Mail, Phone } from 'lucide-react';
 
 // Updated Product Data for 3D Printing and Laser Cutting
@@ -86,7 +87,7 @@ const App: React.FC = () => {
     }
     return DEFAULT_PRODUCTS;
   });
-  const [isAdminOpen, setIsAdminOpen] = useState(false);
+  const navigate = useNavigate();
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [view, setView] = useState<ViewState>(ViewState.HOME);
 
@@ -265,11 +266,21 @@ const App: React.FC = () => {
         cartCount={cart.reduce((acc, item) => acc + item.quantity, 0)} 
         onOpenCart={() => setIsCartOpen(true)}
         onGoHome={() => setView(ViewState.HOME)}
-        onOpenAdmin={() => setIsAdminOpen(true)}
+        onOpenAdmin={() => navigate('/admin')}
       />
 
       <main className="pt-4">
-        {renderContent()}
+        <Routes>
+          <Route index element={renderContent()} />
+          <Route path="admin" element={
+            <AdminPage 
+              products={products}
+              onAdd={handleAddProduct}
+              onEdit={handleEditProduct}
+              onDelete={handleDeleteProduct}
+            />
+          } />
+        </Routes>
       </main>
 
       <CartDrawer 
