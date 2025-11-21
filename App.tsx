@@ -293,15 +293,7 @@ const App: React.FC = () => {
       />
 
       <ChatAssistant products={products} />
-      {isAdminOpen && (
-        <AdminPanel 
-          products={products}
-          onClose={() => setIsAdminOpen(false)}
-          onAdd={handleAddProduct}
-          onEdit={handleEditProduct}
-          onDelete={handleDeleteProduct}
-        />
-      )}
+      
       
       {/* Footer */}
       <footer className="bg-white border-t border-gray-200 py-12 mt-12">
