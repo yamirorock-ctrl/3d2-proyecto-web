@@ -17,10 +17,15 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId }) => 
     image: '',
     description: ''
   });
+  const [previewSrc, setPreviewSrc] = useState<string>(product?.image ?? '');
 
   useEffect(() => {
     if (product) setForm(product);
   }, [product]);
+
+  useEffect(() => {
+    setPreviewSrc(form.image ?? '');
+  }, [form.image]);
 
   const handleChange = (k: keyof Product, v: any) => {
     setForm(prev => ({ ...prev, [k]: v }));
@@ -28,9 +33,30 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId }) => 
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
+    // Basic validation
+    if (!form.name || form.name.trim().length === 0) {
+      alert('El nombre es obligatorio');
+      return;
+    }
+    if (!form.price || Number(form.price) <= 0) {
+      alert('El precio debe ser mayor a 0');
+      return;
+    }
     // Ensure id is set
     if (!form.id) form.id = nextId ?? Date.now();
     onSave(form);
+  };
+
+  const handleFile = (file?: File) => {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string;
+      // set image as data URL
+      setForm(prev => ({ ...prev, image: result }));
+      setPreviewSrc(result);
+    };
+    reader.readAsDataURL(file);
   };
 
   return (
@@ -58,6 +84,14 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId }) => 
           <div>
             <label htmlFor="product-image" className="block text-sm font-medium text-slate-700">Imagen (URL)</label>
             <input id="product-image" name="image" autoComplete="off" value={form.image} onChange={e=>handleChange('image', e.target.value)} className="mt-1 block w-full rounded-md border-gray-200" />
+            <p className="text-xs text-slate-400 mt-2">O sube una imagen desde tu equipo:</p>
+            <input type="file" accept="image/*" onChange={e=>{ const f = e.target.files?.[0]; if(f) handleFile(f); }} className="mt-2 block w-full text-sm text-slate-600" />
+            {previewSrc && (
+              <div className="mt-3">
+                <div className="text-xs text-slate-500 mb-1">Previsualización:</div>
+                <img src={previewSrc} alt="preview" className="h-28 rounded-md object-cover border" />
+              </div>
+            )}
           </div>
           <div className="sm:col-span-2">
             <label htmlFor="product-description" className="block text-sm font-medium text-slate-700">Descripción</label>
