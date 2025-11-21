@@ -5,9 +5,10 @@ interface NavbarProps {
   cartCount: number;
   onOpenCart: () => void;
   onGoHome: () => void;
+  onOpenAdmin?: () => void;
 }
 
-const Navbar: React.FC<NavbarProps> = ({ cartCount, onOpenCart, onGoHome }) => {
+const Navbar: React.FC<NavbarProps> = ({ cartCount, onOpenCart, onGoHome, onOpenAdmin }) => {
   // PLACEHOLDER: Replace this URL with the link to your specific logo image
   const logoUrl = "https://placehold.co/200x200/ffffff/0f172a?text=3D2";
 
@@ -58,6 +59,11 @@ const Navbar: React.FC<NavbarProps> = ({ cartCount, onOpenCart, onGoHome }) => {
 
           {/* Actions */}
           <div className="flex items-center gap-4">
+            {onOpenAdmin && (
+              <button onClick={onOpenAdmin} title="Admin" className="hidden md:inline-flex items-center gap-2 px-3 py-2 bg-amber-50 text-amber-700 rounded-lg hover:bg-amber-100">
+                Admin
+              </button>
+            )}
             <button 
               onClick={onOpenCart}
               className="relative p-2 text-slate-900 hover:bg-slate-100 rounded-full transition-all group"

@@ -4,10 +4,11 @@ import Navbar from './components/Navbar';
 import ProductCard from './components/ProductCard';
 import CartDrawer from './components/CartDrawer';
 import ChatAssistant from './components/ChatAssistant';
+import AdminPanel from './components/AdminPanel';
 import { CheckCircle2, ArrowLeft, Mail, Phone } from 'lucide-react';
 
 // Updated Product Data for 3D Printing and Laser Cutting
-const PRODUCTS: Product[] = [
+const DEFAULT_PRODUCTS: Product[] = [
   {
     id: 1,
     name: "Dinosaurio Articulado T-Rex",
@@ -76,6 +77,16 @@ const PRODUCTS: Product[] = [
 
 const App: React.FC = () => {
   const [cart, setCart] = useState<CartItem[]>([]);
+  const [products, setProducts] = useState<Product[]>(() => {
+    try {
+      const raw = localStorage.getItem('products');
+      if (raw) return JSON.parse(raw) as Product[];
+    } catch (e) {
+      // ignore
+    }
+    return DEFAULT_PRODUCTS;
+  });
+  const [isAdminOpen, setIsAdminOpen] = useState(false);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [view, setView] = useState<ViewState>(ViewState.HOME);
 
@@ -91,6 +102,11 @@ const App: React.FC = () => {
   useEffect(() => {
     localStorage.setItem('cart', JSON.stringify(cart));
   }, [cart]);
+
+  // Save products to local storage
+  useEffect(() => {
+    localStorage.setItem('products', JSON.stringify(products));
+  }, [products]);
 
   const handleAddToCart = (product: Product) => {
     setCart(prev => {
@@ -126,6 +142,22 @@ const App: React.FC = () => {
       setCart([]);
       setView(ViewState.SUCCESS);
     }, 2000);
+  };
+
+  // Product admin handlers
+  const handleAddProduct = (prod: Product) => {
+    setProducts(prev => {
+      const nextId = prev.length ? Math.max(...prev.map(p => p.id)) + 1 : 1;
+      return [...prev, { ...prod, id: nextId }];
+    });
+  };
+
+  const handleEditProduct = (prod: Product) => {
+    setProducts(prev => prev.map(p => p.id === prod.id ? prod : p));
+  };
+
+  const handleDeleteProduct = (id: number) => {
+    setProducts(prev => prev.filter(p => p.id !== id));
   };
 
   const renderContent = () => {
@@ -214,7 +246,7 @@ const App: React.FC = () => {
           </div>
           
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-            {PRODUCTS.map(product => (
+            {products.map(product => (
               <ProductCard 
                 key={product.id} 
                 product={product} 
@@ -233,6 +265,7 @@ const App: React.FC = () => {
         cartCount={cart.reduce((acc, item) => acc + item.quantity, 0)} 
         onOpenCart={() => setIsCartOpen(true)}
         onGoHome={() => setView(ViewState.HOME)}
+        onOpenAdmin={() => setIsAdminOpen(true)}
       />
 
       <main className="pt-4">
@@ -248,7 +281,16 @@ const App: React.FC = () => {
         onCheckout={handleCheckout}
       />
 
-      <ChatAssistant products={PRODUCTS} />
+      <ChatAssistant products={products} />
+      {isAdminOpen && (
+        <AdminPanel 
+          products={products}
+          onClose={() => setIsAdminOpen(false)}
+          onAdd={handleAddProduct}
+          onEdit={handleEditProduct}
+          onDelete={handleDeleteProduct}
+        />
+      )}
       
       {/* Footer */}
       <footer className="bg-white border-t border-gray-200 py-12 mt-12">
