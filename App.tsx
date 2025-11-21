@@ -5,6 +5,8 @@ import ProductCard from './components/ProductCard';
 import CartDrawer from './components/CartDrawer';
 import ChatAssistant from './components/ChatAssistant';
 import AdminPage from './components/AdminPage';
+import AdminLogin from './components/AdminLogin';
+import AdminGuard from './components/AdminGuard';
 import { Routes, Route, useNavigate } from 'react-router-dom';
 import { CheckCircle2, ArrowLeft, Mail, Phone } from 'lucide-react';
 
@@ -272,13 +274,16 @@ const App: React.FC = () => {
       <main className="pt-4">
         <Routes>
           <Route index element={renderContent()} />
+          <Route path="admin/login" element={<AdminLogin />} />
           <Route path="admin" element={
-            <AdminPage 
-              products={products}
-              onAdd={handleAddProduct}
-              onEdit={handleEditProduct}
-              onDelete={handleDeleteProduct}
-            />
+            <AdminGuard>
+              <AdminPage 
+                products={products}
+                onAdd={handleAddProduct}
+                onEdit={handleEditProduct}
+                onDelete={handleDeleteProduct}
+              />
+            </AdminGuard>
           } />
         </Routes>
       </main>
