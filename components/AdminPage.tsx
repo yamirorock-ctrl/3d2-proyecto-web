@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Product } from '../types';
 import ProductAdmin from './ProductAdmin';
 import { Trash2, Edit, Plus, ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { clearAuthenticated } from '../utils/auth';
+import { clearAuthenticated, resetUserFailedAttempts, isUserLocked } from '../utils/auth';
 
 interface Props {
   products: Product[];
@@ -15,6 +15,8 @@ interface Props {
 const AdminPage: React.FC<Props> = ({ products, onAdd, onEdit, onDelete }) => {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editing, setEditing] = useState<Product | null>(null);
+  const [users, setUsers] = useState<{username:string}[]>([]);
+  const [userLocks, setUserLocks] = useState<Record<string, {locked:boolean; until?:number}>>({});
   const navigate = useNavigate();
 
   const storedUser = localStorage.getItem('admin_user');
@@ -22,6 +24,53 @@ const AdminPage: React.FC<Props> = ({ products, onAdd, onEdit, onDelete }) => {
   const handleLogout = () => {
     clearAuthenticated();
     navigate('/admin/login');
+  };
+
+  useEffect(() => {
+    // load registered users
+    try {
+      const raw = localStorage.getItem('users');
+      const arr = raw ? JSON.parse(raw) as {username:string, hash:string}[] : [];
+      setUsers(arr.map(u => ({ username: u.username })));
+      const lockMap: Record<string, {locked:boolean; until?:number}> = {};
+      arr.forEach(u => {
+        lockMap[u.username] = isUserLocked(u.username);
+      });
+      setUserLocks(lockMap);
+    } catch (e) {}
+  }, []);
+
+  const refreshUsers = () => {
+    try {
+      const raw = localStorage.getItem('users');
+      const arr = raw ? JSON.parse(raw) as {username:string, hash:string}[] : [];
+      setUsers(arr.map(u => ({ username: u.username })));
+      const lockMap: Record<string, {locked:boolean; until?:number}> = {};
+      arr.forEach(u => { lockMap[u.username] = isUserLocked(u.username); });
+      setUserLocks(lockMap);
+    } catch (e) {}
+  };
+
+  const handleDeleteUser = (username: string) => {
+    if (!confirm(`Eliminar usuario ${username}? Esta acción no se puede revertir.`)) return;
+    try {
+      const raw = localStorage.getItem('users');
+      const arr = raw ? JSON.parse(raw) as {username:string, hash:string}[] : [];
+      const next = arr.filter(u => u.username !== username);
+      localStorage.setItem('users', JSON.stringify(next));
+      // clear any per-user locks
+      resetUserFailedAttempts(username);
+      refreshUsers();
+    } catch (e) {}
+  };
+
+  const handleUnlockUser = (username: string) => {
+    if (!confirm(`¿Desbloquear usuario ${username}?`)) return;
+    try {
+      resetUserFailedAttempts(username);
+      refreshUsers();
+      alert('Usuario desbloqueado.');
+    } catch (e) {}
   };
 
   return (
@@ -59,13 +108,49 @@ const AdminPage: React.FC<Props> = ({ products, onAdd, onEdit, onDelete }) => {
         ))}
       </div>
 
-      {isCreateOpen && (
-        <ProductAdmin onClose={() => setIsCreateOpen(false)} onSave={(prod)=>{ onAdd(prod); setIsCreateOpen(false); }} nextId={products.length+1} />
-      )}
+      {/* Users panel */}
+      <div className="mt-8">
+        <h3 className="text-xl font-bold mb-4">Usuarios Registrados</h3>
+        {users.length === 0 ? (
+          <div className="text-sm text-slate-500">No hay usuarios registrados.</div>
+        ) : (
+          <div className="space-y-2">
+            {users.map(u => (
+              <div key={u.username} className="flex items-center justify-between border rounded p-3">
+                <div>
+                  <div className="font-medium">{u.username}</div>
+                  <div className="text-sm text-slate-500">{userLocks[u.username]?.locked ? `Bloqueado hasta ${userLocks[u.username].until ? new Date(userLocks[u.username].until).toLocaleString() : '...'}` : 'Activo'}</div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button onClick={() => handleUnlockUser(u.username)} className="px-3 py-1 bg-emerald-50 text-emerald-700 rounded-md">Desbloquear</button>
+                  <button onClick={() => handleDeleteUser(u.username)} className="px-3 py-1 bg-red-50 text-red-700 rounded-md">Eliminar</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
-      {editing && (
-        <ProductAdmin product={editing} onClose={() => setEditing(null)} onSave={(prod)=>{ onEdit(prod); setEditing(null); }} nextId={products.length+1} />
-      )}
+      {(() => {
+        try {
+          const stored = localStorage.getItem('categories');
+          const extra = stored ? JSON.parse(stored) as string[] : [];
+          const categories = Array.from(new Set([...products.map(p => p.category).filter(Boolean), ...extra]));
+          return (
+            <>
+              {isCreateOpen && (
+                <ProductAdmin categories={categories} onClose={() => setIsCreateOpen(false)} onSave={(prod)=>{ onAdd(prod); setIsCreateOpen(false); }} nextId={products.length+1} />
+              )}
+
+              {editing && (
+                <ProductAdmin categories={categories} product={editing} onClose={() => setEditing(null)} onSave={(prod)=>{ onEdit(prod); setEditing(null); }} nextId={products.length+1} />
+              )}
+            </>
+          );
+        } catch (e) {
+          return null;
+        }
+      })()}
     </div>
   );
 };

@@ -6,6 +6,9 @@ import CartDrawer from './components/CartDrawer';
 import ChatAssistant from './components/ChatAssistant';
 import AdminPage from './components/AdminPage';
 import AdminLogin from './components/AdminLogin';
+import Register from './components/Register';
+import UserLogin from './components/UserLogin';
+import { getCurrentUser, clearCurrentUser } from './utils/auth';
 import AdminGuard from './components/AdminGuard';
 import { Routes, Route, useNavigate } from 'react-router-dom';
 import { CheckCircle2, ArrowLeft, Mail, Phone } from 'lucide-react';
@@ -92,6 +95,18 @@ const App: React.FC = () => {
   const navigate = useNavigate();
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [view, setView] = useState<ViewState>(ViewState.HOME);
+  const [selectedCategory, setSelectedCategory] = useState<string>('');
+  const [availableCategories, setAvailableCategories] = useState<string[]>(() => {
+    try {
+      const fromStorage = localStorage.getItem('categories');
+      const extra = fromStorage ? JSON.parse(fromStorage) as string[] : [];
+      const fromProducts = Array.from(new Set((JSON.parse(localStorage.getItem('products')||'[]') as Product[]).map(p=>p.category).filter(Boolean)));
+      return Array.from(new Set([...fromProducts, ...extra]));
+    } catch (e) {
+      return [];
+    }
+  });
+  const [currentUser, setCurrentUser] = useState<string | null>(() => getCurrentUser());
 
   // Load cart from local storage
   useEffect(() => {
@@ -239,17 +254,19 @@ const App: React.FC = () => {
               <p className="text-slate-500 mt-2 text-lg">Objetos únicos creados capa por capa.</p>
             </div>
             
-            {/* Category Filter (Visual only for now) */}
+            {/* Category Filter */}
             <div className="flex gap-2 overflow-x-auto pb-2 sm:pb-0 w-full sm:w-auto no-scrollbar">
-               <span className="px-4 py-2 bg-slate-900 text-white rounded-full text-sm font-medium whitespace-nowrap cursor-pointer">Todo</span>
-               <span className="px-4 py-2 bg-white border border-gray-200 text-slate-600 rounded-full text-sm font-medium whitespace-nowrap hover:bg-gray-50 cursor-pointer transition-colors">Juguetes</span>
-               <span className="px-4 py-2 bg-white border border-gray-200 text-slate-600 rounded-full text-sm font-medium whitespace-nowrap hover:bg-gray-50 cursor-pointer transition-colors">Hogar</span>
-               <span className="px-4 py-2 bg-white border border-gray-200 text-slate-600 rounded-full text-sm font-medium whitespace-nowrap hover:bg-gray-50 cursor-pointer transition-colors">Personalizados</span>
+              <button onClick={()=>setSelectedCategory('')} className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap ${selectedCategory===''? 'bg-slate-900 text-white' : 'bg-white border border-gray-200 text-slate-600 hover:bg-gray-50'}`}>Todo</button>
+              {availableCategories.map(cat => (
+                <button key={cat} onClick={()=>setSelectedCategory(cat)} className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap ${selectedCategory===cat? 'bg-slate-900 text-white' : 'bg-white border border-gray-200 text-slate-600 hover:bg-gray-50'}`}>{cat}</button>
+              ))}
             </div>
           </div>
           
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-            {products.map(product => (
+            {(
+              selectedCategory ? products.filter(p=>p.category===selectedCategory) : products
+            ).map(product => (
               <ProductCard 
                 key={product.id} 
                 product={product} 
@@ -269,11 +286,17 @@ const App: React.FC = () => {
         onOpenCart={() => setIsCartOpen(true)}
         onGoHome={() => setView(ViewState.HOME)}
         onOpenAdmin={() => navigate('/admin')}
+        onRegister={() => navigate('/register')}
+        onLogin={() => navigate('/login')}
+        currentUser={currentUser}
+        onLogoutUser={() => { clearCurrentUser(); setCurrentUser(null); }}
       />
 
       <main className="pt-4">
         <Routes>
           <Route index element={renderContent()} />
+          <Route path="register" element={<Register />} />
+          <Route path="login" element={<UserLogin onLogin={(u)=>setCurrentUser(u)} />} />
           <Route path="admin/login" element={<AdminLogin />} />
           <Route path="admin" element={
             <AdminGuard>

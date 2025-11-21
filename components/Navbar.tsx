@@ -6,9 +6,13 @@ interface NavbarProps {
   onOpenCart: () => void;
   onGoHome: () => void;
   onOpenAdmin?: () => void;
+  onRegister?: () => void;
+  onLogin?: () => void; // navigate to user login
+  currentUser?: string | null;
+  onLogoutUser?: () => void;
 }
 
-const Navbar: React.FC<NavbarProps> = ({ cartCount, onOpenCart, onGoHome, onOpenAdmin }) => {
+const Navbar: React.FC<NavbarProps> = ({ cartCount, onOpenCart, onGoHome, onOpenAdmin, onRegister, onLogin, currentUser, onLogoutUser }) => {
   // PLACEHOLDER: Replace this URL with the link to your specific logo image
   const logoUrl = "https://placehold.co/200x200/ffffff/0f172a?text=3D2";
 
@@ -55,6 +59,17 @@ const Navbar: React.FC<NavbarProps> = ({ cartCount, onOpenCart, onGoHome, onOpen
             <button className="hover:text-indigo-600 transition-colors">Impresión 3D</button>
             <button className="hover:text-indigo-600 transition-colors">Corte Láser</button>
             <button className="hover:text-indigo-600 transition-colors">Personalizados</button>
+            {!currentUser ? (
+              <>
+                <button onClick={onLogin} className="hover:text-indigo-600 transition-colors">Ingresar</button>
+                <button onClick={onRegister} className="hover:text-indigo-600 transition-colors">Registrarse</button>
+              </>
+            ) : (
+              <div className="flex items-center gap-3">
+                <span className="text-sm font-medium text-slate-700">Hola, {currentUser}</span>
+                <button onClick={onLogoutUser} className="text-sm text-slate-500">Cerrar</button>
+              </div>
+            )}
           </div>
 
           {/* Actions */}
@@ -63,6 +78,19 @@ const Navbar: React.FC<NavbarProps> = ({ cartCount, onOpenCart, onGoHome, onOpen
               <button onClick={onOpenAdmin} title="Admin" className="hidden md:inline-flex items-center gap-2 px-3 py-2 bg-amber-50 text-amber-700 rounded-lg hover:bg-amber-100">
                 Admin
               </button>
+            )}
+            {!currentUser ? (
+              onLogin && (
+                <button onClick={onLogin} title="Ingresar" className="hidden md:inline-flex items-center gap-2 px-3 py-2 bg-sky-50 text-sky-700 rounded-lg hover:bg-sky-100">
+                  Ingresar
+                </button>
+              )
+            ) : (
+              onLogoutUser && (
+                <button onClick={onLogoutUser} title="Cerrar sesión" className="hidden md:inline-flex items-center gap-2 px-3 py-2 bg-red-50 text-red-700 rounded-lg hover:bg-red-100">
+                  Cerrar sesión
+                </button>
+              )
             )}
             <button 
               onClick={onOpenCart}
