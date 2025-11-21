@@ -9,13 +9,13 @@ export async function hashPassword(password: string, salt = ''): Promise<string>
 }
 
 export function setSessionAuthenticated() {
-  sessionStorage.setItem('admin_authenticated', '1');
+  localStorage.setItem('admin_authenticated', '1');
 }
 
 export function clearSessionAuthenticated() {
-  sessionStorage.removeItem('admin_authenticated');
+  localStorage.removeItem('admin_authenticated');
 }
 
 export function isSessionAuthenticated(): boolean {
-  return sessionStorage.getItem('admin_authenticated') === '1';
+  return localStorage.getItem('admin_authenticated') === '1';
 }
