@@ -36,7 +36,7 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId }) => 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
-      <form onSubmit={submit} className="relative z-10 bg-white rounded-2xl shadow-xl w-full max-w-2xl p-6">
+      <form onSubmit={submit} onMouseDown={(e)=>e.stopPropagation()} onTouchStart={(e)=>e.stopPropagation()} className="relative z-10 bg-white rounded-2xl shadow-xl w-full max-w-2xl p-6">
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-lg font-bold">{product ? 'Editar Producto' : 'Nuevo Producto'}</h3>
           <button type="button" onClick={onClose} className="text-slate-500">Cerrar</button>
@@ -44,24 +44,24 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId }) => 
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-slate-700">Nombre</label>
-            <input value={form.name} onChange={e=>handleChange('name', e.target.value)} className="mt-1 block w-full rounded-md border-gray-200" />
+            <label htmlFor="product-name" className="block text-sm font-medium text-slate-700">Nombre</label>
+            <input id="product-name" name="name" autoComplete="off" value={form.name} onChange={e=>handleChange('name', e.target.value)} className="mt-1 block w-full rounded-md border-gray-200" />
           </div>
           <div>
             <label className="block text-sm font-medium text-slate-700">Precio</label>
-            <input type="number" value={form.price} onChange={e=>handleChange('price', Number(e.target.value))} className="mt-1 block w-full rounded-md border-gray-200" />
+            <input id="product-price" name="price" type="number" value={form.price} onChange={e=>handleChange('price', Number(e.target.value))} className="mt-1 block w-full rounded-md border-gray-200" />
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700">Categoría</label>
-            <input value={form.category} onChange={e=>handleChange('category', e.target.value)} className="mt-1 block w-full rounded-md border-gray-200" />
+            <label htmlFor="product-category" className="block text-sm font-medium text-slate-700">Categoría</label>
+            <input id="product-category" name="category" autoComplete="off" value={form.category} onChange={e=>handleChange('category', e.target.value)} className="mt-1 block w-full rounded-md border-gray-200" />
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700">Imagen (URL)</label>
-            <input value={form.image} onChange={e=>handleChange('image', e.target.value)} className="mt-1 block w-full rounded-md border-gray-200" />
+            <label htmlFor="product-image" className="block text-sm font-medium text-slate-700">Imagen (URL)</label>
+            <input id="product-image" name="image" autoComplete="off" value={form.image} onChange={e=>handleChange('image', e.target.value)} className="mt-1 block w-full rounded-md border-gray-200" />
           </div>
           <div className="sm:col-span-2">
-            <label className="block text-sm font-medium text-slate-700">Descripción</label>
-            <textarea value={form.description} onChange={e=>handleChange('description', e.target.value)} className="mt-1 block w-full rounded-md border-gray-200" rows={4} />
+            <label htmlFor="product-description" className="block text-sm font-medium text-slate-700">Descripción</label>
+            <textarea id="product-description" name="description" value={form.description} onChange={e=>handleChange('description', e.target.value)} className="mt-1 block w-full rounded-md border-gray-200" rows={4} />
           </div>
         </div>
 
