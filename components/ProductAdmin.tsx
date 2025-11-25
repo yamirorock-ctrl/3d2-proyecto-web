@@ -194,10 +194,10 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
-      <form onSubmit={submit} onMouseDown={(e)=>e.stopPropagation()} onTouchStart={(e)=>e.stopPropagation()} className="relative z-10 bg-white rounded-2xl shadow-xl w-full max-w-2xl p-6">
-        <div className="flex justify-between items-center mb-4">
+      <form onSubmit={submit} onMouseDown={(e)=>e.stopPropagation()} onTouchStart={(e)=>e.stopPropagation()} className="relative z-10 bg-white rounded-2xl shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto p-6">
+        <div className="flex justify-between items-center mb-4 sticky top-0 bg-white pb-2 border-b">
           <h3 className="text-lg font-bold">{product ? 'Editar Producto' : 'Nuevo Producto'}</h3>
           <button type="button" onClick={onClose} className="text-slate-500">Cerrar</button>
         </div>
@@ -246,8 +246,8 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
               <input id="product-category" name="category" autoComplete="off" value={form.category} onChange={e=>handleChange('category', e.target.value)} className="mt-1 block w-full rounded-md border-gray-200" />
             )}
           </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-700">Imágenes y Colores</label>
+          <div className="sm:col-span-2">
+            <label className="block text-sm font-medium text-slate-700 mb-2">Imágenes y Colores</label>
             <div className="mt-1 grid gap-2">
               <div className="flex gap-2 items-center">
                 <input
