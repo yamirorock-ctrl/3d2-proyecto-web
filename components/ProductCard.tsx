@@ -47,6 +47,20 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart }) => {
           </div>
         )}
       </div>
+      {product.images && product.images.length > 1 && (
+        <div className="px-4 pt-3 flex gap-2 items-center">
+          {product.images.map((img, idx) => (
+            <button
+              key={idx}
+              title={img.color || `Variante ${idx+1}`}
+              onClick={(e)=>{ e.preventDefault(); e.stopPropagation(); setActive(idx); }}
+              className={`h-10 w-10 rounded-lg border ${idx===active ? 'border-indigo-500' : 'border-gray-200'} overflow-hidden`}
+            >
+              <img src={img.url} alt={img.color || `var-${idx+1}`} className="h-full w-full object-cover" />
+            </button>
+          ))}
+        </div>
+      )}
       
       <div className="p-5 flex flex-col flex-grow">
         <div className="flex justify-between items-start mb-2">
@@ -59,7 +73,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart }) => {
         </p>
         
         <button 
-          onClick={() => onAddToCart(product)}
+          onClick={() => onAddToCart({ ...product, image: images[active] || product.image })}
           className="w-full py-3 px-4 bg-slate-900 text-white font-medium rounded-xl flex items-center justify-center gap-2 hover:bg-indigo-600 hover:scale-[1.02] hover:shadow-lg active:scale-95 active:bg-indigo-700 transition-all duration-200 ease-out"
         >
           <Plus size={18} />
