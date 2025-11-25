@@ -131,7 +131,11 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
 
   const addImageByUrl = () => {
     const url = newImgUrl.trim();
-    if (!url) return;
+    if (!url) {
+      alert('Por favor ingresa una URL de imagen');
+      return;
+    }
+    console.log('Agregando imagen:', { url, color: newImgColor });
     setForm(prev => ({
       ...prev,
       images: [...(prev.images || []), { url, color: newImgColor || undefined }]
@@ -247,18 +251,20 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
             <div className="mt-1 grid gap-2">
               <div className="flex gap-2 items-center">
                 <input
+                  type="text"
                   placeholder="URL de imagen"
                   value={newImgUrl}
                   onChange={(e)=>setNewImgUrl(e.target.value)}
-                  className="block w-full rounded-md border-gray-200"
+                  className="block w-full rounded-md border border-gray-300 px-3 py-2"
                 />
                 <input
+                  type="text"
                   placeholder="Color (opcional)"
                   value={newImgColor}
                   onChange={(e)=>setNewImgColor(e.target.value)}
-                  className="block w-40 rounded-md border-gray-200"
+                  className="block w-40 rounded-md border border-gray-300 px-3 py-2"
                 />
-                <button type="button" onClick={addImageByUrl} className="px-3 py-2 rounded-md bg-indigo-600 text-white text-sm">Agregar</button>
+                <button type="button" onClick={addImageByUrl} className="px-4 py-2 rounded-md bg-indigo-600 text-white text-sm whitespace-nowrap hover:bg-indigo-700">Agregar</button>
               </div>
               <div className="text-xs text-slate-400">O sube una imagen desde tu equipo:</div>
               <input type="file" accept="image/*" onChange={e=>{ const f = e.target.files?.[0]; if(f) handleFile(f); }} className="block w-full text-sm text-slate-600" />
@@ -272,9 +278,10 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
                       <div className="flex-1">
                         <div className="text-xs text-slate-500">Color:</div>
                         <input
+                          type="text"
                           value={img.color || ''}
                           onChange={(e)=>updateImageColor(idx, e.target.value)}
-                          className="mt-1 block w-48 rounded-md border-gray-200"
+                          className="mt-1 block w-48 rounded-md border border-gray-300 px-3 py-2"
                           placeholder="Ej: Rojo"
                         />
                       </div>
