@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Product } from '../types';
+import { Product, ProductImage } from '../types';
 
 interface Props {
   onClose: () => void;
@@ -10,25 +10,48 @@ interface Props {
 }
 
 const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categories = [] }) => {
-  const [form, setForm] = useState<Product>(product ?? {
-    id: nextId ?? 0,
-    name: '',
-    price: 0,
-    category: '',
-    image: '',
-    description: ''
+  const [form, setForm] = useState<Product>(() => {
+    const base: Product = {
+      id: nextId ?? 0,
+      name: '',
+      price: 0,
+      category: '',
+      image: '',
+      images: [],
+      description: ''
+    };
+    if (product) {
+      return {
+        ...product,
+        images: product.images && product.images.length > 0 ? product.images : (product.image ? [{ url: product.image }] : [])
+      };
+    }
+    return base;
   });
+
   const [categoryMode, setCategoryMode] = useState<'select'|'other'>('select');
   const uniqueCats = useMemo(() => Array.from(new Set((categories || []).filter(Boolean))), [categories]);
   const [localCats, setLocalCats] = useState<string[]>(uniqueCats);
-  const [previewSrc, setPreviewSrc] = useState<string>(product?.image ?? '');
+  const [previewSrc, setPreviewSrc] = useState<string>(product?.images?.[0]?.url ?? product?.image ?? '');
+  const [newImgUrl, setNewImgUrl] = useState('');
+  const [newImgColor, setNewImgColor] = useState('');
 
+  // Sync incoming product
   useEffect(() => {
-    if (product) setForm(product);
+    if (product) {
+      setForm({
+        ...product,
+        images: product.images && product.images.length > 0 ? product.images : (product.image ? [{ url: product.image }] : [])
+      });
+    }
   }, [product]);
 
+  // Category mode + localCats sync
   useEffect(() => {
-    // determine category mode on mount/update
+    setLocalCats(Array.from(new Set((categories || []).filter(Boolean))));
+  }, [categories]);
+
+  useEffect(() => {
     if (product && product.category) {
       if (uniqueCats.includes(product.category)) {
         setCategoryMode('select');
@@ -39,15 +62,15 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
       }
     } else {
       setCategoryMode(uniqueCats.length ? 'select' : 'other');
-      // do not auto-select a category for new product; leave empty so user chooses
       setForm(prev => ({ ...prev, category: '' }));
     }
   }, [product, uniqueCats]);
 
+  // Preview principal
   useEffect(() => {
-    // keep localCats in sync when prop changes
-    setLocalCats(Array.from(new Set((categories || []).filter(Boolean))));
-  }, [categories]);
+    const primary = form.images && form.images.length > 0 ? form.images[0].url : form.image;
+    setPreviewSrc(primary ?? '');
+  }, [form.image, form.images]);
 
   const handleAddCategory = () => {
     const name = prompt('Nombre de la nueva categoría:');
@@ -59,7 +82,6 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
       const arr = raw ? JSON.parse(raw) as string[] : [];
       if (!arr.includes(clean)) arr.push(clean);
       localStorage.setItem('categories', JSON.stringify(arr));
-      // update localCats so select shows it immediately
       setLocalCats(prev => Array.from(new Set([...prev, clean])));
       setCategoryMode('select');
       setForm(prev => ({ ...prev, category: clean }));
@@ -77,7 +99,6 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
       localStorage.setItem('categories', JSON.stringify(next));
       const newLocal = localCats.filter(c => c !== target);
       setLocalCats(newLocal);
-      // if current form category was removed, clear it
       if (form.category === target) {
         setForm(prev => ({ ...prev, category: '' }));
         setCategoryMode(newLocal.length > 0 ? 'select' : 'other');
@@ -86,20 +107,67 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
     } catch (e) { console.error(e); }
   };
 
-  useEffect(() => {
-    setPreviewSrc(form.image ?? '');
-  }, [form.image]);
-
-  // Build options ensuring current category is present
   const options = Array.from(new Set([...localCats, form.category].filter(Boolean)));
 
   const handleChange = (k: keyof Product, v: any) => {
     setForm(prev => ({ ...prev, [k]: v }));
   };
 
+  // Images helpers
+  const handleFile = (file?: File) => {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string;
+      setForm(prev => ({
+        ...prev,
+        images: [...(prev.images || []), { url: result, color: newImgColor || undefined }]
+      }));
+      setNewImgUrl('');
+      setNewImgColor('');
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const addImageByUrl = () => {
+    const url = newImgUrl.trim();
+    if (!url) return;
+    setForm(prev => ({
+      ...prev,
+      images: [...(prev.images || []), { url, color: newImgColor || undefined }]
+    }));
+    setNewImgUrl('');
+    setNewImgColor('');
+  };
+
+  const removeImageAt = (idx: number) => {
+    setForm(prev => ({
+      ...prev,
+      images: (prev.images || []).filter((_, i) => i !== idx)
+    }));
+  };
+
+  const setPrimaryImage = (idx: number) => {
+    setForm(prev => {
+      const imgs = [...(prev.images || [])];
+      if (idx < 0 || idx >= imgs.length) return prev;
+      const [sel] = imgs.splice(idx, 1);
+      imgs.unshift(sel);
+      return { ...prev, images: imgs, image: imgs[0]?.url || prev.image };
+    });
+  };
+
+  const updateImageColor = (idx: number, color: string) => {
+    setForm(prev => {
+      const imgs = [...(prev.images || [])];
+      if (!imgs[idx]) return prev;
+      imgs[idx] = { ...imgs[idx], color: color || undefined } as ProductImage;
+      return { ...prev, images: imgs };
+    });
+  };
+
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
-    // Basic validation
     if (!form.name || form.name.trim().length === 0) {
       alert('El nombre es obligatorio');
       return;
@@ -108,28 +176,17 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
       alert('El precio debe ser mayor a 0');
       return;
     }
-    // Ensure category is set
     const finalCategory = form.category;
     if (!finalCategory || finalCategory.trim().length === 0) {
       alert('La categoría es obligatoria');
       return;
     }
     form.category = finalCategory;
-    // Ensure id is set
+    if (form.images && form.images.length > 0) {
+      form.image = form.images[0].url;
+    }
     if (!form.id) form.id = nextId ?? Date.now();
     onSave(form);
-  };
-
-  const handleFile = (file?: File) => {
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = reader.result as string;
-      // set image as data URL
-      setForm(prev => ({ ...prev, image: result }));
-      setPreviewSrc(result);
-    };
-    reader.readAsDataURL(file);
   };
 
   return (
@@ -186,16 +243,57 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
             )}
           </div>
           <div>
-            <label htmlFor="product-image" className="block text-sm font-medium text-slate-700">Imagen (URL)</label>
-            <input id="product-image" name="image" autoComplete="off" value={form.image} onChange={e=>handleChange('image', e.target.value)} className="mt-1 block w-full rounded-md border-gray-200" />
-            <p className="text-xs text-slate-400 mt-2">O sube una imagen desde tu equipo:</p>
-            <input type="file" accept="image/*" onChange={e=>{ const f = e.target.files?.[0]; if(f) handleFile(f); }} className="mt-2 block w-full text-sm text-slate-600" />
-            {previewSrc && (
-              <div className="mt-3">
-                <div className="text-xs text-slate-500 mb-1">Previsualización:</div>
-                <img src={previewSrc} alt="preview" className="h-28 rounded-md object-cover border" />
+            <label className="block text-sm font-medium text-slate-700">Imágenes y Colores</label>
+            <div className="mt-1 grid gap-2">
+              <div className="flex gap-2 items-center">
+                <input
+                  placeholder="URL de imagen"
+                  value={newImgUrl}
+                  onChange={(e)=>setNewImgUrl(e.target.value)}
+                  className="block w-full rounded-md border-gray-200"
+                />
+                <input
+                  placeholder="Color (opcional)"
+                  value={newImgColor}
+                  onChange={(e)=>setNewImgColor(e.target.value)}
+                  className="block w-40 rounded-md border-gray-200"
+                />
+                <button type="button" onClick={addImageByUrl} className="px-3 py-2 rounded-md bg-indigo-600 text-white text-sm">Agregar</button>
               </div>
-            )}
+              <div className="text-xs text-slate-400">O sube una imagen desde tu equipo:</div>
+              <input type="file" accept="image/*" onChange={e=>{ const f = e.target.files?.[0]; if(f) handleFile(f); }} className="block w-full text-sm text-slate-600" />
+
+              {(form.images && form.images.length > 0) && (
+                <div className="mt-3 space-y-2">
+                  <div className="text-xs text-slate-500">Imágenes agregadas (haz clic en "Principal" para elegir la principal):</div>
+                  {form.images.map((img, idx) => (
+                    <div key={idx} className="flex items-center gap-3 border rounded-md p-2">
+                      <img src={img.url} alt={`img-${idx}`} className="h-14 w-14 object-cover rounded" />
+                      <div className="flex-1">
+                        <div className="text-xs text-slate-500">Color:</div>
+                        <input
+                          value={img.color || ''}
+                          onChange={(e)=>updateImageColor(idx, e.target.value)}
+                          className="mt-1 block w-48 rounded-md border-gray-200"
+                          placeholder="Ej: Rojo"
+                        />
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button type="button" onClick={()=>setPrimaryImage(idx)} className={`px-3 py-1 rounded-md text-sm ${idx===0 ? 'bg-emerald-600 text-white' : 'bg-gray-100 text-slate-700'}`}>{idx===0 ? 'Principal' : 'Hacer principal'}</button>
+                        <button type="button" onClick={()=>removeImageAt(idx)} className="px-3 py-1 rounded-md bg-red-50 text-red-700 text-sm">Quitar</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {previewSrc && (
+                <div className="mt-3">
+                  <div className="text-xs text-slate-500 mb-1">Previsualización (principal):</div>
+                  <img src={previewSrc} alt="preview" className="h-28 rounded-md object-cover border" />
+                </div>
+              )}
+            </div>
           </div>
           <div className="sm:col-span-2">
             <label htmlFor="product-description" className="block text-sm font-medium text-slate-700">Descripción</label>

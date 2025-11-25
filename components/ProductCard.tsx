@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo, useState } from 'react';
 import { Plus } from 'lucide-react';
 import { Product } from '../types';
 
@@ -8,20 +8,44 @@ interface ProductCardProps {
 }
 
 const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart }) => {
+  const images = useMemo(() => {
+    if (product.images && product.images.length > 0) return product.images.map(i => i.url);
+    return product.image ? [product.image] : [];
+  }, [product]);
+  const [active, setActive] = useState(0);
+
+  const prev = (e: React.MouseEvent) => { e.preventDefault(); e.stopPropagation(); setActive(a => (a - 1 + images.length) % images.length); };
+  const next = (e: React.MouseEvent) => { e.preventDefault(); e.stopPropagation(); setActive(a => (a + 1) % images.length); };
+
   return (
     <div className="group bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden flex flex-col h-full">
       <div className="relative h-64 overflow-hidden bg-gray-100">
-        <img 
-          src={product.image} 
-          alt={product.name} 
-          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-          loading="lazy"
-        />
+        {images.length > 0 && (
+          <img
+            src={images[active]}
+            alt={product.name}
+            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+            loading="lazy"
+          />
+        )}
         <div className="absolute top-3 left-3">
            <span className="px-3 py-1 bg-white/90 backdrop-blur text-xs font-bold uppercase tracking-wider rounded-full text-slate-800 shadow-sm">
              {product.category}
            </span>
         </div>
+        {images.length > 1 && (
+          <>
+            <button aria-label="Anterior" onClick={prev} className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white text-slate-700 rounded-full h-8 w-8 flex items-center justify-center shadow">‹</button>
+            <button aria-label="Siguiente" onClick={next} className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white text-slate-700 rounded-full h-8 w-8 flex items-center justify-center shadow">›</button>
+          </>
+        )}
+        {images.length > 1 && (
+          <div className="absolute bottom-2 left-0 right-0 flex justify-center gap-2">
+            {images.map((src, idx) => (
+              <button key={idx} onClick={(e)=>{e.preventDefault(); e.stopPropagation(); setActive(idx);}} className={`h-2.5 w-2.5 rounded-full ${idx===active ? 'bg-white' : 'bg-white/50'} border border-white/60`}></button>
+            ))}
+          </div>
+        )}
       </div>
       
       <div className="p-5 flex flex-col flex-grow">

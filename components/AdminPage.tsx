@@ -93,7 +93,7 @@ const AdminPage: React.FC<Props> = ({ products, onAdd, onEdit, onDelete }) => {
         {products.map(p => (
           <div key={p.id} className="border rounded-lg p-4 flex items-center justify-between gap-4">
             <div className="flex items-center gap-4">
-              <img src={p.image} alt={p.name} className="h-20 w-20 object-cover rounded-md" />
+              <img src={p.images?.[0]?.url ?? p.image} alt={p.name} className="h-20 w-20 object-cover rounded-md" />
               <div>
                 <div className="font-bold">{p.name}</div>
                 <div className="text-sm text-slate-500">{p.category} • ${p.price}</div>
