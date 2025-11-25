@@ -30,6 +30,11 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
   });
 
   const [categoryMode, setCategoryMode] = useState<'select'|'other'>('select');
+  const [technology, setTechnology] = useState<'3D'|'Láser'>(() => {
+    if (product?.category.includes('3D')) return '3D';
+    if (product?.category.includes('Láser')) return 'Láser';
+    return '3D';
+  });
   const uniqueCats = useMemo(() => Array.from(new Set((categories || []).filter(Boolean))), [categories]);
   const [localCats, setLocalCats] = useState<string[]>(uniqueCats);
   const [previewSrc, setPreviewSrc] = useState<string>(product?.images?.[0]?.url ?? product?.image ?? '');
@@ -185,7 +190,16 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
       alert('La categoría es obligatoria');
       return;
     }
-    form.category = finalCategory;
+    // Agregar tecnología a la categoría si no la tiene
+    let finalCategoryWithTech = finalCategory;
+    if (!finalCategory.includes('3D') && !finalCategory.includes('Láser')) {
+      // Si la categoría no tiene tecnología, agregarla al final
+      finalCategoryWithTech = `${finalCategory} ${technology}`;
+    } else {
+      // Si ya tiene una tecnología, reemplazarla
+      finalCategoryWithTech = finalCategory.replace(/3D|Láser/g, technology);
+    }
+    form.category = finalCategoryWithTech;
     if (form.images && form.images.length > 0) {
       form.image = form.images[0].url;
     }
@@ -203,6 +217,19 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="sm:col-span-2">
+            <label className="block text-sm font-medium text-slate-700 mb-2">Tecnología</label>
+            <div className="flex gap-4">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="radio" name="technology" value="3D" checked={technology==='3D'} onChange={()=>setTechnology('3D')} className="text-indigo-600" />
+                <span className="text-sm font-medium text-slate-700">Impresión 3D</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="radio" name="technology" value="Láser" checked={technology==='Láser'} onChange={()=>setTechnology('Láser')} className="text-indigo-600" />
+                <span className="text-sm font-medium text-slate-700">Corte Láser</span>
+              </label>
+            </div>
+          </div>
           <div>
             <label htmlFor="product-name" className="block text-sm font-medium text-slate-700">Nombre</label>
             <input id="product-name" name="name" autoComplete="off" value={form.name} onChange={e=>handleChange('name', e.target.value)} className="mt-1 block w-full rounded-md border-gray-200" />
