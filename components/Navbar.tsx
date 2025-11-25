@@ -10,9 +10,10 @@ interface NavbarProps {
   onLogin?: () => void; // navigate to user login
   currentUser?: string | null;
   onLogoutUser?: () => void;
+  onCategorySelect?: (category: string) => void;
 }
 
-const Navbar: React.FC<NavbarProps> = ({ cartCount, onOpenCart, onGoHome, onOpenAdmin, onRegister, onLogin, currentUser, onLogoutUser }) => {
+const Navbar: React.FC<NavbarProps> = ({ cartCount, onOpenCart, onGoHome, onOpenAdmin, onRegister, onLogin, currentUser, onLogoutUser, onCategorySelect }) => {
   // PLACEHOLDER: Replace this URL with the link to your specific logo image
   const logoUrl = "https://placehold.co/200x200/ffffff/0f172a?text=3D2";
 
@@ -55,10 +56,10 @@ const Navbar: React.FC<NavbarProps> = ({ cartCount, onOpenCart, onGoHome, onOpen
 
           {/* Desktop Menu */}
           <div className="hidden md:flex space-x-8 text-sm font-medium text-slate-600">
-            <button onClick={onGoHome} className="hover:text-indigo-600 transition-colors">Inicio</button>
-            <button className="hover:text-indigo-600 transition-colors">Impresión 3D</button>
-            <button className="hover:text-indigo-600 transition-colors">Corte Láser</button>
-            <button className="hover:text-indigo-600 transition-colors">Personalizados</button>
+            <button onClick={()=>{onGoHome(); onCategorySelect?.('');}} className="hover:text-indigo-600 transition-colors">Inicio</button>
+            <button onClick={()=>{onGoHome(); onCategorySelect?.('3D');}} className="hover:text-indigo-600 transition-colors">Impresión 3D</button>
+            <button onClick={()=>{onGoHome(); onCategorySelect?.('Láser');}} className="hover:text-indigo-600 transition-colors">Corte Láser</button>
+            <button onClick={()=>{onGoHome(); onCategorySelect?.('Personalizados');}} className="hover:text-indigo-600 transition-colors">Personalizados</button>
             {!currentUser ? (
               <>
                 <button onClick={onLogin} className="hover:text-indigo-600 transition-colors">Ingresar</button>

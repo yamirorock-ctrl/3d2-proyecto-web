@@ -265,7 +265,15 @@ const App: React.FC = () => {
           
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
             {(
-              selectedCategory ? products.filter(p=>p.category===selectedCategory) : products
+              selectedCategory 
+                ? products.filter(p => {
+                    // Si es filtro de tecnología (3D o Láser), buscar en la categoría
+                    if (selectedCategory === '3D') return p.category.includes('3D');
+                    if (selectedCategory === 'Láser') return p.category.includes('Láser');
+                    // Si no, filtro exacto por categoría
+                    return p.category === selectedCategory;
+                  })
+                : products
             ).map(product => (
               <ProductCard 
                 key={product.id} 
@@ -284,12 +292,13 @@ const App: React.FC = () => {
       <Navbar 
         cartCount={cart.reduce((acc, item) => acc + item.quantity, 0)} 
         onOpenCart={() => setIsCartOpen(true)}
-        onGoHome={() => setView(ViewState.HOME)}
+        onGoHome={() => { setView(ViewState.HOME); navigate('/'); }}
         onOpenAdmin={() => navigate('/admin')}
         onRegister={() => navigate('/register')}
         onLogin={() => navigate('/login')}
         currentUser={currentUser}
         onLogoutUser={() => { clearCurrentUser(); setCurrentUser(null); }}
+        onCategorySelect={(cat) => { setView(ViewState.HOME); navigate('/'); setSelectedCategory(cat); }}
       />
 
       <main className="pt-4">
