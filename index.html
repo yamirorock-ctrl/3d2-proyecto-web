@@ -36,10 +36,20 @@
   }
 }
 </script>
-  <script type="module" crossorigin src="/assets/index-3vC4FdPC.js"></script>
+  <script type="module" crossorigin src="/assets/index-Bcj9sNhR.js"></script>
   <link rel="stylesheet" crossorigin href="/assets/index-Bu0BjxA1.css">
 </head>
   <body class="bg-gray-50 text-slate-900 antialiased">
     <div id="root"></div>
+  <script>
+    // Restaurar ruta después de redirección desde 404.html
+    (function() {
+      var redirect = sessionStorage.getItem('redirect');
+      if (redirect) {
+        sessionStorage.removeItem('redirect');
+        history.replaceState(null, '', redirect);
+      }
+    })();
+  </script>
 </body>
 </html>
