@@ -11,10 +11,5 @@
       "src": "/api/webhook",
       "dest": "/api/webhook.js"
     }
-  ],
-  "env": {
-    "VITE_SUPABASE_URL": "@supabase-url",
-    "VITE_SUPABASE_ANON_KEY": "@supabase-anon-key",
-    "VITE_MP_ACCESS_TOKEN": "@mp-access-token"
-  }
+  ]
 }
