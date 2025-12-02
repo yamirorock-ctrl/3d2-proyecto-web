@@ -4,7 +4,10 @@ const MP_ACCESS_TOKEN = (import.meta as any).env?.VITE_MP_ACCESS;
 const MP_PUBLIC_KEY = (import.meta as any).env?.VITE_MP_PUBLIC;
 
 interface PreferenceItem {
+  id?: string;
   title: string;
+  description?: string;
+  category_id?: string;
   quantity: number;
   unit_price: number;
   currency_id: string;
@@ -33,7 +36,10 @@ export async function createPaymentPreference(
 
   // Convertir items del pedido a formato de MercadoPago
   const mpItems: PreferenceItem[] = items.map((item) => ({
+    id: String(item.product_id || `item-${item.name.replace(/\s+/g, '-').toLowerCase()}`),
     title: item.name,
+    description: `Producto impreso en 3D - ${item.name}`,
+    category_id: 'art',
     quantity: item.quantity,
     unit_price: item.price,
     currency_id: 'ARS',
@@ -42,7 +48,10 @@ export async function createPaymentPreference(
   // Agregar envío como item separado si tiene costo
   if (shippingCost > 0) {
     mpItems.push({
+      id: `shipping-${orderId}`,
       title: 'Envío',
+      description: 'Costo de envío del pedido',
+      category_id: 'services',
       quantity: 1,
       unit_price: shippingCost,
       currency_id: 'ARS',
