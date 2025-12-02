@@ -12,13 +12,9 @@
       <p>Cargando la aplicación.</p>
     </div>
     <script>
-      // SPA fallback para GitHub Pages con dominio personalizado
-      // Guarda la ruta actual en sessionStorage y redirige a la raíz
-      const path = location.pathname + location.search + location.hash;
-      console.log('[404] Guardando ruta:', path);
-      sessionStorage.setItem('redirect', path);
-      // Redirigir al origen (funciona tanto con dominio personalizado como github.io)
-      location.href = location.origin + '/';
+      // SPA fallback para GitHub Pages
+      sessionStorage.setItem('redirect', location.pathname + location.search + location.hash);
+      location.replace(location.origin + '/');
     </script>
   </body>
 </html>
