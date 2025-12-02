@@ -31,6 +31,13 @@ jobs:
         run: npm ci
 
       - name: Build
+        env:
+          VITE_GEMINI_API_KEY: ${{ secrets.VITE_GEMINI_API_KEY }}
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON: ${{ secrets.VITE_SUPABASE_ANON }}
+          VITE_ADMIN_SECRET: ${{ secrets.VITE_ADMIN_SECRET }}
+          VITE_MP_PUBLIC: ${{ secrets.VITE_MP_PUBLIC }}
+          VITE_MP_ACCESS: ${{ secrets.VITE_MP_ACCESS }}
         run: npm run build
 
       - name: Setup Pages
