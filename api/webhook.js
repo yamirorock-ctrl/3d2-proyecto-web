@@ -46,8 +46,127 @@ export default async function handler(req, res) {
     });
   }
 
-  // Health-check GET: no expone valores, solo flags
+  // Health-check y soporte GET para topic=id (algunos paneles envían GET)
   if (req.method === 'GET') {
+    // Test manual
+    if (req.query && req.query.test_payment_id) {
+      const testPaymentId = req.query.test_payment_id;
+      const testOrderId = req.query.order_id;
+      try {
+        const paymentDetails = await fetch(
+          `https://api.mercadopago.com/v1/payments/${testPaymentId}`,
+          { headers: { 'Authorization': `Bearer ${MP_ACCESS_TOKEN}` } }
+        );
+        if (!paymentDetails.ok) {
+          const errText = await paymentDetails.text().catch(() => '');
+          console.error('[Webhook][TEST][GET] mp fetch failed', { status: paymentDetails.status, body: errText });
+          return res.status(200).json({ received: true, note: 'mp fetch failed (test-get)' });
+        }
+        const payment = await paymentDetails.json();
+        const orderId = testOrderId || payment.external_reference;
+        let orderStatus = 'pending';
+        if (payment.status === 'approved') orderStatus = 'processing';
+        if (payment.status === 'rejected' || payment.status === 'cancelled') orderStatus = 'cancelled';
+
+        const { error } = await supabase
+          .from('orders')
+          .update({
+            status: orderStatus,
+            payment_id: String(testPaymentId),
+            payment_status: payment.status,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', orderId);
+
+        if (error) {
+          console.error('[Webhook][TEST][GET] db update failed', error);
+          return res.status(200).json({ received: true, error: 'db update failed (test-get)' });
+        }
+        return res.status(200).json({ success: true, orderId, status: orderStatus, test: true });
+      } catch (e) {
+        console.error('[Webhook][TEST][GET] exception', e);
+        return res.status(200).json({ received: true, error: 'exception (test-get)' });
+      }
+    }
+
+    // Soporte para GET con topic/id (fallback)
+    const topic = req.query?.topic || req.query?.type;
+    const idParam = req.query?.id;
+    if ((topic === 'payment' || topic === 'merchant_order') && idParam) {
+      try {
+        if (topic === 'payment') {
+          const pResp = await fetch(
+            `https://api.mercadopago.com/v1/payments/${idParam}`,
+            { headers: { 'Authorization': `Bearer ${MP_ACCESS_TOKEN}` } }
+          );
+          if (!pResp.ok) {
+            const txt = await pResp.text().catch(()=> '');
+            console.error('[Webhook][GET] payment fetch failed', { status: pResp.status, body: txt });
+            return res.status(200).json({ received: true, note: 'payment fetch failed (get)' });
+          }
+          const payment = await pResp.json();
+          const orderId = payment.external_reference;
+          let orderStatus = 'pending';
+          if (payment.status === 'approved') orderStatus = 'processing';
+          if (payment.status === 'rejected' || payment.status === 'cancelled') orderStatus = 'cancelled';
+
+          const { error } = await supabase
+            .from('orders')
+            .update({
+              status: orderStatus,
+              payment_id: String(idParam),
+              payment_status: payment.status,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', orderId);
+          if (error) {
+            console.error('[Webhook][GET] db update failed', error);
+            return res.status(200).json({ received: true, error: 'db update failed (get)' });
+          }
+          return res.status(200).json({ success: true, orderId, status: orderStatus, source: 'get-payment' });
+        }
+
+        if (topic === 'merchant_order') {
+          const moResp = await fetch(
+            `https://api.mercadopago.com/merchant_orders/${idParam}`,
+            { headers: { 'Authorization': `Bearer ${MP_ACCESS_TOKEN}` } }
+          );
+          if (!moResp.ok) {
+            const txt = await moResp.text().catch(()=> '');
+            console.error('[Webhook][GET] merchant_order fetch failed', { status: moResp.status, body: txt });
+            return res.status(200).json({ received: true, note: 'merchant_order fetch failed (get)' });
+          }
+          const mo = await moResp.json();
+          const orderId = mo.external_reference;
+          const payment = (mo.payments && mo.payments[0]) || null;
+          const paymentId = payment ? payment.id : null;
+          const paymentStatus = payment ? payment.status : 'pending';
+          let orderStatus = 'pending';
+          if (paymentStatus === 'approved') orderStatus = 'processing';
+          if (paymentStatus === 'rejected' || paymentStatus === 'cancelled') orderStatus = 'cancelled';
+
+          const { error } = await supabase
+            .from('orders')
+            .update({
+              status: orderStatus,
+              payment_id: paymentId ? String(paymentId) : null,
+              payment_status: paymentStatus,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', orderId);
+          if (error) {
+            console.error('[Webhook][GET] db update failed (merchant_order)', error);
+            return res.status(200).json({ received: true, error: 'db update failed (get-merchant_order)' });
+          }
+          return res.status(200).json({ success: true, orderId, status: orderStatus, source: 'get-merchant_order' });
+        }
+      } catch (e) {
+        console.error('[Webhook][GET] exception', e);
+        return res.status(200).json({ received: true, error: 'exception (get)' });
+      }
+    }
+
+    // Health-check
     return res.status(200).json({
       ok: true,
       message: 'Webhook activo',
@@ -56,7 +175,7 @@ export default async function handler(req, res) {
         'SUPABASE_ANON o VITE_SUPABASE_ANON': Boolean(SUPABASE_ANON_KEY),
         'MP_ACCESS o VITE_MP_ACCESS': Boolean(MP_ACCESS_TOKEN)
       },
-      allEnvKeys: Object.keys(process.env).filter(k => 
+      allEnvKeys: Object.keys(process.env).filter(k =>
         k.includes('SUPABASE') || k.includes('MP_') || k.includes('VITE')
       )
     });
