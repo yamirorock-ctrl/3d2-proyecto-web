@@ -15,7 +15,7 @@ const ChatAssistant: React.FC<ChatAssistantProps> = ({ products }) => {
     {
       id: 'welcome',
       role: 'model',
-      text: '¡Hola! 👋 Soy el asistente virtual de Tienda Moderna. ¿En qué puedo ayudarte hoy?',
+      text: '¡Hola! 👋 Soy el asistente virtual de 3D2. ¿En qué puedo ayudarte hoy?',
       timestamp: new Date()
     }
   ]);

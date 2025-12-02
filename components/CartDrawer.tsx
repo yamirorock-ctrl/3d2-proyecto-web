@@ -1,6 +1,9 @@
-import React from 'react';
-import { X, Trash2, ShoppingBag, ArrowRight } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { X, Trash2, ShoppingBag, ArrowRight, CreditCard } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { CartItem } from '../types';
+import SmartImage from './SmartImage';
+import { startMercadoPagoCheckout } from '../services/mercadoPago';
 
 interface CartDrawerProps {
   isOpen: boolean;
@@ -19,7 +22,35 @@ const CartDrawer: React.FC<CartDrawerProps> = ({
   onUpdateQuantity,
   onCheckout
 }) => {
-  const total = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+  const navigate = useNavigate();
+  const total = useMemo(() => items.reduce((sum, item) => sum + (item.price * item.quantity), 0), [items]);
+  const [mpLoading, setMpLoading] = useState(false);
+  const [mpError, setMpError] = useState<string | null>(null);
+  const mpPublicKey = (import.meta as any).env?.VITE_MP_PUBLIC;
+  const mpConfigured = !!mpPublicKey;
+
+  const handleMercadoPago = async () => {
+    if (items.length === 0) return;
+    if (!mpConfigured) {
+      setMpError('Falta VITE_MP_PUBLIC en .env.local');
+      return;
+    }
+    setMpError(null);
+    setMpLoading(true);
+    try {
+      const mpItems = items.map(i => ({
+        id: String(i.id),
+        title: i.name,
+        quantity: i.quantity,
+        unit_price: i.price
+      }));
+      await startMercadoPagoCheckout(mpItems);
+    } catch (e: any) {
+      setMpError(e.message || 'Error Mercado Pago');
+    } finally {
+      setMpLoading(false);
+    }
+  };
 
   if (!isOpen) return null;
 
@@ -65,10 +96,11 @@ const CartDrawer: React.FC<CartDrawerProps> = ({
               items.map((item) => (
                 <div key={item.id} className="flex gap-4 group">
                   <div className="h-24 w-24 flex-shrink-0 overflow-hidden rounded-xl border border-gray-200">
-                    <img
+                    <SmartImage
                       src={item.image}
                       alt={item.name}
                       className="h-full w-full object-cover"
+                      showError
                     />
                   </div>
 
@@ -121,14 +153,25 @@ const CartDrawer: React.FC<CartDrawerProps> = ({
                 <p>${total.toFixed(2)}</p>
               </div>
               <p className="mt-0.5 text-sm text-slate-500">
-                Envío e impuestos calculados al pagar.
+                Envío calculado al finalizar compra.
               </p>
-              <button
-                onClick={onCheckout}
-                className="w-full flex items-center justify-center gap-2 rounded-xl border border-transparent bg-indigo-600 px-6 py-3 text-base font-medium text-white shadow-lg hover:bg-indigo-700 transition-all active:scale-[0.98]"
-              >
-                Pagar Ahora <ArrowRight size={18} />
-              </button>
+              <div className="space-y-3">
+                <button
+                  onClick={() => {
+                    onClose();
+                    navigate('/checkout');
+                  }}
+                  className="w-full flex items-center justify-center gap-2 rounded-xl border border-transparent bg-indigo-600 px-6 py-3 text-base font-medium text-white shadow-lg hover:bg-indigo-700 transition-all active:scale-[0.98]"
+                >
+                  Finalizar Compra <ArrowRight size={18} />
+                </button>
+                <button
+                  onClick={onClose}
+                  className="w-full text-sm text-slate-600 hover:text-slate-900"
+                >
+                  Continuar Comprando
+                </button>
+              </div>
             </div>
           )}
         </div>

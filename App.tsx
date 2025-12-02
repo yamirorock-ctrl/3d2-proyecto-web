@@ -1,17 +1,25 @@
 import React, { useState, useEffect } from 'react';
-import { Product, CartItem, ViewState } from './types';
+import { Product, CartItem, ViewState, Order } from './types';
 import Navbar from './components/Navbar';
 import ProductCard from './components/ProductCard';
 import CartDrawer from './components/CartDrawer';
 import ChatAssistant from './components/ChatAssistant';
+import CheckoutModal from './components/CheckoutModal';
+import Checkout from './components/Checkout';
+import OrderSuccess from './components/OrderSuccess';
+import OrderFailure from './components/OrderFailure';
+import OrderTracking from './components/OrderTracking';
+import OrdersManagement from './components/OrdersManagement';
 import AdminPage from './components/AdminPage';
 import AdminLogin from './components/AdminLogin';
 import Register from './components/Register';
 import UserLogin from './components/UserLogin';
+import CustomOrderForm, { CustomOrder } from './components/CustomOrderForm';
 import { getCurrentUser, clearCurrentUser } from './utils/auth';
 import AdminGuard from './components/AdminGuard';
 import { Routes, Route, useNavigate } from 'react-router-dom';
 import { CheckCircle2, ArrowLeft, Mail, Phone } from 'lucide-react';
+import { getAllProductsFromSupabase } from './services/supabaseService';
 
 // Updated Product Data for 3D Printing and Laser Cutting
 const DEFAULT_PRODUCTS: Product[] = [
@@ -83,6 +91,15 @@ const DEFAULT_PRODUCTS: Product[] = [
 
 const App: React.FC = () => {
   const [cart, setCart] = useState<CartItem[]>([]);
+  const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
+  const [orders, setOrders] = useState<Order[]>(() => {
+    try {
+      const saved = localStorage.getItem('orders');
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      return [];
+    }
+  });
   const [products, setProducts] = useState<Product[]>(() => {
     try {
       const raw = localStorage.getItem('products');
@@ -95,7 +112,8 @@ const App: React.FC = () => {
   const navigate = useNavigate();
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [view, setView] = useState<ViewState>(ViewState.HOME);
-  const [selectedCategory, setSelectedCategory] = useState<string>('');
+  const [selectedCategory, setSelectedCategory] = useState<string>('Destacados');
+  const [searchQuery, setSearchQuery] = useState<string>('');
   const [availableCategories, setAvailableCategories] = useState<string[]>(() => {
     try {
       const fromStorage = localStorage.getItem('categories');
@@ -107,33 +125,277 @@ const App: React.FC = () => {
     }
   });
   const [currentUser, setCurrentUser] = useState<string | null>(() => getCurrentUser());
+  const [customOrders, setCustomOrders] = useState<CustomOrder[]>(() => {
+    try {
+      const saved = localStorage.getItem('customOrders');
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      return [];
+    }
+  });
+  const [cartNotice, setCartNotice] = useState<string | null>(null);
 
-  // Load cart from local storage
+  // Load cart from local storage with sanitization to avoid phantom items
   useEffect(() => {
     const savedCart = localStorage.getItem('cart');
     if (savedCart) {
-      setCart(JSON.parse(savedCart));
+      try {
+        const parsed: CartItem[] = JSON.parse(savedCart);
+        // Remove invalid entries, zero/negative quantities, and deduplicate by id
+        const seen = new Set<number>();
+        const sanitized = parsed
+          .filter(i => i && typeof i.id === 'number' && typeof i.quantity === 'number' && i.quantity > 0)
+          .map(i => ({ ...i, quantity: Math.max(1, i.quantity) }))
+          .filter(i => {
+            if (seen.has(i.id)) return false;
+            seen.add(i.id);
+            return true;
+          });
+        setCart(sanitized);
+        if (sanitized.length !== parsed.length) {
+          // Persist sanitized cart to avoid reappearing items
+          localStorage.setItem('cart', JSON.stringify(sanitized));
+          setCartNotice('Ajustamos tu carrito para corregir items inválidos o duplicados.');
+          setTimeout(() => setCartNotice(null), 5000);
+        }
+      } catch {
+        // Corrupted cart; reset
+        localStorage.removeItem('cart');
+        setCart([]);
+        setCartNotice('Se reinició el carrito por datos corruptos en el navegador.');
+        setTimeout(() => setCartNotice(null), 5000);
+      }
     }
   }, []);
 
+  // When products load/update, enforce stock constraints on cart items to avoid stale phantom entries
+  useEffect(() => {
+    if (!products || products.length === 0) return;
+    setCart(prev => {
+      const productById = new Map(products.map(p => [p.id, p] as const));
+      const next = prev.filter(item => productById.has(item.id)).map(item => {
+        const p = productById.get(item.id)!;
+        const maxQty = typeof p.stock === 'number' ? Math.max(1, p.stock) : item.quantity;
+        return { ...item, quantity: Math.min(item.quantity, maxQty) };
+      });
+      if (next.length !== prev.length || next.some((n, i) => n.quantity !== prev[i]?.quantity)) {
+        setCartNotice('Actualizamos tu carrito según disponibilidad y catálogo.');
+        setTimeout(() => setCartNotice(null), 5000);
+      }
+      try { localStorage.setItem('cart', JSON.stringify(next)); } catch {}
+      return next;
+    });
+  }, [products]);
+
+  // Escuchar evento global para limpiar carrito (por ejemplo, desde OrderSuccess)
+  useEffect(() => {
+    const handler = () => {
+      setCart([]);
+      try { localStorage.removeItem('cart'); } catch {}
+    };
+    window.addEventListener('cart:clear', handler);
+    return () => window.removeEventListener('cart:clear', handler);
+  }, []);
+
+  // Sincronizar productos desde Supabase (multi navegador) + Realtime
+  useEffect(() => {
+    const syncFromSupabase = async () => {
+      try {
+        const url = (import.meta as any).env?.VITE_SUPABASE_URL;
+        const key = (import.meta as any).env?.VITE_SUPABASE_ANON;
+        if (!url || !key) return; // Supabase no configurado
+        
+        const res = await getAllProductsFromSupabase();
+        if (res.success && res.products) {
+          if (res.products.length > 0) {
+            // Normalizar images antes de usar
+            const normalizedProducts = res.products.map(p => {
+              if (p.images && Array.isArray(p.images)) {
+                p.images = p.images.map((img: any) => {
+                  if (typeof img === 'string') {
+                    try {
+                      return JSON.parse(img);
+                    } catch {
+                      return img;
+                    }
+                  }
+                  return img;
+                });
+              }
+              return p;
+            });
+            
+            console.log('[STATE] incoming normalizedProducts length=', normalizedProducts.length);
+            // Evitar re-render si no cambian
+            try {
+              const current = JSON.stringify(products);
+              const incoming = JSON.stringify(normalizedProducts);
+              if (current !== incoming) {
+                console.log('[STATE] setProducts triggered');
+                setProducts(normalizedProducts);
+              }
+            } catch {
+              console.log('[STATE] setProducts fallback triggered');
+              setProducts(normalizedProducts);
+            }
+            // Recalcular categorías sólo desde remotos + existentes locales
+            try {
+              const remoteCats = Array.from(new Set(normalizedProducts.map(p => p.category).filter(Boolean)));
+              const prevCatsRaw = localStorage.getItem('categories');
+              const prevCats = prevCatsRaw ? JSON.parse(prevCatsRaw) as string[] : [];
+              const merged = Array.from(new Set([...prevCats, ...remoteCats]));
+              console.log('[STATE] incoming categories count=', merged.length);
+              // Evitar re-render si no cambian
+              try {
+                const currentCats = JSON.stringify(availableCategories);
+                const incomingCats = JSON.stringify(merged);
+                if (currentCats !== incomingCats) {
+                  console.log('[STATE] setAvailableCategories triggered');
+                  setAvailableCategories(merged);
+                }
+              } catch {
+                console.log('[STATE] setAvailableCategories fallback triggered');
+                setAvailableCategories(merged);
+              }
+            } catch {}
+          } else {
+            // Tabla vacía: conservar locales (fallback)
+            console.warn('Supabase sin productos, usando localStorage como fallback');
+          }
+        } else {
+          console.warn('Fallo al obtener productos de Supabase, usando localStorage');
+        }
+      } catch (e) {
+        console.warn('No se pudo sincronizar productos desde Supabase:', (e as Error).message);
+      }
+    };
+    syncFromSupabase();
+
+    // Realtime deshabilitado temporalmente para aislar error 301
+  }, []); // FIX: Agregar dependencias vacías para ejecutar solo una vez
+
+  // Exponer función manual de sincronización (puede ser llamada desde AdminPage vía evento global simple)
+  (window as any).__forceSyncProducts = async () => {
+    try {
+      const url = (import.meta as any).env?.VITE_SUPABASE_URL;
+      const key = (import.meta as any).env?.VITE_SUPABASE_ANON;
+      if (!url || !key) { alert('Supabase no configurado'); return; }
+      const res = await getAllProductsFromSupabase();
+      if (res.success && res.products && res.products.length) {
+        // Normalizar images antes de usar
+        const normalizedProducts = res.products.map(p => {
+          if (p.images && Array.isArray(p.images)) {
+            p.images = p.images.map((img: any) => {
+              if (typeof img === 'string') {
+                try {
+                  return JSON.parse(img);
+                } catch {
+                  return img;
+                }
+              }
+              return img;
+            });
+          }
+          return p;
+        });
+        
+        setProducts(normalizedProducts);
+        try {
+          const cats = Array.from(new Set(normalizedProducts.map(p => p.category).filter(Boolean)));
+          setAvailableCategories(cats);
+        } catch {}
+        alert('Sincronización desde Supabase completada');
+      } else {
+        alert('No se obtuvieron productos remotos');
+      }
+    } catch (e) {
+      alert('Error al sincronizar: ' + (e as Error).message);
+    }
+  };
+
   // Save cart to local storage
   useEffect(() => {
-    localStorage.setItem('cart', JSON.stringify(cart));
+    try {
+      localStorage.setItem('cart', JSON.stringify(cart));
+    } catch (e) {
+      if (e instanceof Error && e.name === 'QuotaExceededError') {
+        console.warn('LocalStorage lleno, limpiando datos antiguos...');
+        // Mantener solo los datos esenciales
+        localStorage.removeItem('session');
+        localStorage.removeItem('failedAttempts');
+        try {
+          localStorage.setItem('cart', JSON.stringify(cart));
+        } catch (e2) {
+          console.error('No se pudo guardar el carrito');
+        }
+      }
+    }
   }, [cart]);
 
   // Save products to local storage
   useEffect(() => {
-    localStorage.setItem('products', JSON.stringify(products));
+    try {
+      localStorage.setItem('products', JSON.stringify(products));
+    } catch (e) {
+      if (e instanceof Error && e.name === 'QuotaExceededError') {
+        console.warn('LocalStorage lleno al guardar productos');
+        alert('¡Atención! La memoria del navegador está llena. No se pueden guardar más productos. Intenta borrar algunos o usar URLs para las imágenes.');
+      }
+    }
   }, [products]);
+  // Save categories to local storage
+  useEffect(() => {
+    try {
+      localStorage.setItem('categories', JSON.stringify(availableCategories));
+    } catch (e) {
+      console.warn('Error al guardar categorías:', e);
+    }
+  }, [availableCategories]);
+
+
+  // Save custom orders to local storage
+  useEffect(() => {
+    try {
+      localStorage.setItem('customOrders', JSON.stringify(customOrders));
+    } catch (e) {
+      if (e instanceof Error && e.name === 'QuotaExceededError') {
+        console.warn('LocalStorage lleno al guardar pedidos personalizados');
+      }
+    }
+  }, [customOrders]);
+
+  // Save orders to local storage
+  useEffect(() => {
+    try {
+      localStorage.setItem('orders', JSON.stringify(orders));
+    } catch (e) {
+      if (e instanceof Error && e.name === 'QuotaExceededError') {
+        console.warn('LocalStorage lleno al guardar órdenes');
+      }
+    }
+  }, [orders]);
 
   const handleAddToCart = (product: Product) => {
+    // Validar stock antes de agregar
+    if (product.stock === 0) {
+      alert('Este producto está agotado');
+      return;
+    }
+
     setCart(prev => {
       const existing = prev.find(item => item.id === product.id);
+      
       if (existing) {
+        // Verificar si hay stock suficiente para agregar más
+        if (product.stock !== undefined && existing.quantity >= product.stock) {
+          alert(`Solo hay ${product.stock} unidades disponibles de este producto`);
+          return prev;
+        }
         return prev.map(item => 
           item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
         );
       }
+      
       return [...prev, { ...product, quantity: 1 }];
     });
     setIsCartOpen(true);
@@ -146,7 +408,15 @@ const App: React.FC = () => {
   const handleUpdateQuantity = (id: number, delta: number) => {
     setCart(prev => prev.map(item => {
       if (item.id === id) {
-        return { ...item, quantity: Math.max(1, item.quantity + delta) };
+        const newQuantity = item.quantity + delta;
+        
+        // Validar stock si está definido
+        if (item.stock !== undefined && newQuantity > item.stock) {
+          alert(`Solo hay ${item.stock} unidades disponibles`);
+          return item;
+        }
+        
+        return { ...item, quantity: Math.max(1, newQuantity) };
       }
       return item;
     }));
@@ -154,28 +424,80 @@ const App: React.FC = () => {
 
   const handleCheckout = () => {
     setIsCartOpen(false);
-    setView(ViewState.CHECKOUT);
-    // Simulate processing
-    setTimeout(() => {
-      setCart([]);
-      setView(ViewState.SUCCESS);
-    }, 2000);
+    setIsCheckoutOpen(true);
+  };
+
+  const handleConfirmOrder = (order: Order) => {
+    // Descontar stock de los productos
+    setProducts(prev => prev.map(product => {
+      const orderItem = order.items.find(item => item.id === product.id);
+      if (orderItem && product.stock !== undefined) {
+        return {
+          ...product,
+          stock: Math.max(0, product.stock - orderItem.quantity)
+        };
+      }
+      return product;
+    }));
+
+    setOrders(prev => [...prev, order]);
+    setCart([]); // Clear cart after order
+    console.log('Nueva orden confirmada:', order);
+    console.log('Stock actualizado');
+    // TODO: Enviar notificación por email al admin
   };
 
   // Product admin handlers
-  const handleAddProduct = (prod: Product) => {
-    setProducts(prev => {
-      const nextId = prev.length ? Math.max(...prev.map(p => p.id)) + 1 : 1;
-      return [...prev, { ...prod, id: nextId }];
-    });
+  const handleAddProduct = async (prod: Product) => {
+    const nextId = products.length ? Math.max(...products.map(p => p.id)) + 1 : 1;
+    const newProduct = { ...prod, id: nextId };
+    setProducts(prev => [...prev, newProduct]);
+    
+    // Sincronizar con Supabase automáticamente
+    try {
+      const { upsertProductToSupabase } = await import('./services/supabaseService');
+      await upsertProductToSupabase(newProduct);
+      console.log('[Realtime] Producto agregado a Supabase');
+    } catch (e) {
+      console.warn('[Realtime] Error al agregar a Supabase:', (e as Error).message);
+    }
   };
 
-  const handleEditProduct = (prod: Product) => {
+  const handleEditProduct = async (prod: Product) => {
     setProducts(prev => prev.map(p => p.id === prod.id ? prod : p));
+    
+    // Sincronizar con Supabase automáticamente
+    try {
+      const { upsertProductToSupabase } = await import('./services/supabaseService');
+      await upsertProductToSupabase(prod);
+      console.log('[Realtime] Producto editado en Supabase');
+    } catch (e) {
+      console.warn('[Realtime] Error al editar en Supabase:', (e as Error).message);
+    }
   };
 
-  const handleDeleteProduct = (id: number) => {
+  const handleDeleteProduct = async (id: number) => {
     setProducts(prev => prev.filter(p => p.id !== id));
+    
+    // Sincronizar con Supabase automáticamente
+    try {
+      const { createClient } = await import('@supabase/supabase-js');
+      const url = (import.meta as any).env?.VITE_SUPABASE_URL;
+      const key = (import.meta as any).env?.VITE_SUPABASE_ANON;
+      if (url && key) {
+        const supabase = createClient(url, key);
+        await supabase.from('products').delete().eq('id', id);
+        console.log('[Realtime] Producto eliminado de Supabase');
+      }
+    } catch (e) {
+      console.warn('[Realtime] Error al eliminar de Supabase:', (e as Error).message);
+    }
+  };
+
+  const handleCustomOrder = (order: CustomOrder) => {
+    setCustomOrders(prev => [...prev, order]);
+    console.log('Nuevo pedido personalizado:', order);
+    // Aquí puedes agregar lógica adicional como enviar email
   };
 
   const renderContent = () => {
@@ -223,6 +545,23 @@ const App: React.FC = () => {
             <div className="absolute inset-0 bg-gradient-to-r from-slate-950 via-slate-900/90 to-transparent"></div>
           </div>
           
+          {/* Animated 3D Logo Chip */}
+          <div className="absolute right-8 top-1/2 -translate-y-1/2 z-10 hidden lg:block">
+            <div className="relative w-64 h-64 animate-float">
+              <div className="absolute inset-0 animate-spin-slow">
+                <div className="w-full h-full rounded-3xl bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 shadow-2xl shadow-indigo-500/50 flex items-center justify-center transform perspective-1000 rotate-y-12 p-8">
+                  <img 
+                    src="/LOGO.jpg" 
+                    alt="3D² Logo" 
+                    className="w-full h-full object-contain drop-shadow-2xl"
+                  />
+                </div>
+              </div>
+              {/* Glow effect */}
+              <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 blur-xl opacity-50 animate-pulse"></div>
+            </div>
+          </div>
+          
           <div className="relative z-10 max-w-3xl">
             <span className="inline-block px-3 py-1 bg-indigo-600/30 border border-indigo-400/30 rounded-full text-indigo-200 text-sm font-bold mb-4 backdrop-blur-sm tracking-wide uppercase">
               Impresión 3D & Corte Láser
@@ -236,10 +575,16 @@ const App: React.FC = () => {
               Creamos objetos únicos con tecnología 3D y precisión láser para ti.
             </p>
             <div className="flex flex-wrap gap-4">
-              <button className="px-8 py-4 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-900/20">
+              <button 
+                onClick={() => setSelectedCategory('__all__')}
+                className="px-8 py-4 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-900/20"
+              >
                 Ver Catálogo
               </button>
-              <button className="px-8 py-4 bg-white/5 backdrop-blur-md text-white border border-white/10 rounded-xl font-bold hover:bg-white/10 transition-all">
+              <button 
+                onClick={() => setSelectedCategory('Personalizados')}
+                className="px-8 py-4 bg-white/5 backdrop-blur-md text-white border border-white/10 rounded-xl font-bold hover:bg-white/10 transition-all"
+              >
                 Pedido Personalizado
               </button>
             </div>
@@ -256,7 +601,8 @@ const App: React.FC = () => {
             
             {/* Category Filter */}
             <div className="flex gap-2 overflow-x-auto pb-2 sm:pb-0 w-full sm:w-auto no-scrollbar">
-              <button onClick={()=>setSelectedCategory('')} className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap ${selectedCategory===''? 'bg-slate-900 text-white' : 'bg-white border border-gray-200 text-slate-600 hover:bg-gray-50'}`}>Todo</button>
+              <button onClick={()=>setSelectedCategory('Destacados')} className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap ${selectedCategory==='Destacados'? 'bg-slate-900 text-white' : 'bg-white border border-gray-200 text-slate-600 hover:bg-gray-50'}`}>Destacados</button>
+              <button onClick={()=>setSelectedCategory('__all__')} className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap ${selectedCategory==='__all__'? 'bg-slate-900 text-white' : 'bg-white border border-gray-200 text-slate-600 hover:bg-gray-50'}`}>Todo</button>
               {availableCategories.map(cat => (
                 <button key={cat} onClick={()=>setSelectedCategory(cat)} className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap ${selectedCategory===cat? 'bg-slate-900 text-white' : 'bg-white border border-gray-200 text-slate-600 hover:bg-gray-50'}`}>{cat}</button>
               ))}
@@ -264,16 +610,57 @@ const App: React.FC = () => {
           </div>
           
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-            {(
+            {selectedCategory === 'Personalizados' ? (
+              <div className="col-span-full">
+                <CustomOrderForm onSubmit={handleCustomOrder} />
+              </div>
+            ) : (
               selectedCategory 
-                ? products.filter(p => {
-                    // Si es filtro de tecnología (3D o Láser), buscar en la categoría
-                    if (selectedCategory === '3D') return p.category.includes('3D');
-                    if (selectedCategory === 'Láser') return p.category.includes('Láser');
-                    // Si no, filtro exacto por categoría
+                ? products
+                  .filter(p => {
+                    // Si es filtro de tecnología (3D o Láser), usar campo technology
+                    // Fallback: inferir desde la categoría para productos antiguos
+                    if (selectedCategory === '3D') {
+                      const inferred3D = (p.category || '').toUpperCase().includes('3D');
+                      const match = p.technology === '3D' || (!p.technology && inferred3D);
+                      console.log(`Producto: ${p.name} | Tecnología: ${p.technology} | Inferred3D: ${inferred3D} | Match 3D: ${match}`);
+                      return match;
+                    }
+                    if (selectedCategory === 'Láser') {
+                      const inferredLaser = (p.category || '').toLowerCase().includes('láser') || (p.category || '').toLowerCase().includes('laser');
+                      const match = p.technology === 'Láser' || (!p.technology && inferredLaser);
+                      console.log(`Producto: ${p.name} | Tecnología: ${p.technology} | InferredLaser: ${inferredLaser} | Match Láser: ${match}`);
+                      return match;
+                    }
+                    if (selectedCategory === 'Destacados') {
+                      return !!p.featured;
+                    }
+                    if (selectedCategory === '__all__') {
+                      return true;
+                    }
+                    // Para categorías normales, filtro exacto por categoría
                     return p.category === selectedCategory;
                   })
+                  .filter(p => {
+                    if (!searchQuery.trim()) return true;
+                    const q = searchQuery.toLowerCase();
+                    return (
+                      p.name.toLowerCase().includes(q) ||
+                      (p.description || '').toLowerCase().includes(q) ||
+                      (p.category || '').toLowerCase().includes(q)
+                    );
+                  })
                 : products
+                  .filter(p => !!p.featured)
+                  .filter(p => {
+                    if (!searchQuery.trim()) return true;
+                    const q = searchQuery.toLowerCase();
+                    return (
+                      p.name.toLowerCase().includes(q) ||
+                      (p.description || '').toLowerCase().includes(q) ||
+                      (p.category || '').toLowerCase().includes(q)
+                    );
+                  })
             ).map(product => (
               <ProductCard 
                 key={product.id} 
@@ -289,16 +676,25 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 font-sans selection:bg-indigo-100 selection:text-indigo-900">
+      {cartNotice && (
+        <div className="bg-yellow-100 text-yellow-800 text-xs sm:text-sm p-2 text-center">
+          {cartNotice}
+        </div>
+      )}
+      {(!(import.meta as any).env?.VITE_SUPABASE_URL || !(import.meta as any).env?.VITE_SUPABASE_ANON) && (
+        <div className="bg-yellow-100 text-yellow-800 text-xs sm:text-sm p-2 text-center">
+          Aviso: Supabase no está configurado en este build. Se usarán datos locales. Pulsa "Forzar Sync Supabase" en Admin si ya configuraste las variables y redeployaste.
+        </div>
+      )}
       <Navbar 
         cartCount={cart.reduce((acc, item) => acc + item.quantity, 0)} 
         onOpenCart={() => setIsCartOpen(true)}
         onGoHome={() => { setView(ViewState.HOME); navigate('/'); }}
         onOpenAdmin={() => navigate('/admin')}
-        onRegister={() => navigate('/register')}
-        onLogin={() => navigate('/login')}
         currentUser={currentUser}
         onLogoutUser={() => { clearCurrentUser(); setCurrentUser(null); }}
         onCategorySelect={(cat) => { setView(ViewState.HOME); navigate('/'); setSelectedCategory(cat); }}
+        onSearch={(q) => { setSearchQuery(q); setView(ViewState.HOME); navigate('/'); }}
       />
 
       <main className="pt-4">
@@ -307,6 +703,15 @@ const App: React.FC = () => {
           <Route path="register" element={<Register />} />
           <Route path="login" element={<UserLogin onLogin={(u)=>setCurrentUser(u)} />} />
           <Route path="admin/login" element={<AdminLogin />} />
+          <Route path="checkout" element={
+            <Checkout 
+              cart={cart} 
+              onClearCart={() => setCart([])} 
+            />
+          } />
+          <Route path="order-success" element={<OrderSuccess />} />
+          <Route path="order-failure" element={<OrderFailure />} />
+          <Route path="order-tracking" element={<OrderTracking />} />
           <Route path="admin" element={
             <AdminGuard>
               <AdminPage 
@@ -315,6 +720,11 @@ const App: React.FC = () => {
                 onEdit={handleEditProduct}
                 onDelete={handleDeleteProduct}
               />
+            </AdminGuard>
+          } />
+          <Route path="admin/orders" element={
+            <AdminGuard>
+              <OrdersManagement />
             </AdminGuard>
           } />
         </Routes>
@@ -327,6 +737,14 @@ const App: React.FC = () => {
         onRemoveItem={handleRemoveItem}
         onUpdateQuantity={handleUpdateQuantity}
         onCheckout={handleCheckout}
+      />
+
+      <CheckoutModal
+        isOpen={isCheckoutOpen}
+        onClose={() => setIsCheckoutOpen(false)}
+        items={cart}
+        total={cart.reduce((sum, item) => sum + (item.price * item.quantity), 0)}
+        onConfirmOrder={handleConfirmOrder}
       />
 
       <ChatAssistant products={products} />
@@ -347,7 +765,25 @@ const App: React.FC = () => {
               <h4 className="font-bold text-slate-900 mb-4">Enlaces Rápidos</h4>
               <ul className="space-y-2 text-sm text-slate-500">
                 <li><a href="#" className="hover:text-indigo-600 transition-colors">Catálogo</a></li>
-                <li><a href="#" className="hover:text-indigo-600 transition-colors">Trabajos a Pedido</a></li>
+                <li>
+                  <a 
+                    href="https://www.instagram.com/3d2_creart/" 
+                    target="_blank" 
+                    rel="noopener noreferrer" 
+                    className="hover:text-indigo-600 transition-colors"
+                  >
+                    Instagram
+                  </a>
+                </li>
+                <li>
+                  {(() => {
+                    const num = (import.meta as any).env?.VITE_WHATSAPP_NUMBER || '1234567890';
+                    const href = `https://wa.me/${num}`;
+                    return (
+                      <a href={href} target="_blank" rel="noopener noreferrer" className="hover:text-indigo-600 transition-colors">Trabajos a Pedido</a>
+                    );
+                  })()}
+                </li>
                 <li><a href="#" className="hover:text-indigo-600 transition-colors">Preguntas Frecuentes</a></li>
               </ul>
             </div>
@@ -366,7 +802,7 @@ const App: React.FC = () => {
                {/* Social Icons */}
                <div className="flex items-center justify-center md:justify-end gap-3">
                   <a 
-                    href="https://instagram.com" 
+                    href="https://www.instagram.com/3d2_creart/" 
                     target="_blank" 
                     rel="noopener noreferrer"
                     className="p-2 bg-gray-100 rounded-full text-slate-600 hover:bg-gradient-to-br hover:from-purple-500 hover:via-pink-500 hover:to-red-500 hover:text-white transition-all duration-300 transform hover:-translate-y-1 shadow-sm"
@@ -392,7 +828,7 @@ const App: React.FC = () => {
                   </a>
 
                   <a 
-                    href="https://wa.me/1234567890" 
+                    href={(import.meta as any).env?.VITE_WHATSAPP_NUMBER ? `https://wa.me/${(import.meta as any).env.VITE_WHATSAPP_NUMBER}` : 'https://wa.me/1234567890'} 
                     target="_blank" 
                     rel="noopener noreferrer"
                     className="p-2 bg-gray-100 rounded-full text-slate-600 hover:bg-green-500 hover:text-white transition-all duration-300 transform hover:-translate-y-1 shadow-sm"
@@ -407,6 +843,7 @@ const App: React.FC = () => {
           </div>
           <div className="border-t border-gray-100 pt-8 flex flex-col md:flex-row justify-between items-center text-slate-400 text-sm">
             <p>&copy; 2025 3D2 Store. Todos los derechos reservados.</p>
+            <span className="mt-2 md:mt-0 text-xs text-slate-400">Build: {(import.meta as any).env?.APP_VERSION}</span>
             <div className="flex gap-4 mt-2 md:mt-0">
                <a href="#" className="hover:text-indigo-600">Privacidad</a>
                <a href="#" className="hover:text-indigo-600">Términos</a>

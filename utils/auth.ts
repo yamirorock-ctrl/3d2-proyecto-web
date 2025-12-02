@@ -8,8 +8,110 @@ export async function hashPassword(password: string, salt = ''): Promise<string>
   return hashHex;
 }
 
+// Generate unique session token
+function generateSessionToken(): string {
+  return `${Date.now()}-${Math.random().toString(36).substring(2, 15)}`;
+}
+
+// Session management constants
+const MAX_ACTIVE_SESSIONS = 1; // Solo una sesión admin simultánea
+const SESSION_STORAGE_KEY = 'admin_sessions';
+const CURRENT_SESSION_KEY = 'admin_current_session';
+
+interface Session {
+  token: string;
+  createdAt: number;
+  lastActivity: number;
+  userAgent: string;
+}
+
+// Get all active sessions
+export function getActiveSessions(): Session[] {
+  try {
+    const data = localStorage.getItem(SESSION_STORAGE_KEY);
+    if (!data) return [];
+    const sessions: Session[] = JSON.parse(data);
+    // Filter out expired sessions (older than 7 days)
+    const now = Date.now();
+    const validSessions = sessions.filter(s => (now - s.lastActivity) < 7 * 24 * 60 * 60 * 1000);
+    if (validSessions.length !== sessions.length) {
+      localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(validSessions));
+    }
+    return validSessions;
+  } catch (e) {
+    return [];
+  }
+}
+
+// Create new session (returns false if limit reached)
+export function createSession(): { success: boolean; message?: string; replaced?: boolean } {
+  let sessions = getActiveSessions();
+  // Si ya hay una sesión activa, reemplazar la más antigua automáticamente
+  let replaced = false;
+  if (sessions.length >= MAX_ACTIVE_SESSIONS) {
+    // Ordenar por createdAt asc y quitar la primera (más vieja)
+    sessions.sort((a,b) => a.createdAt - b.createdAt);
+    sessions = sessions.slice(1); // descartar la más antigua
+    replaced = true;
+  }
+  const newSession: Session = {
+    token: generateSessionToken(),
+    createdAt: Date.now(),
+    lastActivity: Date.now(),
+    userAgent: navigator.userAgent.substring(0, 100)
+  };
+  sessions.push(newSession);
+  localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(sessions));
+  sessionStorage.setItem(CURRENT_SESSION_KEY, newSession.token);
+  return { success: true, replaced };
+}
+
+// Update session activity
+export function updateSessionActivity(): void {
+  const currentToken = sessionStorage.getItem(CURRENT_SESSION_KEY);
+  if (!currentToken) return;
+  
+  const sessions = getActiveSessions();
+  const session = sessions.find(s => s.token === currentToken);
+  if (session) {
+    session.lastActivity = Date.now();
+    localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(sessions));
+  }
+}
+
+// Validate current session
+export function isSessionValid(): boolean {
+  const currentToken = sessionStorage.getItem(CURRENT_SESSION_KEY);
+  if (!currentToken) return false;
+  
+  const sessions = getActiveSessions();
+  return sessions.some(s => s.token === currentToken);
+}
+
+// Close current session
+export function closeCurrentSession(): void {
+  const currentToken = sessionStorage.getItem(CURRENT_SESSION_KEY);
+  if (!currentToken) return;
+  
+  const sessions = getActiveSessions();
+  const filtered = sessions.filter(s => s.token !== currentToken);
+  localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(filtered));
+  sessionStorage.removeItem(CURRENT_SESSION_KEY);
+}
+
+// Close all sessions (for logout)
+export function closeAllSessions(): void {
+  localStorage.removeItem(SESSION_STORAGE_KEY);
+  sessionStorage.removeItem(CURRENT_SESSION_KEY);
+}
+
 // Set authenticated state. If `persistent` is true, use localStorage and optionally set expiry (in days).
-export function setAuthenticated(persistent = false, days?: number) {
+export function setAuthenticated(persistent = false, days?: number): { success: boolean; message?: string; replaced?: boolean } {
+  const sessionResult = createSession();
+  if (!sessionResult.success) {
+    return sessionResult;
+  }
+  
   if (persistent) {
     localStorage.setItem('admin_authenticated', '1');
     if (days && days > 0) {
@@ -25,9 +127,12 @@ export function setAuthenticated(persistent = false, days?: number) {
     sessionStorage.removeItem('admin_auth_expires');
     // do not touch localStorage so persistent login remains if present
   }
+  
+  return { success: true, replaced: sessionResult.replaced };
 }
 
 export function clearAuthenticated() {
+  closeCurrentSession();
   try {
     sessionStorage.removeItem('admin_authenticated');
   } catch (e) {}
@@ -38,6 +143,15 @@ export function clearAuthenticated() {
 }
 
 export function isAuthenticated(): boolean {
+  // Validate session first
+  if (!isSessionValid()) {
+    clearAuthenticated();
+    return false;
+  }
+  
+  // Update activity
+  updateSessionActivity();
+  
   // sessionStorage takes precedence
   try {
     if (sessionStorage.getItem('admin_authenticated') === '1') return true;

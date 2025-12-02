@@ -1,11 +1,11 @@
 import { GoogleGenAI, Chat } from "@google/genai";
 import { Product } from "../types";
 
-const apiKey = process.env.API_KEY || '';
+const apiKey = import.meta.env.VITE_GEMINI_API_KEY || '';
 let ai: GoogleGenAI | null = null;
 
-// Initialize only if key exists
-if (apiKey) {
+// Initialize only if key exists and is not placeholder
+if (apiKey && apiKey !== 'TU_API_KEY_AQUI') {
   ai = new GoogleGenAI({ apiKey });
 }
 

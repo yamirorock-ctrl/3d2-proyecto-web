@@ -1,5 +1,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Product, ProductImage } from '../types';
+import SmartImage from './SmartImage';
+import { saveFile } from '../services/imageStore';
+import { uploadToCloudinary } from '../services/cloudinary';
+import { uploadToSupabase, upsertProductToSupabase } from '../services/supabaseService';
+import { compressImage } from '../utils/imageCompression';
+import { getBlob } from '../services/imageStore';
 
 interface Props {
   onClose: () => void;
@@ -18,38 +24,50 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
       category: '',
       image: '',
       images: [],
-      description: ''
+      description: '',
+      featured: false
     };
     if (product) {
+      // Normalizar images: convertir strings JSON a objetos
+      let normalizedImages = product.images && product.images.length > 0 
+        ? product.images.map(img => {
+            if (typeof img === 'string') {
+              try {
+                return JSON.parse(img);
+              } catch {
+                return img;
+              }
+            }
+            return img;
+          })
+        : (product.image ? [{ url: product.image }] : []);
+      
       return {
         ...product,
-        images: product.images && product.images.length > 0 ? product.images : (product.image ? [{ url: product.image }] : [])
+        images: normalizedImages
       };
     }
     return base;
   });
 
   const [categoryMode, setCategoryMode] = useState<'select'|'other'>('select');
-  const [technology, setTechnology] = useState<'3D'|'Láser'>(() => {
-    if (product?.category.includes('3D')) return '3D';
-    if (product?.category.includes('Láser')) return 'Láser';
-    return '3D';
-  });
+  const [technology, setTechnology] = useState<'3D'|'Láser'>(() => (product?.technology ?? '3D'));
   const uniqueCats = useMemo(() => Array.from(new Set((categories || []).filter(Boolean))), [categories]);
   const [localCats, setLocalCats] = useState<string[]>(uniqueCats);
-  const [previewSrc, setPreviewSrc] = useState<string>(product?.images?.[0]?.url ?? product?.image ?? '');
+  const [previewSrc, setPreviewSrc] = useState<string>(product?.images?.[0]?.url ?? (product?.images?.[0]?.storageKey ? `lf:${product.images[0].storageKey}` : (product?.image ?? '')));
   const [newImgUrl, setNewImgUrl] = useState('');
   const [newImgColor, setNewImgColor] = useState('');
-
-  // Sync incoming product
-  useEffect(() => {
-    if (product) {
-      setForm({
-        ...product,
-        images: product.images && product.images.length > 0 ? product.images : (product.image ? [{ url: product.image }] : [])
-      });
-    }
-  }, [product]);
+  const [newCategoryText, setNewCategoryText] = useState('');
+  const [uploadTarget, setUploadTarget] = useState<'local' | 'cloudinary' | 'supabase'>(() => {
+    const imgs = product?.images || [];
+    if (imgs.some(i => i.url && i.url.includes('/storage/v1/object'))) return 'supabase';
+    if (imgs.some(i => i.storageKey)) return 'local';
+    return 'supabase';
+  });
+  const [supabaseBucket, setSupabaseBucket] = useState('product-images');
+  const [isCompressing, setIsCompressing] = useState(false);
+  const [compressionEnabled, setCompressionEnabled] = useState(true);
+  const [isMigratingProduct, setIsMigratingProduct] = useState(false);
 
   // Category mode + localCats sync
   useEffect(() => {
@@ -73,14 +91,14 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
 
   // Preview principal
   useEffect(() => {
-    const primary = form.images && form.images.length > 0 ? form.images[0].url : form.image;
+    const primaryImg = form.images && form.images.length > 0 ? form.images[0] : undefined;
+    const primary = primaryImg?.url ?? (primaryImg?.storageKey ? `lf:${primaryImg.storageKey}` : form.image);
     setPreviewSrc(primary ?? '');
   }, [form.image, form.images]);
 
   const handleAddCategory = () => {
-    const name = prompt('Nombre de la nueva categoría:');
-    if (!name) return;
-    const clean = name.trim();
+    const name = (newCategoryText || form.category || '').trim();
+    const clean = name;
     if (!clean) return alert('Nombre inválido');
     try {
       const raw = localStorage.getItem('categories');
@@ -90,6 +108,7 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
       setLocalCats(prev => Array.from(new Set([...prev, clean])));
       setCategoryMode('select');
       setForm(prev => ({ ...prev, category: clean }));
+      setNewCategoryText('');
     } catch (e) { console.error(e); }
   };
 
@@ -119,28 +138,125 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
   };
 
   // Images helpers
-  const handleFile = (file?: File) => {
+  const handleFile = async (file?: File, opts?: { color?: string; batch?: boolean }) => {
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = reader.result as string;
-      setForm(prev => ({
-        ...prev,
-        images: [...(prev.images || []), { url: result, color: newImgColor || undefined }]
-      }));
+
+    if (!opts?.batch) setIsCompressing(true);
+
+    try {
+      // Siempre comprimir a WebP
+      let processedFile = file;
+      if (compressionEnabled) {
+        try {
+          processedFile = await compressImage(file, {
+            maxSizeMB: 0.5,
+            maxWidthOrHeight: 1920,
+            useWebWorker: true,
+            fileType: 'image/webp',
+            initialQuality: 0.8
+          });
+        } catch (compressionError) {
+          console.warn('Error al comprimir imagen, usando original:', compressionError);
+          processedFile = file;
+        }
+      }
+
+      // Validar tamaño después de compresión
+      if (processedFile.size > 2 * 1024 * 1024) {
+        alert('La imagen aún supera 2MB después de la compresión. Usa una imagen más pequeña o una URL externa.');
+        if (!opts?.batch) setIsCompressing(false);
+        return;
+      }
+
+      // Nombre único: product-{id}-{timestamp}.webp
+      let fileName = `product-${form.id}-${Date.now()}.webp`;
+
+      if (uploadTarget === 'local') {
+        const key = await saveFile(processedFile);
+        setForm(prev => ({
+          ...prev,
+          images: [...(prev.images || []), { storageKey: key, color: (opts?.color ?? newImgColor) || undefined }]
+        }));
+      } else if (uploadTarget === 'cloudinary') {
+        const url = await uploadToCloudinary(processedFile);
+        setForm(prev => ({
+          ...prev,
+          images: [...(prev.images || []), { url, color: (opts?.color ?? newImgColor) || undefined }]
+        }));
+      } else {
+        const envUrl = (import.meta as any).env?.VITE_SUPABASE_URL;
+        const envKey = (import.meta as any).env?.VITE_SUPABASE_ANON;
+        if (!envUrl || !envKey) {
+          alert('Supabase no está configurado. Define VITE_SUPABASE_URL y VITE_SUPABASE_ANON en tu entorno antes de usar este destino.');
+          if (!opts?.batch) setIsCompressing(false);
+          return;
+        }
+        // Subir con nombre único
+        const url = await uploadToSupabase(processedFile, supabaseBucket, fileName);
+        setForm(prev => ({
+          ...prev,
+          images: [...(prev.images || []), { url, color: (opts?.color ?? newImgColor) || undefined }]
+        }));
+      }
       setNewImgUrl('');
-      setNewImgColor('');
-    };
-    reader.readAsDataURL(file);
+      if (!opts?.batch) setNewImgColor('');
+    } catch (e) {
+      console.error(e);
+      alert((e as Error).message || 'No se pudo guardar la imagen.');
+    } finally {
+      if (!opts?.batch) setIsCompressing(false);
+    }
   };
 
-  const addImageByUrl = () => {
+  const handleFiles = async (files?: FileList | File[]) => {
+    if (!files || (files as FileList).length === 0) return;
+    const arr = Array.from(files as any);
+    const savedColor = newImgColor;
+    setIsCompressing(true);
+    try {
+      for (const f of arr) {
+        // Procesar secuencialmente para evitar picos de memoria
+        // Mantener mismo color para todo el lote
+        await handleFile(f, { color: savedColor, batch: true });
+      }
+    } finally {
+      setIsCompressing(false);
+      setNewImgColor('');
+    }
+  };
+
+  const addImageByUrl = async () => {
     const url = newImgUrl.trim();
     if (!url) {
       alert('Por favor ingresa una URL de imagen');
       return;
     }
-    console.log('Agregando imagen:', { url, color: newImgColor });
+    const allowedExt = ['.jpg', '.jpeg', '.png', '.webp', '.gif'];
+    const lower = url.toLowerCase();
+    const hasExt = allowedExt.some(ext => lower.includes(ext));
+    if (!hasExt) {
+      const proceed = confirm('La URL no parece terminar en una extensión de imagen (.jpg/.png/.webp). ¿Deseas intentar de todos modos?');
+      if (!proceed) return;
+    }
+    try {
+      const res = await fetch(url, { method: 'HEAD' });
+      const ct = res.headers.get('content-type') || '';
+      if (!ct.includes('image/')) {
+        alert('La URL no parece ser una imagen directa (content-type). Usa un enlace directo a .jpg/.png/.webp o sube el archivo.');
+        return;
+      }
+    } catch (e) {
+      console.warn('No se pudo verificar la URL (HEAD). Intentando agregar de todos modos.', e);
+    }
+    // Intento GET ligero opcional con abort para detectar accesibilidad sin bloquear por CORS
+    try {
+      const ac = new AbortController();
+      const t = setTimeout(() => ac.abort(), 2500);
+      await fetch(url, { method: 'GET', mode: 'cors', cache: 'no-store', signal: ac.signal });
+      clearTimeout(t);
+    } catch (e) {
+      console.warn('GET de prueba falló (posible CORS/hotlink). Se agregará igual y SmartImage mostrará error si no carga.', e);
+    }
     setForm(prev => ({
       ...prev,
       images: [...(prev.images || []), { url, color: newImgColor || undefined }]
@@ -190,30 +306,91 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
       alert('La categoría es obligatoria');
       return;
     }
-    // Agregar tecnología a la categoría si no la tiene
-    let finalCategoryWithTech = finalCategory;
-    if (!finalCategory.includes('3D') && !finalCategory.includes('Láser')) {
-      // Si la categoría no tiene tecnología, agregarla al final
-      finalCategoryWithTech = `${finalCategory} ${technology}`;
-    } else {
-      // Si ya tiene una tecnología, reemplazarla
-      finalCategoryWithTech = finalCategory.replace(/3D|Láser/g, technology);
-    }
-    form.category = finalCategoryWithTech;
+    form.technology = technology;
     if (form.images && form.images.length > 0) {
       form.image = form.images[0].url;
     }
+    if (typeof form.featured !== 'boolean') form.featured = false;
     if (!form.id) form.id = nextId ?? Date.now();
-    onSave(form);
+
+    // Guardar en Supabase si el destino es supabase
+    if (uploadTarget === 'supabase') {
+      import('../services/supabaseService').then(({ upsertProductToSupabase }) => {
+        upsertProductToSupabase(form).then(res => {
+          if (res.success) {
+            alert('Producto guardado en Supabase correctamente');
+            onSave(form);
+          } else {
+            alert('Error al guardar en Supabase: ' + (res.error || '')); 
+          }
+        });
+      });
+    } else {
+      onSave(form);
+    }
+    // No recargar ni navegar, solo actualizar estado
+  };
+
+  // Migrar imágenes del producto actual a Supabase
+  const migrateCurrentProductToSupabase = async () => {
+    if (!form || !form.images || form.images.length === 0) {
+      alert('Este producto no tiene imágenes para migrar.');
+      return;
+    }
+    setIsMigratingProduct(true);
+    try {
+      const updatedImages: ProductImage[] = [];
+      for (const img of form.images) {
+        if (img.url && img.url.startsWith('data:image')) {
+          try {
+            const res = await fetch(img.url);
+            const blob = await res.blob();
+            const fileName = `product-${form.id}-${Date.now()}.webp`;
+            const url = await uploadToSupabase(new File([blob], fileName, { type: blob.type || 'image/webp' }), supabaseBucket || 'product-images', fileName);
+            updatedImages.push({ url, color: img.color });
+          } catch {
+            updatedImages.push(img);
+          }
+        } else if (img.storageKey) {
+          try {
+            const blob = await getBlob(img.storageKey);
+            if (blob) {
+              const fileName = `product-${form.id}-${Date.now()}.webp`;
+              const url = await uploadToSupabase(new File([blob], fileName, { type: blob.type || 'image/webp' }), supabaseBucket || 'product-images', fileName);
+              updatedImages.push({ url, color: img.color });
+            } else {
+              updatedImages.push(img);
+            }
+          } catch {
+            updatedImages.push(img);
+          }
+        } else {
+          updatedImages.push(img);
+        }
+      }
+      const updatedProduct: Product = { ...form, images: updatedImages, image: updatedImages[0]?.url || form.image };
+      const res = await upsertProductToSupabase(updatedProduct);
+      if (!res.success) {
+        alert('Imágenes migradas, pero falló guardar el producto en Supabase: ' + (res.error || ''));
+      } else {
+        alert('Producto migrado a Supabase correctamente');
+      }
+      setForm(updatedProduct);
+    } catch (e) {
+      console.error(e);
+      alert('Error al migrar el producto a Supabase');
+    } finally {
+      setIsMigratingProduct(false);
+    }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4">
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
-      <form onSubmit={submit} onMouseDown={(e)=>e.stopPropagation()} onTouchStart={(e)=>e.stopPropagation()} className="relative z-10 bg-white rounded-2xl shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto p-6">
+      <form onSubmit={submit} onMouseDown={(e)=>e.stopPropagation()} onTouchStart={(e)=>e.stopPropagation()} className="relative z-10 bg-white rounded-2xl shadow-xl w-full max-w-[95vw] sm:max-w-2xl lg:max-w-4xl max-h-[90vh] overflow-y-auto p-4 sm:p-6">
         <div className="flex justify-between items-center mb-4 sticky top-0 bg-white pb-2 border-b">
-          <h3 className="text-lg font-bold">{product ? 'Editar Producto' : 'Nuevo Producto'}</h3>
-          <button type="button" onClick={onClose} className="text-slate-500">Cerrar</button>
+          <h3 className="text-base sm:text-lg font-bold">{product ? 'Editar Producto' : 'Nuevo Producto'}</h3>
+          <button type="button" onClick={onClose} className="text-slate-500 text-sm sm:text-base">Cerrar</button>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -221,11 +398,11 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
             <label className="block text-sm font-medium text-slate-700 mb-2">Tecnología</label>
             <div className="flex gap-4">
               <label className="flex items-center gap-2 cursor-pointer">
-                <input type="radio" name="technology" value="3D" checked={technology==='3D'} onChange={()=>setTechnology('3D')} className="text-indigo-600" />
+                <input type="radio" name="technology" value="3D" checked={technology==='3D'} onChange={()=>{setTechnology('3D'); console.log('Tecnología cambiada a: 3D');}} className="text-indigo-600" />
                 <span className="text-sm font-medium text-slate-700">Impresión 3D</span>
               </label>
               <label className="flex items-center gap-2 cursor-pointer">
-                <input type="radio" name="technology" value="Láser" checked={technology==='Láser'} onChange={()=>setTechnology('Láser')} className="text-indigo-600" />
+                <input type="radio" name="technology" value="Láser" checked={technology==='Láser'} onChange={()=>{setTechnology('Láser'); console.log('Tecnología cambiada a: Láser');}} className="text-indigo-600" />
                 <span className="text-sm font-medium text-slate-700">Corte Láser</span>
               </label>
             </div>
@@ -237,6 +414,10 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
           <div>
             <label className="block text-sm font-medium text-slate-700">Precio</label>
             <input id="product-price" name="price" type="number" value={form.price} onChange={e=>handleChange('price', Number(e.target.value))} className="mt-1 block w-full rounded-md border-gray-200" />
+          </div>
+          <div className="flex items-center gap-2">
+            <input id="product-featured" type="checkbox" checked={!!form.featured} onChange={(e)=>handleChange('featured', e.target.checked)} />
+            <label htmlFor="product-featured" className="text-sm font-medium text-slate-700">Marcar como Destacado</label>
           </div>
           <div>
             <label htmlFor="product-category" className="block text-sm font-medium text-slate-700">Categoría</label>
@@ -261,7 +442,8 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
                     <option value="__other">Otra...</option>
                   </select>
                   <div className="flex gap-2">
-                    <button type="button" onClick={handleAddCategory} className="ml-2 px-3 py-1 rounded-md bg-emerald-50 text-emerald-700 text-sm">Agregar</button>
+                    <input type="text" placeholder="Nueva categoría" value={newCategoryText} onChange={(e)=>setNewCategoryText(e.target.value)} className="px-2 py-1 border rounded-md text-sm" />
+                    <button type="button" onClick={handleAddCategory} className="px-3 py-1 rounded-md bg-emerald-50 text-emerald-700 text-sm">Agregar</button>
                     <button type="button" onClick={()=>handleRemoveCategory()} className="ml-2 px-3 py-1 rounded-md bg-red-50 text-red-700 text-sm">Quitar</button>
                   </div>
                 </div>
@@ -270,12 +452,27 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
                 )}
               </>
             ) : (
-              <input id="product-category" name="category" autoComplete="off" value={form.category} onChange={e=>handleChange('category', e.target.value)} className="mt-1 block w-full rounded-md border-gray-200" />
+              <div className="flex gap-2 items-center">
+                <input id="product-category" name="category" autoComplete="off" value={form.category} onChange={e=>handleChange('category', e.target.value)} className="mt-1 block w-full rounded-md border-gray-200" placeholder="Ej: Hogar" />
+                <input type="text" placeholder="Nueva categoría" value={newCategoryText} onChange={(e)=>setNewCategoryText(e.target.value)} className="px-2 py-1 border rounded-md text-sm" />
+                <button type="button" onClick={handleAddCategory} className="px-3 py-1 rounded-md bg-emerald-50 text-emerald-700 text-sm">Agregar</button>
+              </div>
             )}
           </div>
           <div className="sm:col-span-2">
             <label className="block text-sm font-medium text-slate-700 mb-2">Imágenes y Colores</label>
             <div className="mt-1 grid gap-2">
+              <div className="flex gap-2 items-center">
+                <label className="text-xs text-slate-600">Destino:</label>
+                <select value={uploadTarget} onChange={(e)=>setUploadTarget(e.target.value as any)} className="text-sm border rounded px-2 py-1">
+                  <option value="local">Local (IndexedDB)</option>
+                  <option value="cloudinary">Cloudinary</option>
+                  <option value="supabase">Supabase</option>
+                </select>
+                {uploadTarget === 'supabase' && (
+                  <input type="text" value={supabaseBucket} onChange={(e)=>setSupabaseBucket(e.target.value)} className="text-sm border rounded px-2 py-1" placeholder="Bucket (ej: product-images)" />
+                )}
+              </div>
               <div className="flex gap-2 items-center">
                 <input
                   type="text"
@@ -294,14 +491,49 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
                 <button type="button" onClick={addImageByUrl} className="px-4 py-2 rounded-md bg-indigo-600 text-white text-sm whitespace-nowrap hover:bg-indigo-700">Agregar</button>
               </div>
               <div className="text-xs text-slate-400">O sube una imagen desde tu equipo:</div>
-              <input type="file" accept="image/*" onChange={e=>{ const f = e.target.files?.[0]; if(f) handleFile(f); }} className="block w-full text-sm text-slate-600" />
+              <div className="bg-yellow-50 p-2 rounded text-xs text-yellow-800 mb-2">
+                ⚠️ Recomendación: Usa URLs externas siempre que sea posible. Subir archivos llena la memoria del navegador muy rápido y puede borrar tus datos.
+              </div>
+              <div className="flex gap-2 items-center">
+                <input 
+                  type="file" 
+                  accept="image/*" 
+                  multiple
+                  onChange={e=>{ const files = e.target.files; if(files && files.length) handleFiles(files); }} 
+                  className="block w-full text-sm text-slate-600"
+                  disabled={isCompressing}
+                />
+                <label className="flex items-center gap-2 text-xs text-slate-600 whitespace-nowrap">
+                  <input 
+                    type="checkbox" 
+                    checked={compressionEnabled} 
+                    onChange={(e) => setCompressionEnabled(e.target.checked)}
+                    className="rounded"
+                  />
+                  Comprimir WebP
+                </label>
+                {uploadTarget === 'supabase' && (
+                  <button type="button" onClick={migrateCurrentProductToSupabase} disabled={isMigratingProduct} className="px-3 py-2 rounded-md bg-purple-600 text-white text-xs whitespace-nowrap hover:bg-purple-700">
+                    {isMigratingProduct ? 'Migrando…' : 'Migrar este producto a Supabase'}
+                  </button>
+                )}
+              </div>
+              {isCompressing && (
+                <div className="bg-blue-50 p-2 rounded text-xs text-blue-700 flex items-center gap-2">
+                  <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Comprimiendo imagen a WebP...
+                </div>
+              )}
 
               {(form.images && form.images.length > 0) && (
                 <div className="mt-3 space-y-2">
                   <div className="text-xs text-slate-500">Imágenes agregadas (haz clic en "Principal" para elegir la principal):</div>
                   {form.images.map((img, idx) => (
                     <div key={idx} className="flex items-center gap-3 border rounded-md p-2">
-                      <img src={img.url} alt={`img-${idx}`} className="h-14 w-14 object-cover rounded" />
+                      <SmartImage src={img.url} storageKey={img.storageKey} alt={`img-${idx}`} className="h-14 w-14 object-cover rounded" showError />
                       <div className="flex-1">
                         <div className="text-xs text-slate-500">Color:</div>
                         <input
@@ -324,7 +556,7 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
               {previewSrc && (
                 <div className="mt-3">
                   <div className="text-xs text-slate-500 mb-1">Previsualización (principal):</div>
-                  <img src={previewSrc} alt="preview" className="h-28 rounded-md object-cover border" />
+                  <SmartImage src={previewSrc} alt="preview" className="h-28 rounded-md object-cover border" showError />
                 </div>
               )}
             </div>
@@ -332,6 +564,24 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
           <div className="sm:col-span-2">
             <label htmlFor="product-description" className="block text-sm font-medium text-slate-700">Descripción</label>
             <textarea id="product-description" name="description" value={form.description} onChange={e=>handleChange('description', e.target.value)} className="mt-1 block w-full rounded-md border-gray-200" rows={4} />
+          </div>
+
+          <div>
+            <label htmlFor="product-stock" className="block text-sm font-medium text-slate-700">
+              Stock Disponible
+            </label>
+            <input 
+              id="product-stock" 
+              type="number" 
+              min="0"
+              value={form.stock ?? ''} 
+              onChange={e => handleChange('stock', e.target.value ? parseInt(e.target.value) : undefined)}
+              className="mt-1 block w-full rounded-md border-gray-200" 
+              placeholder="Ej: 10"
+            />
+            <p className="mt-1 text-xs text-slate-500">
+              Dejar vacío si no deseas controlar stock
+            </p>
           </div>
         </div>
 
