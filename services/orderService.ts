@@ -56,27 +56,32 @@ export async function calculateShippingCost(
   if (!config) return 0;
 
   if (shippingMethod === 'moto') {
-    // Verificar si califica para envío gratis
+    // Si la compra es >= $40,000, envío gratis
     if (subtotal >= config.moto_free_threshold) {
-      // Verificar distancia si tenemos coordenadas
-      if (destinationLat && destinationLng) {
-        const distance = calculateDistance(
-          config.store_lat,
-          config.store_lng,
-          destinationLat,
-          destinationLng
-        );
-        
-        if (distance <= config.moto_radius_km) {
-          return 0; // Envío gratis en moto
-        }
-      } else {
-        return 0; // Asumimos que está dentro del radio
-      }
+      return 0;
     }
     
-    // Si no califica, sugerir correo
-    return config.correo_cost;
+    // Si < $40,000, calcular costo según distancia
+    if (destinationLat && destinationLng) {
+      const distance = calculateDistance(
+        config.store_lat,
+        config.store_lng,
+        destinationLat,
+        destinationLng
+      );
+      
+      // Hasta 20 km: $20,000
+      if (distance <= 20) {
+        return 20000;
+      }
+      
+      // Más de 20 km: $20,000 + ($4,000 × km adicionales)
+      const extraKm = Math.ceil(distance - 20);
+      return 20000 + (extraKm * 4000);
+    }
+    
+    // Si no hay coordenadas, cobrar tarifa base de hasta 20 km
+    return 20000;
   }
 
   if (shippingMethod === 'correo') {

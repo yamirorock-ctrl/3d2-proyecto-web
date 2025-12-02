@@ -333,9 +333,14 @@ const Checkout: React.FC<CheckoutProps> = ({ cart, onClearCart }) => {
                       </div>
                       <p className="text-sm text-gray-600 mt-1">
                         {subtotal >= (shippingConfig?.moto_free_threshold || 40000)
-                          ? `Envío gratis en radio de ${shippingConfig?.moto_radius_km || 20}km`
-                          : `Gratis desde $${(shippingConfig?.moto_free_threshold || 40000).toLocaleString()}`}
+                          ? `Envío gratis en tu compra`
+                          : `Hasta 20 km: $20,000 | Km extra: $4,000 c/u`}
                       </p>
+                      {subtotal < (shippingConfig?.moto_free_threshold || 40000) && (
+                        <p className="text-xs text-indigo-600 font-medium mt-1">
+                          💡 Envío gratis desde ${(shippingConfig?.moto_free_threshold || 40000).toLocaleString()}
+                        </p>
+                      )}
                     </div>
                   </label>
 
