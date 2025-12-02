@@ -65,7 +65,7 @@ export default async function handler(req, res) {
         const payment = await paymentDetails.json();
         const orderId = testOrderId || payment.external_reference;
         let orderStatus = 'pending';
-        if (payment.status === 'approved') orderStatus = 'processing';
+        if (payment.status === 'approved') orderStatus = 'paid';
         if (payment.status === 'rejected' || payment.status === 'cancelled') orderStatus = 'cancelled';
 
         const { error } = await supabase
@@ -107,7 +107,7 @@ export default async function handler(req, res) {
           const payment = await pResp.json();
           const orderId = payment.external_reference;
           let orderStatus = 'pending';
-          if (payment.status === 'approved') orderStatus = 'processing';
+          if (payment.status === 'approved') orderStatus = 'paid';
           if (payment.status === 'rejected' || payment.status === 'cancelled') orderStatus = 'cancelled';
 
           const { error } = await supabase
@@ -142,7 +142,7 @@ export default async function handler(req, res) {
           const paymentId = payment ? payment.id : null;
           const paymentStatus = payment ? payment.status : 'pending';
           let orderStatus = 'pending';
-          if (paymentStatus === 'approved') orderStatus = 'processing';
+          if (paymentStatus === 'approved') orderStatus = 'paid';
           if (paymentStatus === 'rejected' || paymentStatus === 'cancelled') orderStatus = 'cancelled';
 
           const { error } = await supabase
@@ -228,7 +228,7 @@ export default async function handler(req, res) {
       let orderStatus;
       switch (payment.status) {
         case 'approved':
-          orderStatus = 'processing';
+          orderStatus = 'paid';
           break;
         case 'pending':
         case 'in_process':
@@ -309,7 +309,7 @@ export default async function handler(req, res) {
       let orderStatus;
       switch (payment.status) {
         case 'approved':
-          orderStatus = 'processing'; // Pago aprobado, pendiente de preparación
+          orderStatus = 'paid'; // Pago aprobado
           break;
         case 'pending':
         case 'in_process':
@@ -367,7 +367,7 @@ export default async function handler(req, res) {
         const paymentId = payment ? payment.id : null;
         const paymentStatus = payment ? payment.status : 'pending';
         let orderStatus = 'pending';
-        if (paymentStatus === 'approved') orderStatus = 'processing';
+        if (paymentStatus === 'approved') orderStatus = 'paid';
         if (paymentStatus === 'rejected' || paymentStatus === 'cancelled') orderStatus = 'cancelled';
 
         if (!orderId) {
