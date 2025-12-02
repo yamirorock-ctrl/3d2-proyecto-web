@@ -14,8 +14,11 @@
     <script>
       // SPA fallback para GitHub Pages
       // Guarda la ruta actual en sessionStorage y redirige a la raíz
-      sessionStorage.setItem('redirect', location.pathname + location.search + location.hash);
-      window.location.replace('/');
+      const path = location.pathname + location.search + location.hash;
+      console.log('[404] Guardando ruta:', path);
+      sessionStorage.setItem('redirect', path);
+      // Usar href en lugar de replace para asegurar recarga completa
+      location.href = '/';
     </script>
   </body>
 </html>

@@ -18,9 +18,14 @@ const AppWithRedirect: React.FC = () => {
   
   React.useEffect(() => {
     const redirect = sessionStorage.getItem('redirect');
+    console.log('[APP] Verificando redirect:', redirect);
     if (redirect) {
+      console.log('[APP] Restaurando ruta:', redirect);
       sessionStorage.removeItem('redirect');
-      navigate(redirect, { replace: true });
+      // Pequeño delay para asegurar que React Router está listo
+      setTimeout(() => {
+        navigate(redirect, { replace: true });
+      }, 0);
     }
   }, [navigate]);
 
