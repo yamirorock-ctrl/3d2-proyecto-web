@@ -1,16 +1,17 @@
 import React, { useState, useMemo } from 'react';
 import { Order } from '../types';
-import { TrendingUp, Package, DollarSign, Clock, Download, Calendar, CheckCircle, Loader, XCircle, Trash2 } from 'lucide-react';
+import { TrendingUp, Package, DollarSign, Clock, Download, Calendar, CheckCircle, Loader, XCircle, Trash2, RefreshCw } from 'lucide-react';
 
 interface Props {
   orders: Order[];
   onUpdateStatus?: (orderId: string, newStatus: Order['status']) => void;
   onDelete?: (orderId: string) => void;
+  onRefresh?: () => void;
 }
 
 type DateFilter = 'today' | 'week' | 'month' | 'all';
 
-const SalesDashboard: React.FC<Props> = ({ orders, onUpdateStatus, onDelete }) => {
+const SalesDashboard: React.FC<Props> = ({ orders, onUpdateStatus, onDelete, onRefresh }) => {
   const [dateFilter, setDateFilter] = useState<DateFilter>('all');
 
   const filteredOrders = useMemo(() => {
@@ -59,12 +60,12 @@ const SalesDashboard: React.FC<Props> = ({ orders, onUpdateStatus, onDelete }) =
     const headers = ['ID', 'Fecha', 'Cliente', 'Email', 'Teléfono', 'Total', 'Método Pago', 'Estado', 'Productos'];
     const rows = filteredOrders.map(o => [
       o.id,
-      new Date(o.timestamp).toLocaleString('es-AR'),
-      o.customer.name,
-      o.customer.email,
-      o.customer.phone,
+      new Date((o as any).timestamp || (o as any).created_at).toLocaleString('es-AR'),
+      (o as any).customer?.name || (o as any).customer_name,
+      (o as any).customer?.email || (o as any).customer_email,
+      (o as any).customer?.phone || (o as any).customer_phone,
       o.total.toFixed(2),
-      o.paymentMethod,
+      (o as any).paymentMethod || ((o as any).payment_id ? 'mercadopago' : 'otro'),
       o.status,
       o.items.map(i => `${i.name} (x${i.quantity})`).join('; ')
     ]);
@@ -106,6 +107,15 @@ const SalesDashboard: React.FC<Props> = ({ orders, onUpdateStatus, onDelete }) =
               </button>
             ))}
           </div>
+          {onRefresh && (
+            <button
+              onClick={onRefresh}
+              className="px-4 py-2 bg-indigo-600 text-white rounded-lg flex items-center gap-2 hover:bg-indigo-700 transition-colors"
+            >
+              <RefreshCw size={16} />
+              Actualizar
+            </button>
+          )}
           <button
             onClick={handleExportCSV}
             className="px-4 py-2 bg-green-600 text-white rounded-lg flex items-center gap-2 hover:bg-green-700 transition-colors"
@@ -212,7 +222,11 @@ const SalesDashboard: React.FC<Props> = ({ orders, onUpdateStatus, onDelete }) =
               <p>No hay órdenes para mostrar</p>
             </div>
           ) : (
-            filteredOrders.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()).map(order => (
+            filteredOrders.sort((a, b) => {
+              const aTime = new Date((a as any).timestamp || (a as any).created_at).getTime();
+              const bTime = new Date((b as any).timestamp || (b as any).created_at).getTime();
+              return bTime - aTime;
+            }).map(order => (
               <div key={order.id} className="p-6 hover:bg-gray-50 transition-colors">
                 <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
                   <div className="flex-1">
@@ -243,10 +257,10 @@ const SalesDashboard: React.FC<Props> = ({ orders, onUpdateStatus, onDelete }) =
                     <div className="bg-slate-50 rounded-lg p-4 mb-3">
                       <p className="text-sm font-medium text-slate-700 mb-2">Cliente:</p>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-slate-600">
-                        <div><strong>Nombre:</strong> {order.customer.name}</div>
-                        <div><strong>Email:</strong> {order.customer.email}</div>
-                        <div><strong>Teléfono:</strong> {order.customer.phone}</div>
-                        <div><strong>Dirección:</strong> {order.customer.address}</div>
+                        <div><strong>Nombre:</strong> {(order as any).customer?.name || (order as any).customer_name}</div>
+                        <div><strong>Email:</strong> {(order as any).customer?.email || (order as any).customer_email}</div>
+                        <div><strong>Teléfono:</strong> {(order as any).customer?.phone || (order as any).customer_phone}</div>
+                        <div><strong>Dirección:</strong> {(order as any).customer?.address || (order as any).customer_address || 'N/A'}</div>
                       </div>
                     </div>
 

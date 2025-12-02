@@ -153,6 +153,19 @@ const AdminPage: React.FC<Props> = ({ products, onAdd, onEdit, onDelete }) => {
     } catch (e) {}
   };
 
+  const refreshSalesOrders = async () => {
+    try {
+      const { getAllOrders } = await import('../services/orderService');
+      const orders = await getAllOrders();
+      if (Array.isArray(orders) && orders.length >= 0) {
+        setSalesOrders(orders);
+        try { localStorage.setItem('orders', JSON.stringify(orders)); } catch {}
+      }
+    } catch (err) {
+      console.warn('[AdminPage] No se pudieron cargar órdenes desde Supabase:', err);
+    }
+  };
+
   const handleDeleteUser = (username: string) => {
     if (!confirm(`Eliminar usuario ${username}? Esta acción no se puede revertir.`)) return;
     try {
@@ -645,6 +658,7 @@ const AdminPage: React.FC<Props> = ({ products, onAdd, onEdit, onDelete }) => {
           orders={salesOrders} 
           onUpdateStatus={handleUpdateSaleStatus}
           onDelete={handleDeleteSale}
+          onRefresh={refreshSalesOrders}
         />
       )}
 
