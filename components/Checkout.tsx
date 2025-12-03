@@ -56,6 +56,7 @@ const Checkout: React.FC<CheckoutProps> = ({ cart, onClearCart }) => {
   const [shippingConfig, setShippingConfig] = useState<any>(null);
   const [mlShippingCost, setMlShippingCost] = useState<number | null>(null);
   const [mlShippingLoading, setMlShippingLoading] = useState(false);
+    const [mlEstimatedDelivery, setMlEstimatedDelivery] = useState<string | null>(null);
   
   // Estado de procesamiento
   const [isProcessing, setIsProcessing] = useState(false);
@@ -110,6 +111,7 @@ const Checkout: React.FC<CheckoutProps> = ({ cart, onClearCart }) => {
     const quoteMlShipping = async () => {
       if (shippingMethod !== 'correo' || !customerPostalCode || customerPostalCode.length < 4) {
         setMlShippingCost(null);
+          setMlEstimatedDelivery(null);
         return;
       }
 
@@ -143,12 +145,20 @@ const Checkout: React.FC<CheckoutProps> = ({ cart, onClearCart }) => {
         
         if (data.success && data.defaultCost) {
           setMlShippingCost(data.defaultCost);
+          // Extraer fecha de entrega si está disponible
+          if (data.selectedOption?.estimatedDelivery) {
+            setMlEstimatedDelivery(data.selectedOption.estimatedDelivery);
+          } else {
+            setMlEstimatedDelivery(null);
+          }
         } else {
           setMlShippingCost(8000);
+          setMlEstimatedDelivery(null);
         }
       } catch (error) {
         console.error('[ML Quote] Exception:', error);
         setMlShippingCost(8000); // Fallback
+        setMlEstimatedDelivery(null);
       } finally {
         setMlShippingLoading(false);
       }
@@ -441,7 +451,9 @@ const Checkout: React.FC<CheckoutProps> = ({ cart, onClearCart }) => {
                       </div>
                       <p className="text-sm text-gray-600 mt-1">
                         {customerPostalCode && customerPostalCode.length >= 4
-                          ? 'Costo calculado por MercadoEnvíos'
+                          ? mlEstimatedDelivery 
+                            ? `Llega aproximadamente el ${new Date(mlEstimatedDelivery).toLocaleDateString('es-AR', { day: 'numeric', month: 'long' })}`
+                            : 'Costo calculado por MercadoEnvíos'
                           : 'Ingresá tu código postal para ver el costo'}
                       </p>
                     </div>
