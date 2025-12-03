@@ -785,7 +785,7 @@ const App: React.FC = () => {
       />
 
       <ChatAssistant products={products} />
-      <MLCallback />
+      {/* MLCallback solo debe renderizarse vía la ruta /ml-callback */}
       
       
       {/* Footer */}
