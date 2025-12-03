@@ -9,6 +9,7 @@ import { saveDataUrl, getBlob } from '../services/imageStore';
 import SmartImage from './SmartImage';
 import SalesDashboard from './SalesDashboard';
 import PriceUpdateTool from './PriceUpdateTool';
+import { getAuthUrl } from '../services/mlService';
 import { validateSession, renewSession, deleteSession } from '../services/authService';
 
 interface Props {
@@ -455,6 +456,15 @@ const AdminPage: React.FC<Props> = ({ products, onAdd, onEdit, onDelete }) => {
               <button onClick={async ()=>{ const bucket = 'product-images'; const { testSupabase } = await import('../services/supabaseService'); const res = await testSupabase(bucket); alert(res.ok ? `Supabase OK (${bucket}): ${res.message}` : `Supabase Error (${bucket}): ${res.message}`); }} className="hidden lg:inline-flex whitespace-nowrap px-3 py-2 bg-purple-600 text-white rounded-md text-xs sm:text-sm">Test Supabase</button>
               <button onClick={handleImportBackup} className="whitespace-nowrap px-3 py-2 bg-slate-100 text-slate-800 border border-gray-300 rounded-md text-xs sm:text-sm">Importar</button>
               <button onClick={() => setIsCreateOpen(true)} className="whitespace-nowrap px-3 py-2 bg-teal-600 text-white rounded-md flex items-center gap-1 text-xs sm:text-sm"><Plus size={14} />Nuevo</button>
+              {(() => {
+                const url = getAuthUrl();
+                return (
+                  <button
+                    onClick={() => { if (url) window.location.href = url; else alert('Configura VITE_ML_APP_ID y VITE_ML_REDIRECT_URI'); }}
+                    className="whitespace-nowrap px-3 py-2 bg-yellow-600 text-white rounded-md text-xs sm:text-sm"
+                  >Conectar MercadoLibre</button>
+                );
+              })()}
             </>
           )}
           <button 

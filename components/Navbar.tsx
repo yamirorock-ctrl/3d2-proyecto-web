@@ -22,7 +22,22 @@ const Navbar: React.FC<NavbarProps> = ({ cartCount, onOpenCart, onGoHome, onOpen
   const [search, setSearch] = useState('');
   const [showSearch, setShowSearch] = useState(false);
   const navigate = useNavigate();
-  const ADMIN_SECRET = import.meta.env.VITE_ADMIN_SECRET || '';
+  // Leer el secreto desde env; si falta, intenta desde localStorage (no exponer por defecto)
+  const ADMIN_SECRET = (import.meta as any).env?.VITE_ADMIN_SECRET || localStorage.getItem('ADMIN_SECRET') || '';
+
+  const issueAdminEntry = (secret: string) => {
+    const s = (secret || '').trim();
+    if (!s) { alert('Secreto requerido'); return; }
+    const ts = Date.now();
+    const minute = Math.floor(ts / 60000);
+    const raw = s + ':' + minute;
+    const token = btoa(unescape(encodeURIComponent(raw))).replace(/=+$/,'');
+    try {
+      sessionStorage.setItem('admin_entry_token', token);
+      sessionStorage.setItem('admin_entry_ts', String(ts));
+    } catch {}
+    navigate('/admin/login');
+  };
   // Logo local servido desde /public respetando la base de Vite
   // Usar logo JPG absoluto desde /public
   const logoUrl = `/LOGO.jpg`;
@@ -89,16 +104,7 @@ const Navbar: React.FC<NavbarProps> = ({ cartCount, onOpenCart, onGoHome, onOpen
                   onKeyDown={(e)=>{
                     if (e.key === 'Enter') {
                       if (ADMIN_SECRET && search.trim() === ADMIN_SECRET) {
-                        const ts = Date.now();
-                        const minute = Math.floor(ts / 60000);
-                        // token derivado (no seguro contra ingeniería pero ofusca)
-                        const raw = ADMIN_SECRET + ':' + minute;
-                        const token = btoa(unescape(encodeURIComponent(raw))).replace(/=+$/,'');
-                        try {
-                          sessionStorage.setItem('admin_entry_token', token);
-                          sessionStorage.setItem('admin_entry_ts', String(ts));
-                        } catch {}
-                        navigate('/admin/login');
+                        issueAdminEntry(ADMIN_SECRET);
                         setSearch('');
                         setShowSearch(false);
                       } else {

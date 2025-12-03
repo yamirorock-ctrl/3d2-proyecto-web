@@ -139,35 +139,6 @@ const App: React.FC = () => {
 
   // Load cart from local storage with sanitization to avoid phantom items
   useEffect(() => {
-    // Optional cleanup trigger via URL param: ?reset=admin
-    try {
-      const params = new URLSearchParams(window.location.search);
-      if (params.get('reset') === 'admin') {
-        const keys = [
-          'ADMIN_SECRET',
-          'admin_user',
-          'admin_pass_hash',
-          'admin_session_id',
-          'adminAccessAttempts',
-          'orders',
-          'cart',
-          'customOrders',
-          'categories',
-          'products'
-        ];
-        keys.forEach(k => { try { localStorage.removeItem(k); } catch {} });
-        try { sessionStorage.removeItem('admin_entry_token'); sessionStorage.removeItem('admin_entry_ts'); } catch {}
-        setCart([]);
-        setProducts(DEFAULT_PRODUCTS);
-        setAvailableCategories([]);
-        alert('Reseteo local completado. Vuelve a intentar el flujo.');
-        // Limpiar query para evitar re-ejecución
-        const url = new URL(window.location.href);
-        url.searchParams.delete('reset');
-        window.history.replaceState({}, '', url.toString());
-      }
-    } catch {}
-  }, []);
     const savedCart = localStorage.getItem('cart');
     if (savedCart) {
       try {
