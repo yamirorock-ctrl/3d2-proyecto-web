@@ -23,8 +23,8 @@ import { Routes, Route, useNavigate } from 'react-router-dom';
 import { CheckCircle2, ArrowLeft, Mail, Phone } from 'lucide-react';
 import { getAllProductsFromSupabase } from './services/supabaseService';
 
-// 🔧 MODO MANTENIMIENTO - Cambiar a false para reactivar la tienda
-const MAINTENANCE_MODE = true;
+// 🔧 MODO MANTENIMIENTO - Cambiar a true para activar mantenimiento
+const MAINTENANCE_MODE = false;
 
 // Updated Product Data for 3D Printing and Laser Cutting
 const DEFAULT_PRODUCTS: Product[] = [
