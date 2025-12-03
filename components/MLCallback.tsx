@@ -8,6 +8,7 @@ export default function MLCallback() {
   const navigate = useNavigate();
   const [status, setStatus] = useState<'idle'|'processing'|'done'|'error'>('idle');
   const [message, setMessage] = useState<string>('');
+  const processedRef = React.useRef(false);
 
   useEffect(() => {
     const path = location.pathname;
@@ -28,6 +29,8 @@ export default function MLCallback() {
       return;
     }
 
+    if (processedRef.current) return;
+    processedRef.current = true;
     setStatus('processing');
     setMessage('Recibimos el código, intercambiando por tokens...');
 
@@ -40,7 +43,8 @@ export default function MLCallback() {
         });
         const data = await r.json();
         if (!r.ok || !data?.ok) {
-          throw new Error(data?.error || 'Fallo en el intercambio de tokens');
+          const errMsg = data?.error || `Fallo en el intercambio de tokens (status ${r.status})`;
+          throw new Error(errMsg);
         }
         setStatus('done');
         setMessage('Tokens recibidos. Integraremos MercadoEnvíos con tu cuenta.');
