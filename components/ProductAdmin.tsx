@@ -625,6 +625,7 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
                     <option value="5">5 mm</option>
                     <option value="6">6 mm</option>
                     <option value="9">9 mm</option>
+                    <option value="15">15 mm (máximo)</option>
                   </select>
                   <p className="mt-1 text-xs text-slate-500">Para corte láser, el alto se toma como grosor.</p>
                 </div>

@@ -106,9 +106,14 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart }) => {
         {(product.dimensions || product.weight) && (
           <div className="mb-3 text-xs text-slate-600">
             {product.dimensions && (
-              <p>
-                Dimensiones: {product.dimensions.width}×{product.dimensions.height}×{product.dimensions.length} cm
-              </p>
+              <>
+                <p>
+                  Dimensiones: {product.dimensions.width}×{product.dimensions.height}×{product.dimensions.length} cm
+                </p>
+                {product.technology === 'Láser' && product.dimensions.height && (
+                  <p>Grosor: {Math.round(product.dimensions.height * 10)} mm</p>
+                )}
+              </>
             )}
             {product.weight && (
               <p>Peso: {product.weight} g</p>
