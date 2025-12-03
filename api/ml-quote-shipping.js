@@ -27,6 +27,9 @@ export default async function handler(req, res) {
   }
 
   if (req.method !== 'POST') {
+    if (req.method === 'GET') {
+      return res.status(200).json({ ok: true, message: 'ml-quote-shipping up' });
+    }
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
@@ -60,7 +63,12 @@ export default async function handler(req, res) {
     const accessToken = tokenData.access_token;
 
     // Construir dimensiones en formato ML: "ancho x alto x largo,peso_en_gramos"
-    const { width, height, length, weight } = dimensions;
+    let { width, height, length, weight } = dimensions;
+    // Normalizar y acotar valores a rangos seguros aceptados por ML
+    width = Math.max(1, Math.min(40, Math.round(Number(width))));
+    height = Math.max(1, Math.min(30, Math.round(Number(height))));
+    length = Math.max(1, Math.min(50, Math.round(Number(length))));
+    weight = Math.max(100, Math.min(30000, Math.round(Number(weight)))); // 100g a 30kg
     const dimensionsStr = `${width}x${height}x${length},${weight}`;
 
     // Llamar a la API de ML para cotizar envíos
@@ -90,11 +98,18 @@ export default async function handler(req, res) {
       
       // Si es 404 o error de ML, devolver costo estimado por defecto
       if (mlResponse.status === 404 || mlResponse.status === 400) {
+        // Fallback dinámico según peso
+        let fallback = 8000;
+        if (weight <= 500) fallback = 4500;
+        else if (weight <= 1500) fallback = 6500;
+        else if (weight <= 3000) fallback = 9000;
+        else if (weight <= 7000) fallback = 11000;
+        else fallback = 14000;
         return res.status(200).json({
           success: true,
           options: [],
-          defaultCost: 8000, // Costo estimado por defecto
-          message: 'Using estimated shipping cost. Actual cost may vary.'
+          defaultCost: fallback,
+          message: 'Using dynamic estimated shipping cost due to no ML options.'
         });
       }
       
@@ -132,11 +147,18 @@ export default async function handler(req, res) {
 
     // Si no hay opciones, devolver costo estimado
     if (options.length === 0) {
+      // Fallback dinámico según peso
+      let fallback = 8000;
+      if (weight <= 500) fallback = 4500;
+      else if (weight <= 1500) fallback = 6500;
+      else if (weight <= 3000) fallback = 9000;
+      else if (weight <= 7000) fallback = 11000;
+      else fallback = 14000;
       return res.status(200).json({
         success: true,
         options: [],
-        defaultCost: 8000,
-        message: 'No shipping options available. Using estimated cost.'
+        defaultCost: fallback,
+        message: 'No ML options; using dynamic estimated cost.'
       });
     }
 
