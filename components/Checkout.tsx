@@ -459,27 +459,12 @@ const Checkout: React.FC<CheckoutProps> = ({ cart, onClearCart }) => {
                     </div>
                   </label>
 
-                  {/* Retiro en local */}
-                  <label className="flex items-start p-4 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-indigo-500 transition-colors">
-                    <input
-                      type="radio"
-                      name="shipping"
-                      value="retiro"
-                      checked={shippingMethod === 'retiro'}
-                      onChange={(e) => setShippingMethod(e.target.value as ShippingMethod)}
-                      className="mt-1 mr-3"
-                    />
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <Store className="text-indigo-600" size={20} />
-                        <span className="font-medium">Retiro en Local</span>
-                        <span className="ml-auto text-green-600 font-bold">GRATIS</span>
-                      </div>
-                      <p className="text-sm text-gray-600 mt-1">
-                        Te enviaremos la dirección por WhatsApp después de confirmar el pago
-                      </p>
-                    </div>
-                  </label>
+                  {/* Nota de tiempos de entrega */}
+                  <div className="mt-3 rounded-lg border border-gray-200 bg-gray-50 p-3">
+                    <p className="text-sm text-gray-700">
+                      Tiempo estimado de entrega: <span className="font-semibold">2 a 7 días hábiles</span> una vez realizada la compra.
+                    </p>
+                  </div>
                 </div>
               )}
 
