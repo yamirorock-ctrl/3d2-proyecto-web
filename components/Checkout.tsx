@@ -358,12 +358,12 @@ const Checkout: React.FC<CheckoutProps> = ({ cart, onClearCart }) => {
                       <div className="flex items-center gap-2">
                         <Package className="text-indigo-600" size={20} />
                         <span className="font-medium">Correo Argentino / Andreani</span>
-                        <span className="ml-auto font-bold">
-                          ${(shippingConfig?.correo_cost || 3000).toLocaleString()}
+                        <span className="ml-auto font-bold text-indigo-600">
+                          A calcular
                         </span>
                       </div>
                       <p className="text-sm text-gray-600 mt-1">
-                        Envío a todo Buenos Aires
+                        Costo calculado por MercadoEnvíos según destino
                       </p>
                     </div>
                   </label>

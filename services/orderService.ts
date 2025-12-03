@@ -85,7 +85,8 @@ export async function calculateShippingCost(
   }
 
   if (shippingMethod === 'correo') {
-    return config.correo_cost;
+    // Costo calculado dinámicamente por MercadoLibre
+    return 0;
   }
 
   return 0;
