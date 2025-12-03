@@ -10,6 +10,18 @@
     {
       "src": "/api/webhook",
       "dest": "/api/webhook.js"
+    },
+    {
+      "src": "/api/ml-oauth",
+      "dest": "/api/ml-oauth.js"
+    },
+    {
+      "src": "/api/ml-webhook",
+      "dest": "/api/ml-webhook.js"
+    },
+    {
+      "src": "/api/ml-create-shipment",
+      "dest": "/api/ml-create-shipment.js"
     }
   ]
 }
