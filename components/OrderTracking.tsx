@@ -146,7 +146,7 @@ const OrderTracking: React.FC = () => {
       case 'moto':
         return 'Envío en Moto';
       case 'correo':
-        return 'Correo Argentino / Andreani';
+        return 'MercadoEnvíos';
       case 'retiro':
         return 'Retiro en Local';
       case 'to_coordinate':

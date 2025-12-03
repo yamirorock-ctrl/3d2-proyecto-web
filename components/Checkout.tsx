@@ -428,7 +428,7 @@ const Checkout: React.FC<CheckoutProps> = ({ cart, onClearCart }) => {
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
                         <Package className="text-indigo-600" size={20} />
-                        <span className="font-medium">Correo Argentino / Andreani</span>
+                        <span className="font-medium">MercadoEnvíos</span>
                         <span className="ml-auto font-bold">
                           {mlShippingLoading ? (
                             <span className="text-gray-400">Calculando...</span>

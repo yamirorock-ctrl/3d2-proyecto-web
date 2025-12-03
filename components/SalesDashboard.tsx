@@ -302,7 +302,7 @@ const SalesDashboard: React.FC<Props> = ({ orders, onUpdateStatus, onDelete, onR
                             <div>
                               <strong>Método:</strong>{' '}
                               {(order as any).shipping_method === 'moto' ? 'Envío en Moto' :
-                               (order as any).shipping_method === 'correo' ? 'Correo Argentino / Andreani' :
+                               (order as any).shipping_method === 'correo' ? 'MercadoEnvíos' :
                                (order as any).shipping_method === 'retiro' ? 'Retiro en Local' :
                                'A coordinar'}
                             </div>
