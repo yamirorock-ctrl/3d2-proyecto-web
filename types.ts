@@ -15,6 +15,12 @@ export interface Product {
   technology?: '3D' | 'Láser';
   featured?: boolean;
   stock?: number; // Cantidad disponible en inventario
+  dimensions?: {
+    width: number;  // cm
+    height: number; // cm
+    length: number; // cm
+  };
+  weight?: number; // gramos
 }
 
 export interface CartItem extends Product {

@@ -101,6 +101,20 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart }) => {
         <p className="text-sm text-slate-500 mb-4 line-clamp-3 flex-grow">
           {product.description}
         </p>
+
+        {/* Dimensiones y peso */}
+        {(product.dimensions || product.weight) && (
+          <div className="mb-3 text-xs text-slate-600">
+            {product.dimensions && (
+              <p>
+                Dimensiones: {product.dimensions.width}×{product.dimensions.height}×{product.dimensions.length} cm
+              </p>
+            )}
+            {product.weight && (
+              <p>Peso: {product.weight} g</p>
+            )}
+          </div>
+        )}
         
         <button 
           onClick={() => onAddToCart({ ...product, image: images[active].url ? images[active].url! : images[active].storageKey ? `lf:${images[active].storageKey}` : product.image })}

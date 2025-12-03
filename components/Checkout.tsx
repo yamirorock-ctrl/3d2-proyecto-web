@@ -219,7 +219,7 @@ const Checkout: React.FC<CheckoutProps> = ({ cart, onClearCart }) => {
       return;
     }
 
-    if (isBuenosAires && shippingMethod !== 'retiro' && !customerAddress) {
+    if (shippingMethod && !customerAddress) {
       setError('Por favor ingresá tu dirección para el envío');
       return;
     }
