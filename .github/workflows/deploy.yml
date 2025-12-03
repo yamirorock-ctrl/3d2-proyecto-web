@@ -38,6 +38,10 @@ jobs:
           VITE_ADMIN_SECRET: ${{ secrets.VITE_ADMIN_SECRET }}
           VITE_MP_PUBLIC: ${{ secrets.VITE_MP_PUBLIC }}
           VITE_MP_ACCESS: ${{ secrets.VITE_MP_ACCESS }}
+          VITE_MP_WEBHOOK_URL: ${{ secrets.VITE_MP_WEBHOOK_URL }}
+          VITE_ML_APP_ID: ${{ secrets.VITE_ML_APP_ID }}
+          VITE_ML_APP_SECRET: ${{ secrets.VITE_ML_APP_SECRET }}
+          VITE_ML_REDIRECT_URI: ${{ secrets.VITE_ML_REDIRECT_URI }}
         run: npm run build
 
       - name: Setup Pages

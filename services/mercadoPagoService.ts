@@ -77,7 +77,7 @@ export async function createPaymentPreference(
     auto_return: 'all',
     external_reference: orderId,
     statement_descriptor: '3D2 STORE',
-    notification_url: 'https://3d2-bewhook-6nulnycuk-yamil-sanchezs-projects.vercel.app/api/webhook',
+    notification_url: import.meta.env.VITE_MP_WEBHOOK_URL || 'https://3d2-bewhook-6nulnycuk-yamil-sanchezs-projects.vercel.app/api/webhook',
   };
 
   try {
