@@ -132,7 +132,7 @@ const Checkout: React.FC<CheckoutProps> = ({ cart, onClearCart }) => {
         let totalWeight = 0;
 
         cart.forEach(item => {
-          const dim = PRODUCT_DIMENSIONS[item.technology || 'default'];
+          const dim = item.dimensions ? item.dimensions : PRODUCT_DIMENSIONS[item.technology || 'default'];
           // Para múltiples unidades, solo aumentamos peso y largo (apilados)
           const itemWeight = item.weight && item.weight > 0 ? item.weight : estimateProductWeight(item);
           totalWeight += itemWeight * item.quantity;
