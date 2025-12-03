@@ -80,6 +80,7 @@ export default async function handler(req, res) {
     });
 
     const responseText = await mlResponse.text();
+    console.log('[ML Quote] Request params:', { from: ML_ZIP_CODE_FROM, to: zipCodeTo, dimensions: dimensionsStr });
     console.log('[ML Quote] Response status:', mlResponse.status);
     console.log('[ML Quote] Response body:', responseText);
 
@@ -104,6 +105,7 @@ export default async function handler(req, res) {
     }
 
     const data = JSON.parse(responseText);
+    console.log('[ML Quote] Parsed data options count:', data.options?.length || 0);
     
     // Extraer opciones de envío con más detalles de estimación
     const options = (data.options || []).map(opt => ({
@@ -142,6 +144,8 @@ export default async function handler(req, res) {
     const cheapestOption = options.reduce((min, opt) => 
       opt.cost < min.cost ? opt : min, options[0]
     );
+
+    console.log('[ML Quote] Returning cheapest option:', { cost: cheapestOption.cost, carrier: cheapestOption.carrier });
 
     return res.status(200).json({
       success: true,

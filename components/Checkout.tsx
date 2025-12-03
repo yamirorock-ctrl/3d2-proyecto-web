@@ -117,13 +117,19 @@ const Checkout: React.FC<CheckoutProps> = ({ cart, onClearCart }) => {
 
       setMlShippingLoading(true);
       try {
-        // Estimar dimensiones del carrito (esto debería venir de los productos)
+        // Calcular dimensiones basadas en el carrito
+        const totalQuantity = cart.reduce((sum, item) => sum + item.quantity, 0);
+        const totalWeight = cart.reduce((sum, item) => sum + (item.quantity * 200), 0); // 200g por producto estimado
+        
+        // Ajustar dimensiones según cantidad de productos
         const dimensions = {
-          width: 20,   // cm
-          height: 20,  // cm
-          length: 20,  // cm
-          weight: 500  // gramos
+          width: Math.min(30, 15 + totalQuantity * 2),   // cm (max 30cm)
+          height: Math.min(25, 10 + totalQuantity * 2),  // cm (max 25cm)
+          length: Math.min(35, 20 + totalQuantity * 2),  // cm (max 35cm)
+          weight: Math.max(500, totalWeight)              // gramos (min 500g)
         };
+        
+        console.log('[ML Quote] Cart:', { totalQuantity, totalWeight, dimensions });
 
         const response = await fetch('https://3d2-bewhook.vercel.app/api/ml-quote-shipping', {
           method: 'POST',
@@ -141,17 +147,23 @@ const Checkout: React.FC<CheckoutProps> = ({ cart, onClearCart }) => {
         }
 
         const data = await response.json();
-        console.log('[ML Quote] Result:', data);
+        console.log('[ML Quote] API Response:', data);
+        console.log('[ML Quote] Options count:', data.options?.length || 0);
+        console.log('[ML Quote] Default cost:', data.defaultCost);
         
         if (data.success && data.defaultCost) {
+          console.log('[ML Quote] Using cost:', data.defaultCost);
           setMlShippingCost(data.defaultCost);
           // Extraer fecha de entrega si está disponible
           if (data.selectedOption?.estimatedDelivery) {
+            console.log('[ML Quote] Estimated delivery:', data.selectedOption.estimatedDelivery);
             setMlEstimatedDelivery(data.selectedOption.estimatedDelivery);
           } else {
+            console.log('[ML Quote] No estimated delivery available');
             setMlEstimatedDelivery(null);
           }
         } else {
+          console.warn('[ML Quote] No valid response, using fallback 8000');
           setMlShippingCost(8000);
           setMlEstimatedDelivery(null);
         }
