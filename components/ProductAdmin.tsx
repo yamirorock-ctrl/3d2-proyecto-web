@@ -583,6 +583,57 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
               Dejar vacío si no deseas controlar stock
             </p>
           </div>
+
+          {/* Dimensiones y peso (debajo de stock) */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700">Ancho (cm) *</label>
+              <input
+                type="number"
+                min={1}
+                value={form.dimensions?.width ?? ''}
+                onChange={e => handleChange('dimensions', { ...form.dimensions, width: e.target.value ? Number(e.target.value) : undefined })}
+                className="mt-1 block w-full rounded-md border-gray-200"
+                placeholder="Ej: 12"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700">Alto (cm) *</label>
+              <input
+                type="number"
+                min={0.1}
+                step={0.1}
+                value={form.dimensions?.height ?? ''}
+                onChange={e => handleChange('dimensions', { ...form.dimensions, height: e.target.value ? Number(e.target.value) : undefined })}
+                className="mt-1 block w-full rounded-md border-gray-200"
+                placeholder="Ej: 10"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700">Largo (cm) *</label>
+              <input
+                type="number"
+                min={1}
+                value={form.dimensions?.length ?? ''}
+                onChange={e => handleChange('dimensions', { ...form.dimensions, length: e.target.value ? Number(e.target.value) : undefined })}
+                className="mt-1 block w-full rounded-md border-gray-200"
+                placeholder="Ej: 15"
+              />
+            </div>
+          </div>
+
+          <div className="mt-3">
+            <label className="block text-sm font-medium text-slate-700">Peso (g)</label>
+            <input
+              type="number"
+              min={0}
+              value={form.weight ?? ''}
+              onChange={e => handleChange('weight', e.target.value ? Number(e.target.value) : undefined)}
+              className="mt-1 block w-full rounded-md border-gray-200"
+              placeholder="Opcional. 3D: usar valor del slicer; Láser: se estima si falta"
+            />
+            <p className="mt-1 text-xs text-slate-500">Si no se define, se estimará automáticamente según tecnología y dimensiones.</p>
+          </div>
         </div>
 
         <div className="mt-6 flex justify-end gap-3">
