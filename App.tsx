@@ -714,6 +714,7 @@ const App: React.FC = () => {
           <Route path="order-success" element={<OrderSuccess />} />
           <Route path="order-failure" element={<OrderFailure />} />
           <Route path="order-tracking" element={<OrderTracking />} />
+          <Route path="ml-callback" element={<MLCallback />} />
           <Route path="reset-admin" element={<ResetAdmin onDone={() => navigate('/')} />} />
           <Route path="admin" element={
             <AdminGuard>
