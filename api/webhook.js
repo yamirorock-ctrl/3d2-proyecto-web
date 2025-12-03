@@ -348,7 +348,7 @@ export default async function handler(req, res) {
         // Obtener datos de la orden para verificar si necesita envío de ML
         const { data: orderData, error: orderFetchError } = await supabase
           .from('orders')
-          .select('shipping_method, user_id')
+          .select('shipping_method')
           .eq('id', orderId)
           .single();
 
@@ -356,9 +356,21 @@ export default async function handler(req, res) {
           const needsMLShipment = ['moto', 'correo'].includes(orderData.shipping_method);
           
           if (needsMLShipment) {
-            // Buscar un user_id del sistema o usar uno por defecto
-            // En producción, deberías tener un user_id asociado al admin/vendedor
-            const userId = orderData.user_id || 'admin-default';
+            // Obtener el primer user_id disponible de ml_tokens (el vendedor)
+            const { data: mlToken, error: mlTokenError } = await supabase
+              .from('ml_tokens')
+              .select('user_id')
+              .order('updated_at', { ascending: false })
+              .limit(1)
+              .single();
+            
+            if (mlTokenError || !mlToken) {
+              console.error('[Webhook] No se encontró token de ML. Ejecuta el OAuth callback primero.');
+              return res.status(200).json({ success: true, orderId, status: orderStatus, warning: 'No ML token found' });
+            }
+            
+            const userId = String(mlToken.user_id);
+            console.log('[Webhook] Usando ML user_id:', userId, 'para orden:', orderId);
             
             // Llamar al endpoint de crear envío (asíncrono, no bloqueante)
             fetch(`${process.env.VERCEL_URL || 'https://3d2-bewhook.vercel.app'}/api/ml-create-shipment`, {
@@ -371,11 +383,11 @@ export default async function handler(req, res) {
               if (data.success) {
                 console.log('[Webhook] Envío ML creado exitosamente:', data.shipment);
               } else {
-                console.warn('[Webhook] No se pudo crear envío ML:', data.error);
+                console.warn('[Webhook] No se pudo crear envío ML:', data.error, data.details);
               }
             })
             .catch(err => {
-              console.error('[Webhook] Error al llamar ml-create-shipment:', err);
+              console.error('[Webhook] Error al llamar ml-create-shipment:', err.message);
             });
           } else {
             console.log('[Webhook] Método de envío no requiere ML:', orderData.shipping_method);

@@ -19,27 +19,32 @@ export default async function handler(req, res) {
   }
 
   if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+    console.error('[ML Shipment] Missing Supabase credentials');
     return res.status(500).json({ error: 'Server misconfigured' });
   }
 
   try {
     const { orderId, userId } = req.body;
+    console.log('[ML Shipment] Request received:', { orderId, userId });
 
     if (!orderId || !userId) {
+      console.error('[ML Shipment] Missing required params:', { orderId, userId });
       return res.status(400).json({ error: 'Missing orderId or userId' });
     }
 
     // Obtener el token de ML del usuario desde Supabase
     const { data: tokenData, error: tokenError } = await supabase
       .from('ml_tokens')
-      .select('access_token')
+      .select('access_token, expires_in, updated_at')
       .eq('user_id', userId)
       .single();
 
     if (tokenError || !tokenData) {
-      console.error('[ML Shipment] No token found for user:', userId);
-      return res.status(404).json({ error: 'ML token not found' });
+      console.error('[ML Shipment] No token found for user:', userId, 'Error:', tokenError);
+      return res.status(404).json({ error: 'ML token not found', userId, tokenError });
     }
+
+    console.log('[ML Shipment] Token found for user:', userId, 'expires_in:', tokenData.expires_in);
 
     const accessToken = tokenData.access_token;
 
@@ -81,6 +86,9 @@ export default async function handler(req, res) {
     };
 
     // Crear envío en MercadoLibre
+    console.log('[ML Shipment] Creating shipment in ML for order:', orderId);
+    console.log('[ML Shipment] Shipment body:', JSON.stringify(shipmentBody, null, 2));
+    
     const mlResponse = await fetch('https://api.mercadolibre.com/shipments', {
       method: 'POST',
       headers: {
@@ -91,16 +99,27 @@ export default async function handler(req, res) {
       body: JSON.stringify(shipmentBody),
     });
 
+    const responseText = await mlResponse.text();
+    console.log('[ML Shipment] ML Response status:', mlResponse.status);
+    console.log('[ML Shipment] ML Response body:', responseText);
+
     if (!mlResponse.ok) {
-      const errorData = await mlResponse.json().catch(() => ({}));
-      console.error('[ML Shipment] Failed to create shipment:', errorData);
+      const errorData = responseText ? JSON.parse(responseText) : {};
+      console.error('[ML Shipment] Failed to create shipment. Status:', mlResponse.status, 'Error:', errorData);
       return res.status(500).json({ 
         error: 'Failed to create ML shipment',
-        details: errorData
+        status: mlResponse.status,
+        details: errorData,
+        orderId
       });
     }
 
-    const shipment = await mlResponse.json();
+    const shipment = JSON.parse(responseText);
+    console.log('[ML Shipment] Shipment created successfully:', {
+      id: shipment.id,
+      tracking: shipment.tracking_number,
+      status: shipment.status
+    });
 
     // Guardar información del envío en Supabase
     const { error: insertError } = await supabase
@@ -116,18 +135,26 @@ export default async function handler(req, res) {
       });
 
     if (insertError) {
-      console.error('[ML Shipment] Failed to save shipment:', insertError);
+      console.error('[ML Shipment] Failed to save shipment to DB:', insertError);
       // No fallar la request si solo falla el guardado
+    } else {
+      console.log('[ML Shipment] Shipment saved to DB successfully');
     }
 
     // Actualizar orden con el tracking
-    await supabase
+    const { error: updateError } = await supabase
       .from('orders')
       .update({
         tracking_number: shipment.tracking_number || null,
         ml_shipment_id: shipment.id,
       })
       .eq('id', orderId);
+
+    if (updateError) {
+      console.error('[ML Shipment] Failed to update order:', updateError);
+    } else {
+      console.log('[ML Shipment] Order updated with tracking info');
+    }
 
     return res.status(200).json({
       success: true,
