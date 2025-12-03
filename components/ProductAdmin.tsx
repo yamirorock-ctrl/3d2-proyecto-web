@@ -608,6 +608,27 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
                 className="mt-1 block w-full rounded-md border-gray-200"
                 placeholder="Ej: 10"
               />
+              {form.technology === 'Láser' && (
+                <div className="mt-2">
+                  <label className="block text-xs font-medium text-slate-600">Grosor (mm)</label>
+                  <select
+                    className="mt-1 block w-full rounded-md border-gray-200"
+                    value={form.dimensions?.height ? Math.round((form.dimensions.height || 0) * 10) : ''}
+                    onChange={e => {
+                      const mm = Number(e.target.value) || 3;
+                      const cm = mm / 10;
+                      handleChange('dimensions', { ...form.dimensions, height: cm });
+                    }}
+                  >
+                    <option value="">Seleccioná grosor</option>
+                    <option value="3">3 mm</option>
+                    <option value="5">5 mm</option>
+                    <option value="6">6 mm</option>
+                    <option value="9">9 mm</option>
+                  </select>
+                  <p className="mt-1 text-xs text-slate-500">Para corte láser, el alto se toma como grosor.</p>
+                </div>
+              )}
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700">Largo (cm) *</label>
