@@ -341,6 +341,48 @@ export default async function handler(req, res) {
 
       console.log(`[Webhook] Orden ${orderId} actualizada a estado: ${orderStatus}`);
 
+      // Si el pago fue aprobado, intentar crear envío en MercadoLibre (no bloqueante)
+      if (orderStatus === 'paid') {
+        console.log('[Webhook] Pago aprobado - iniciando creación de envío en ML');
+        
+        // Obtener datos de la orden para verificar si necesita envío de ML
+        const { data: orderData, error: orderFetchError } = await supabase
+          .from('orders')
+          .select('shipping_method, user_id')
+          .eq('id', orderId)
+          .single();
+
+        if (!orderFetchError && orderData) {
+          const needsMLShipment = ['moto', 'correo'].includes(orderData.shipping_method);
+          
+          if (needsMLShipment) {
+            // Buscar un user_id del sistema o usar uno por defecto
+            // En producción, deberías tener un user_id asociado al admin/vendedor
+            const userId = orderData.user_id || 'admin-default';
+            
+            // Llamar al endpoint de crear envío (asíncrono, no bloqueante)
+            fetch(`${process.env.VERCEL_URL || 'https://3d2-bewhook.vercel.app'}/api/ml-create-shipment`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ orderId, userId })
+            })
+            .then(resp => resp.json())
+            .then(data => {
+              if (data.success) {
+                console.log('[Webhook] Envío ML creado exitosamente:', data.shipment);
+              } else {
+                console.warn('[Webhook] No se pudo crear envío ML:', data.error);
+              }
+            })
+            .catch(err => {
+              console.error('[Webhook] Error al llamar ml-create-shipment:', err);
+            });
+          } else {
+            console.log('[Webhook] Método de envío no requiere ML:', orderData.shipping_method);
+          }
+        }
+      }
+
       return res.status(200).json({
         success: true,
         orderId,

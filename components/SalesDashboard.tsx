@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Order } from '../types';
-import { TrendingUp, Package, DollarSign, Clock, Download, Calendar, CheckCircle, Loader, XCircle, Trash2, RefreshCw } from 'lucide-react';
+import { TrendingUp, Package, DollarSign, Clock, Download, Calendar, CheckCircle, Loader, XCircle, Trash2, RefreshCw, Truck } from 'lucide-react';
 
 interface Props {
   orders: Order[];
@@ -276,6 +276,40 @@ const SalesDashboard: React.FC<Props> = ({ orders, onUpdateStatus, onDelete, onR
                         ))}
                       </div>
                     </div>
+
+                    {/* Tracking Info (si existe) */}
+                    {((order as any).tracking_number || (order as any).ml_shipment_id) && (
+                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-3">
+                        <p className="text-sm font-medium text-blue-900 mb-2 flex items-center gap-2">
+                          <Truck size={16} />
+                          Información de Envío
+                        </p>
+                        <div className="space-y-1 text-sm text-blue-800">
+                          {(order as any).tracking_number && (
+                            <div>
+                              <strong>Número de seguimiento:</strong>{' '}
+                              <span className="font-mono bg-white px-2 py-0.5 rounded border border-blue-300">
+                                {(order as any).tracking_number}
+                              </span>
+                            </div>
+                          )}
+                          {(order as any).ml_shipment_id && (
+                            <div>
+                              <strong>ID Envío ML:</strong> {(order as any).ml_shipment_id}
+                            </div>
+                          )}
+                          {(order as any).shipping_method && (
+                            <div>
+                              <strong>Método:</strong>{' '}
+                              {(order as any).shipping_method === 'moto' ? 'Envío en Moto' :
+                               (order as any).shipping_method === 'correo' ? 'Correo Argentino / Andreani' :
+                               (order as any).shipping_method === 'retiro' ? 'Retiro en Local' :
+                               'A coordinar'}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
 
                     {/* Total */}
                     <div className="flex justify-between items-center pt-3 border-t">
