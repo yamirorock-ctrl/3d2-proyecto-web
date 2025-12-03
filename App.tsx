@@ -4,6 +4,7 @@ import Navbar from './components/Navbar';
 import ProductCard from './components/ProductCard';
 import CartDrawer from './components/CartDrawer';
 import ChatAssistant from './components/ChatAssistant';
+import MLCallback from './components/MLCallback';
 import CheckoutModal from './components/CheckoutModal';
 import Checkout from './components/Checkout';
 import OrderSuccess from './components/OrderSuccess';
@@ -12,6 +13,7 @@ import OrderTracking from './components/OrderTracking';
 import OrdersManagement from './components/OrdersManagement';
 import AdminPage from './components/AdminPage';
 import AdminLogin from './components/AdminLogin';
+import ResetAdmin from './components/ResetAdmin';
 import Register from './components/Register';
 import UserLogin from './components/UserLogin';
 import CustomOrderForm, { CustomOrder } from './components/CustomOrderForm';
@@ -137,6 +139,35 @@ const App: React.FC = () => {
 
   // Load cart from local storage with sanitization to avoid phantom items
   useEffect(() => {
+    // Optional cleanup trigger via URL param: ?reset=admin
+    try {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('reset') === 'admin') {
+        const keys = [
+          'ADMIN_SECRET',
+          'admin_user',
+          'admin_pass_hash',
+          'admin_session_id',
+          'adminAccessAttempts',
+          'orders',
+          'cart',
+          'customOrders',
+          'categories',
+          'products'
+        ];
+        keys.forEach(k => { try { localStorage.removeItem(k); } catch {} });
+        try { sessionStorage.removeItem('admin_entry_token'); sessionStorage.removeItem('admin_entry_ts'); } catch {}
+        setCart([]);
+        setProducts(DEFAULT_PRODUCTS);
+        setAvailableCategories([]);
+        alert('Reseteo local completado. Vuelve a intentar el flujo.');
+        // Limpiar query para evitar re-ejecución
+        const url = new URL(window.location.href);
+        url.searchParams.delete('reset');
+        window.history.replaceState({}, '', url.toString());
+      }
+    } catch {}
+  }, []);
     const savedCart = localStorage.getItem('cart');
     if (savedCart) {
       try {
@@ -712,6 +743,7 @@ const App: React.FC = () => {
           <Route path="order-success" element={<OrderSuccess />} />
           <Route path="order-failure" element={<OrderFailure />} />
           <Route path="order-tracking" element={<OrderTracking />} />
+          <Route path="reset-admin" element={<ResetAdmin onDone={() => navigate('/')} />} />
           <Route path="admin" element={
             <AdminGuard>
               <AdminPage 
@@ -748,6 +780,7 @@ const App: React.FC = () => {
       />
 
       <ChatAssistant products={products} />
+      <MLCallback />
       
       
       {/* Footer */}
