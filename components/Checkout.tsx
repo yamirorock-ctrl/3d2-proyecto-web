@@ -167,11 +167,9 @@ const Checkout: React.FC<CheckoutProps> = ({ cart, onClearCart }) => {
     quoteMlShipping();
   }, [shippingMethod, customerPostalCode]);
 
-  // Setear método de envío automáticamente si no es Buenos Aires
+  // Permitir envíos a todo el país (MercadoEnvíos cotiza interior)
   useEffect(() => {
-    if (!isBuenosAires && shippingMethod !== 'to_coordinate') {
-      setShippingMethod('to_coordinate');
-    }
+    // No forzar método de envío por provincia
   }, [isBuenosAires, shippingMethod]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -342,58 +340,44 @@ const Checkout: React.FC<CheckoutProps> = ({ cart, onClearCart }) => {
                   </select>
                 </div>
 
-                {isBuenosAires && (
-                  <>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Localidad *
-                      </label>
-                      <input
-                        type="text"
-                        value={customerCity}
-                        onChange={(e) => setCustomerCity(e.target.value)}
-                        placeholder="Ej: Esteban Echeverría"
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
-                        required={isBuenosAires}
-                      />
-                    </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Localidad {shippingMethod === 'correo' && <span className="text-red-500">*</span>}
+                  </label>
+                  <input
+                    type="text"
+                    value={customerCity}
+                    onChange={(e) => setCustomerCity(e.target.value)}
+                    placeholder="Ej: Esteban Echeverría"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                    required={shippingMethod === 'correo'}
+                  />
+                </div>
 
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Código Postal {shippingMethod === 'correo' && <span className="text-red-500">*</span>}
-                      </label>
-                      <input
-                        type="text"
-                        value={customerPostalCode}
-                        onChange={(e) => setCustomerPostalCode(e.target.value)}
-                        placeholder="Ej: 1842"
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
-                        required={shippingMethod === 'correo'}
-                      />
-                      {shippingMethod === 'correo' && (
-                        <p className="text-xs text-gray-500 mt-1">
-                          Necesario para calcular el costo de envío por correo
-                        </p>
-                      )}
-                    </div>
-                  </>
-                )}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Código Postal {shippingMethod === 'correo' && <span className="text-red-500">*</span>}
+                  </label>
+                  <input
+                    type="text"
+                    value={customerPostalCode}
+                    onChange={(e) => setCustomerPostalCode(e.target.value)}
+                    placeholder="Ej: 1842"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                    required={shippingMethod === 'correo'}
+                  />
+                  {shippingMethod === 'correo' && (
+                    <p className="text-xs text-gray-500 mt-1">
+                      Necesario para calcular el costo de envío
+                    </p>
+                  )}
+                </div>
 
             {/* Método de envío */}
             <div>
               <h2 className="text-xl font-semibold mb-4">Método de Entrega</h2>
 
-              {!isBuenosAires ? (
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                  <p className="text-yellow-800 font-medium">
-                    📦 Envío al interior: A coordinar con el vendedor
-                  </p>
-                  <p className="text-sm text-yellow-700 mt-2">
-                    Te contactaremos por WhatsApp/Email para coordinar el envío y el costo.
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-3">
+              <div className="space-y-3">
                   {/* Envío en moto */}
                   <label className="flex items-start p-4 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-indigo-500 transition-colors">
                     <input
@@ -459,17 +443,16 @@ const Checkout: React.FC<CheckoutProps> = ({ cart, onClearCart }) => {
                     </div>
                   </label>
 
-                  {/* Nota de tiempos de entrega */}
-                  <div className="mt-3 rounded-lg border border-gray-200 bg-gray-50 p-3">
-                    <p className="text-sm text-gray-700">
-                      Tiempo estimado de entrega: <span className="font-semibold">2 a 7 días hábiles</span> una vez realizada la compra.
-                    </p>
-                  </div>
+                {/* Nota de tiempos de entrega */}
+                <div className="mt-3 rounded-lg border border-gray-200 bg-gray-50 p-3">
+                  <p className="text-sm text-gray-700">
+                    Tiempo estimado de entrega: <span className="font-semibold">2 a 7 días hábiles</span> una vez realizada la compra.
+                  </p>
                 </div>
-              )}
+              </div>
 
               {/* Dirección de envío */}
-              {isBuenosAires && shippingMethod && shippingMethod !== 'retiro' && shippingMethod !== 'to_coordinate' && (
+              {shippingMethod && (
                 <div className="mt-4">
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     <MapPin className="inline mr-1" size={16} />
