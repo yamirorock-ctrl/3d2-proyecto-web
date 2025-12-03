@@ -54,6 +54,8 @@ const Checkout: React.FC<CheckoutProps> = ({ cart, onClearCart }) => {
   const [shippingMethod, setShippingMethod] = useState<ShippingMethod | ''>('');
   const [shippingCost, setShippingCost] = useState(0);
   const [shippingConfig, setShippingConfig] = useState<any>(null);
+  const [mlShippingCost, setMlShippingCost] = useState<number | null>(null);
+  const [mlShippingLoading, setMlShippingLoading] = useState(false);
   
   // Estado de procesamiento
   const [isProcessing, setIsProcessing] = useState(false);
@@ -84,13 +86,76 @@ const Checkout: React.FC<CheckoutProps> = ({ cart, onClearCart }) => {
         return;
       }
 
+      // Si es correo (ML), usar costo cotizado dinámicamente
+      if (shippingMethod === 'correo') {
+        if (mlShippingCost !== null) {
+          console.log('[CHECKOUT] Using ML quoted cost:', mlShippingCost);
+          setShippingCost(mlShippingCost);
+        } else {
+          setShippingCost(0);
+        }
+        return;
+      }
+
       const cost = await calculateShippingCost(shippingMethod, subtotal);
       console.log('[CHECKOUT] setShippingCost=', cost);
       setShippingCost(cost);
     };
 
     updateShippingCost();
-  }, [shippingMethod, subtotal]);
+  }, [shippingMethod, subtotal, mlShippingCost]);
+
+  // Cotizar envío ML cuando el usuario ingresa código postal y selecciona correo
+  useEffect(() => {
+    const quoteMlShipping = async () => {
+      if (shippingMethod !== 'correo' || !customerPostalCode || customerPostalCode.length < 4) {
+        setMlShippingCost(null);
+        return;
+      }
+
+      setMlShippingLoading(true);
+      try {
+        // Estimar dimensiones del carrito (esto debería venir de los productos)
+        const dimensions = {
+          width: 20,   // cm
+          height: 20,  // cm
+          length: 20,  // cm
+          weight: 500  // gramos
+        };
+
+        const response = await fetch('https://3d2-bewhook.vercel.app/api/ml-quote-shipping', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            zipCodeTo: customerPostalCode,
+            dimensions
+          })
+        });
+
+        if (!response.ok) {
+          console.error('[ML Quote] Failed to quote shipping');
+          setMlShippingCost(8000); // Costo estimado por defecto
+          return;
+        }
+
+        const data = await response.json();
+        console.log('[ML Quote] Result:', data);
+        
+        if (data.success && data.defaultCost) {
+          setMlShippingCost(data.defaultCost);
+        } else {
+          setMlShippingCost(8000);
+        }
+      } catch (error) {
+        console.error('[ML Quote] Exception:', error);
+        setMlShippingCost(8000); // Fallback
+      } finally {
+        setMlShippingLoading(false);
+      }
+    };
+
+    quoteMlShipping();
+  }, [shippingMethod, customerPostalCode]);
 
   // Setear método de envío automáticamente si no es Buenos Aires
   useEffect(() => {
@@ -285,7 +350,7 @@ const Checkout: React.FC<CheckoutProps> = ({ cart, onClearCart }) => {
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Código Postal
+                        Código Postal {shippingMethod === 'correo' && <span className="text-red-500">*</span>}
                       </label>
                       <input
                         type="text"
@@ -293,7 +358,13 @@ const Checkout: React.FC<CheckoutProps> = ({ cart, onClearCart }) => {
                         onChange={(e) => setCustomerPostalCode(e.target.value)}
                         placeholder="Ej: 1842"
                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                        required={shippingMethod === 'correo'}
                       />
+                      {shippingMethod === 'correo' && (
+                        <p className="text-xs text-gray-500 mt-1">
+                          Necesario para calcular el costo de envío por correo
+                        </p>
+                      )}
                     </div>
                   </>
                 )}
@@ -358,12 +429,20 @@ const Checkout: React.FC<CheckoutProps> = ({ cart, onClearCart }) => {
                       <div className="flex items-center gap-2">
                         <Package className="text-indigo-600" size={20} />
                         <span className="font-medium">Correo Argentino / Andreani</span>
-                        <span className="ml-auto font-bold text-indigo-600">
-                          A calcular
+                        <span className="ml-auto font-bold">
+                          {mlShippingLoading ? (
+                            <span className="text-gray-400">Calculando...</span>
+                          ) : mlShippingCost !== null ? (
+                            <span className="text-indigo-600">${mlShippingCost.toLocaleString()}</span>
+                          ) : (
+                            <span className="text-gray-400">Ingresá CP</span>
+                          )}
                         </span>
                       </div>
                       <p className="text-sm text-gray-600 mt-1">
-                        Costo calculado por MercadoEnvíos según destino
+                        {customerPostalCode && customerPostalCode.length >= 4
+                          ? 'Costo calculado por MercadoEnvíos'
+                          : 'Ingresá tu código postal para ver el costo'}
                       </p>
                     </div>
                   </label>

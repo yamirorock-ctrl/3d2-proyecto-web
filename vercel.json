@@ -26,6 +26,10 @@
     {
       "src": "/api/ml-retry-shipments",
       "dest": "/api/ml-retry-shipments.js"
+    },
+    {
+      "src": "/api/ml-quote-shipping",
+      "dest": "/api/ml-quote-shipping.js"
     }
   ]
 }
