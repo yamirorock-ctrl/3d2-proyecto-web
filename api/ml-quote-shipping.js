@@ -105,13 +105,26 @@ export default async function handler(req, res) {
 
     const data = JSON.parse(responseText);
     
-    // Extraer opciones de envío
+    // Extraer opciones de envío con más detalles de estimación
     const options = (data.options || []).map(opt => ({
       id: opt.id,
       name: opt.name,
       cost: opt.cost,
       currency: opt.currency_id,
+      // Campos de estimación comunes en ML:
+      // - estimated_delivery_time: { date, time_from, time_to, unit, value }
+      // - shipping_time: { unit, value }
       estimatedDelivery: opt.estimated_delivery_time?.date || null,
+      estimatedWindow: opt.estimated_delivery_time
+        ? {
+            date: opt.estimated_delivery_time.date || null,
+            from: opt.estimated_delivery_time.time_from || null,
+            to: opt.estimated_delivery_time.time_to || null,
+            unit: opt.estimated_delivery_time.unit || null,
+            value: opt.estimated_delivery_time.value || null,
+          }
+        : null,
+      shippingTime: opt.shipping_time || null,
       carrier: opt.shipping_method_id || 'standard'
     }));
 

@@ -453,7 +453,7 @@ const Checkout: React.FC<CheckoutProps> = ({ cart, onClearCart }) => {
                         {customerPostalCode && customerPostalCode.length >= 4
                           ? mlEstimatedDelivery 
                             ? `Llega aproximadamente el ${new Date(mlEstimatedDelivery).toLocaleDateString('es-AR', { day: 'numeric', month: 'long' })}`
-                            : 'Costo calculado por MercadoEnvíos'
+                            : 'Costo calculado por MercadoEnvíos (tiempos sujetos a disponibilidad)'
                           : 'Ingresá tu código postal para ver el costo'}
                       </p>
                     </div>
