@@ -118,6 +118,22 @@ const OrderSuccess: React.FC = () => {
                 </div>
               </div>
 
+              {(order as any).shipping_method === 'retiro' && (
+                <div className="bg-green-50 border-2 border-green-300 rounded-lg p-4 mb-4">
+                  <p className="text-green-800 font-semibold mb-3">
+                    📍 Retiro en Local - Te enviaremos la dirección por WhatsApp
+                  </p>
+                  <a
+                    href={`https://wa.me/${(import.meta as any).env?.VITE_WHATSAPP_NUMBER || '5491151524520'}?text=Hola! Acabo de confirmar mi pedido ${order.order_number} con retiro en local. ¿Cuál es la dirección y horarios?`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg text-center transition-colors"
+                  >
+                    📱 Contactar por WhatsApp para coordinar retiro
+                  </a>
+                </div>
+              )}
+
               <div className="bg-blue-50 border border-blue-200 rounded p-3 text-sm">
                 <p className="text-blue-800">
                   📧 Te enviamos un email a <strong>{order.customer_email}</strong> con los detalles de tu pedido.

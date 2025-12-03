@@ -385,10 +385,7 @@ const Checkout: React.FC<CheckoutProps> = ({ cart, onClearCart }) => {
                         <span className="ml-auto text-green-600 font-bold">GRATIS</span>
                       </div>
                       <p className="text-sm text-gray-600 mt-1">
-                        {shippingConfig?.store_address || 'Amado Nervo 85, El Jagüel'}
-                      </p>
-                      <p className="text-sm text-gray-500">
-                        {shippingConfig?.store_hours || 'Lun a Vie 10-18hs'}
+                        Te enviaremos la dirección por WhatsApp después de confirmar el pago
                       </p>
                     </div>
                   </label>
