@@ -10,6 +10,13 @@ interface CheckoutProps {
   onClearCart: () => void;
 }
 
+// Dimensiones estándar para productos 3D y láser (estimaciones realistas)
+const PRODUCT_DIMENSIONS = {
+  '3D': { width: 12, height: 12, length: 15, weight: 150 },      // Figura 3D pequeña/mediana
+  'Láser': { width: 20, height: 0.5, length: 25, weight: 100 },  // Producto plano de corte láser
+  'default': { width: 15, height: 10, length: 20, weight: 200 }  // Por defecto si no tiene tecnología
+};
+
 const PROVINCIAS_ARGENTINA = [
   'Buenos Aires',
   'CABA',
@@ -117,19 +124,32 @@ const Checkout: React.FC<CheckoutProps> = ({ cart, onClearCart }) => {
 
       setMlShippingLoading(true);
       try {
-        // Calcular dimensiones basadas en el carrito
-        const totalQuantity = cart.reduce((sum, item) => sum + item.quantity, 0);
-        const totalWeight = cart.reduce((sum, item) => sum + (item.quantity * 200), 0); // 200g por producto estimado
-        
-        // Ajustar dimensiones según cantidad de productos
+        // Calcular dimensiones del paquete basado en los productos del carrito
+        let totalWidth = 0;
+        let totalHeight = 0;
+        let totalLength = 0;
+        let totalWeight = 0;
+
+        cart.forEach(item => {
+          const dim = PRODUCT_DIMENSIONS[item.technology || 'default'];
+          // Para múltiples unidades, solo aumentamos peso y largo (apilados)
+          totalWeight += dim.weight * item.quantity;
+          totalLength += dim.length * 0.3 * item.quantity; // Factor de compresión al apilar
+          // Ancho y alto se toman del producto más grande
+          totalWidth = Math.max(totalWidth, dim.width);
+          totalHeight = Math.max(totalHeight, dim.height * Math.min(item.quantity, 3)); // Max 3 apilados en altura
+        });
+
+        // Redondear y aplicar límites de paquete postal
         const dimensions = {
-          width: Math.min(30, 15 + totalQuantity * 2),   // cm (max 30cm)
-          height: Math.min(25, 10 + totalQuantity * 2),  // cm (max 25cm)
-          length: Math.min(35, 20 + totalQuantity * 2),  // cm (max 35cm)
-          weight: Math.max(500, totalWeight)              // gramos (min 500g)
+          width: Math.min(40, Math.ceil(totalWidth + 5)),   // +5cm de packaging
+          height: Math.min(30, Math.ceil(totalHeight + 3)),  // +3cm de packaging
+          length: Math.min(50, Math.ceil(totalLength + 10)), // +10cm de packaging
+          weight: Math.max(300, Math.ceil(totalWeight + 100)) // +100g de packaging
         };
         
-        console.log('[ML Quote] Cart:', { totalQuantity, totalWeight, dimensions });
+        console.log('[ML Quote] Cart items:', cart.map(i => ({ name: i.name, tech: i.technology, qty: i.quantity })));
+        console.log('[ML Quote] Calculated dimensions:', dimensions);
 
         const response = await fetch('https://3d2-bewhook.vercel.app/api/ml-quote-shipping', {
           method: 'POST',
