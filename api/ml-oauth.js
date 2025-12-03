@@ -2,6 +2,20 @@
 import { createClient } from '@supabase/supabase-js';
 
 export default async function handler(req, res) {
+  // CORS headers
+  const origin = req.headers.origin || '*';
+  res.setHeader('Access-Control-Allow-Origin', origin);
+  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+
+  if (req.method === 'OPTIONS') {
+    // Preflight response
+    return res.status(200).end();
+  }
+  if (req.method === 'GET') {
+    return res.status(200).json({ ok: true, message: 'ml-oauth endpoint alive' });
+  }
   if (req.method !== 'POST') {
     res.status(405).json({ error: 'Method not allowed' });
     return;
@@ -48,13 +62,18 @@ export default async function handler(req, res) {
           token_type: data.token_type,
           updated_at: new Date().toISOString()
         };
-        await supabase.from('ml_tokens').upsert(payload, { onConflict: 'user_id' });
+        const { data: upserted, error: upsertError } = await supabase.from('ml_tokens').upsert(payload, { onConflict: 'user_id' }).select('user_id, updated_at').single();
+        if (upsertError) {
+          console.warn('[ml-oauth] upsert error:', upsertError.message);
+        } else {
+          console.log('[ml-oauth] tokens saved for user', upserted?.user_id, 'at', upserted?.updated_at);
+        }
       }
     } catch (e) {
       // Continue even if persistence fails
       console.warn('[ml-oauth] persistence error:', e.message);
     }
-    res.status(200).json({ ok: true });
+    res.status(200).json({ ok: true, user_id: data.user_id, saved: true });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
