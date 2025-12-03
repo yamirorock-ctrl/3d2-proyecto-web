@@ -23,6 +23,9 @@ import { Routes, Route, useNavigate } from 'react-router-dom';
 import { CheckCircle2, ArrowLeft, Mail, Phone } from 'lucide-react';
 import { getAllProductsFromSupabase } from './services/supabaseService';
 
+// 🔧 MODO MANTENIMIENTO - Cambiar a false para reactivar la tienda
+const MAINTENANCE_MODE = true;
+
 // Updated Product Data for 3D Printing and Laser Cutting
 const DEFAULT_PRODUCTS: Product[] = [
   {
@@ -678,6 +681,36 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 font-sans selection:bg-indigo-100 selection:text-indigo-900">
+      {/* MODO MANTENIMIENTO */}
+      {MAINTENANCE_MODE && window.location.pathname !== '/admin/login' && window.location.pathname !== '/admin' ? (
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-500 to-purple-600 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full text-center">
+            <div className="mb-6">
+              <div className="w-20 h-20 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <span className="text-4xl">🔧</span>
+              </div>
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">En Mantenimiento</h1>
+              <p className="text-gray-600">
+                Estamos mejorando nuestra tienda para ofrecerte una mejor experiencia.
+              </p>
+            </div>
+            <div className="space-y-4 text-sm text-gray-700">
+              <p>✨ Integrando nuevas funcionalidades</p>
+              <p>📦 Mejorando sistema de envíos</p>
+              <p>🔄 Volvemos pronto</p>
+            </div>
+            <div className="mt-8 pt-6 border-t border-gray-200">
+              <p className="text-xs text-gray-500">
+                ¿Eres administrador? 
+                <a href="/admin/login" className="text-indigo-600 hover:text-indigo-700 ml-1 font-medium">
+                  Acceder al panel
+                </a>
+              </p>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <>
       {cartNotice && (
         <div className="bg-yellow-100 text-yellow-800 text-xs sm:text-sm p-2 text-center">
           {cartNotice}
@@ -856,6 +889,8 @@ const App: React.FC = () => {
           </div>
         </div>
       </footer>
+        </>
+      )}
     </div>
   );
 };
