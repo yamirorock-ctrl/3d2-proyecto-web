@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ShoppingCart, MapPin, Truck, Store, Package, CreditCard } from 'lucide-react';
 import { CartItem, ShippingMethod } from '../types';
 import { createOrder, calculateShippingCost, getShippingConfig } from '../services/orderService';
+import { estimateProductWeight } from '../services/weightEstimator';
 import { createPaymentPreference } from '../services/mercadoPagoService';
 
 interface CheckoutProps {
@@ -133,7 +134,8 @@ const Checkout: React.FC<CheckoutProps> = ({ cart, onClearCart }) => {
         cart.forEach(item => {
           const dim = PRODUCT_DIMENSIONS[item.technology || 'default'];
           // Para múltiples unidades, solo aumentamos peso y largo (apilados)
-          totalWeight += dim.weight * item.quantity;
+          const itemWeight = item.weight && item.weight > 0 ? item.weight : estimateProductWeight(item);
+          totalWeight += itemWeight * item.quantity;
           totalLength += dim.length * 0.3 * item.quantity; // Factor de compresión al apilar
           // Ancho y alto se toman del producto más grande
           totalWidth = Math.max(totalWidth, dim.width);
