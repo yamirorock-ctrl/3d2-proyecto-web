@@ -79,7 +79,7 @@ export async function getAllProductsFromSupabase(): Promise<{ success: boolean; 
     const client = getClient();
     const { data, error } = await client
       .from('products')
-      .select('id,name,price,category,image,images,description,technology,featured,stock');
+      .select('id,name,price,category,image,images,description,technology,featured,stock,sale_type,pack_enabled,units_per_pack,mayorista_enabled,wholesale_units,wholesale_discount,wholesale_image,wholesale_description');
     if (error) return { success: false, error: error.message };
     // Asegurar tipos básicos y default arrays
     const products: Product[] = (data || []).map((p: any) => ({
@@ -92,7 +92,16 @@ export async function getAllProductsFromSupabase(): Promise<{ success: boolean; 
       description: p.description || '',
       technology: p.technology === 'Láser' ? 'Láser' : '3D',
       featured: !!p.featured,
-      stock: typeof p.stock === 'number' ? p.stock : (p.stock !== null && p.stock !== undefined ? Number(p.stock) : undefined)
+      stock: typeof p.stock === 'number' ? p.stock : (p.stock !== null && p.stock !== undefined ? Number(p.stock) : undefined),
+      // Packs y mayorista
+      saleType: p.sale_type || 'unidad',
+      packEnabled: !!p.pack_enabled,
+      unitsPerPack: p.units_per_pack ? Number(p.units_per_pack) : undefined,
+      mayoristaEnabled: !!p.mayorista_enabled,
+      wholesaleUnits: p.wholesale_units ? Number(p.wholesale_units) : undefined,
+      wholesaleDiscount: p.wholesale_discount ? Number(p.wholesale_discount) : undefined,
+      wholesaleImage: p.wholesale_image || undefined,
+      wholesaleDescription: p.wholesale_description || undefined
     }));
     return { success: true, products };
   } catch (e) {

@@ -21,6 +21,15 @@ export interface Product {
     length: number; // cm
   };
   weight?: number; // gramos
+  // Campos para packs y mayorista
+  saleType?: 'unidad' | 'pack' | 'mayorista';
+  packEnabled?: boolean;
+  unitsPerPack?: number;
+  mayoristaEnabled?: boolean;
+  wholesaleUnits?: number;
+  wholesaleDiscount?: number;
+  wholesaleImage?: string;
+  wholesaleDescription?: string;
 }
 
 export interface CartItem extends Product {
