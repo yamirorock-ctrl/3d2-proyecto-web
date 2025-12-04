@@ -315,14 +315,15 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
       return;
     }
     // Sincronizar campos de tipo de venta
+    // Mapear a snake_case para Supabase
     const updatedForm = {
       ...form,
-      saleType,
-      unitsPerPack,
-      wholesaleUnits,
-      wholesaleDiscount,
-      wholesaleImage,
-      wholesaleDescription
+      sale_type: saleType,
+      units_per_pack: unitsPerPack,
+      wholesale_units: wholesaleUnits,
+      wholesale_discount: wholesaleDiscount,
+      wholesale_image: wholesaleImage,
+      wholesale_description: wholesaleDescription
     };
     updatedForm.technology = technology;
     if (updatedForm.images && updatedForm.images.length > 0) {
