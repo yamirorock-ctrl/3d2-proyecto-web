@@ -43,18 +43,27 @@ export default async function handler(req, res) {
 
     const r = await fetch(tokenUrl, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: params.toString() });
     const data = await r.json();
+    console.log('[ml-oauth] Respuesta completa de MercadoLibre:', data);
     if (!r.ok) {
       res.status(r.status).json({ error: 'Token exchange failed', details: data });
       return;
     }
-    // Persist tokens securely in Supabase
+    // Validar datos críticos
+    if (!data.user_id || !data.access_token) {
+      console.error('[ml-oauth] Faltan datos críticos en la respuesta de ML:', data);
+      res.status(500).json({ error: 'Faltan datos críticos de MercadoLibre', details: data });
+      return;
+    }
+    // Persist tokens y devolver depuración (commit for redeploy)
+    let debug = {};
     try {
       const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
       const supabaseAnon = process.env.VITE_SUPABASE_ANON || process.env.SUPABASE_ANON_KEY;
+      debug.supabaseEnv = { supabaseUrl, supabaseAnon };
       if (supabaseUrl && supabaseAnon) {
         const supabase = createClient(supabaseUrl, supabaseAnon);
         const payload = {
-          user_id: data.user_id,
+          user_id: String(data.user_id),
           access_token: data.access_token,
           refresh_token: data.refresh_token,
           expires_in: data.expires_in,
@@ -62,18 +71,14 @@ export default async function handler(req, res) {
           token_type: data.token_type,
           updated_at: new Date().toISOString()
         };
+        debug.payload = payload;
         const { data: upserted, error: upsertError } = await supabase.from('ml_tokens').upsert(payload, { onConflict: 'user_id' }).select('user_id, updated_at').single();
-        if (upsertError) {
-          console.warn('[ml-oauth] upsert error:', upsertError.message);
-        } else {
-          console.log('[ml-oauth] tokens saved for user', upserted?.user_id, 'at', upserted?.updated_at);
-        }
+        debug.upsertResult = { upserted, upsertError };
       }
     } catch (e) {
-      // Continue even if persistence fails
-      console.warn('[ml-oauth] persistence error:', e.message);
+      debug.persistenceError = e.message;
     }
-    res.status(200).json({ ok: true, user_id: data.user_id, saved: true });
+    res.status(200).json({ ok: true, user_id: data.user_id, saved: true, debug });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
