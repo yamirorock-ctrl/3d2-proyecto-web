@@ -314,27 +314,37 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
       alert('La categoría es obligatoria');
       return;
     }
-    form.technology = technology;
-    if (form.images && form.images.length > 0) {
-      form.image = form.images[0].url;
+    // Sincronizar campos de tipo de venta
+    const updatedForm = {
+      ...form,
+      saleType,
+      unitsPerPack,
+      wholesaleUnits,
+      wholesaleDiscount,
+      wholesaleImage,
+      wholesaleDescription
+    };
+    updatedForm.technology = technology;
+    if (updatedForm.images && updatedForm.images.length > 0) {
+      updatedForm.image = updatedForm.images[0].url;
     }
-    if (typeof form.featured !== 'boolean') form.featured = false;
-    if (!form.id) form.id = nextId ?? Date.now();
+    if (typeof updatedForm.featured !== 'boolean') updatedForm.featured = false;
+    if (!updatedForm.id) updatedForm.id = nextId ?? Date.now();
 
     // Guardar en Supabase si el destino es supabase
     if (uploadTarget === 'supabase') {
       import('../services/supabaseService').then(({ upsertProductToSupabase }) => {
-        upsertProductToSupabase(form).then(res => {
+        upsertProductToSupabase(updatedForm).then(res => {
           if (res.success) {
             alert('Producto guardado en Supabase correctamente');
-            onSave(form);
+            onSave(updatedForm);
           } else {
-            alert('Error al guardar en Supabase: ' + (res.error || '')); 
+            alert('Error al guardar en Supabase: ' + (res.error || ''));
           }
         });
       });
     } else {
-      onSave(form);
+      onSave(updatedForm);
     }
     // No recargar ni navegar, solo actualizar estado
   };
