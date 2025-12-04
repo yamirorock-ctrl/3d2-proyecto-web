@@ -316,8 +316,13 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
     }
     // Sincronizar campos de tipo de venta
     // Mapear a snake_case para Supabase
+    // Mapear y limpiar campos para Supabase
+    const {
+      saleType, unitsPerPack, wholesaleUnits, wholesaleDiscount, wholesaleImage, wholesaleDescription,
+      ...restForm
+    } = form;
     const updatedForm = {
-      ...form,
+      ...restForm,
       sale_type: saleType,
       units_per_pack: unitsPerPack,
       wholesale_units: wholesaleUnits,
