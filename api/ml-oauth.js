@@ -54,12 +54,10 @@ export default async function handler(req, res) {
       res.status(500).json({ error: 'Faltan datos críticos de MercadoLibre', details: data });
       return;
     }
-    // Persist tokens y devolver depuración (commit for redeploy)
-    let debug = {};
+    // Persist tokens y devolver respuesta final
     try {
       const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
       const supabaseAnon = process.env.VITE_SUPABASE_ANON || process.env.SUPABASE_ANON_KEY;
-      debug.supabaseEnv = { supabaseUrl, supabaseAnon };
       if (supabaseUrl && supabaseAnon) {
         const supabase = createClient(supabaseUrl, supabaseAnon);
         const payload = {
@@ -71,14 +69,13 @@ export default async function handler(req, res) {
           token_type: data.token_type,
           updated_at: new Date().toISOString()
         };
-        debug.payload = payload;
-        const { data: upserted, error: upsertError } = await supabase.from('ml_tokens').upsert(payload, { onConflict: 'user_id' }).select('user_id, updated_at').single();
-        debug.upsertResult = { upserted, upsertError };
+        await supabase.from('ml_tokens').upsert(payload, { onConflict: 'user_id' });
       }
     } catch (e) {
-      debug.persistenceError = e.message;
+      // Si falla la persistencia, loguear pero no exponer detalles al usuario
+      console.error('[ml-oauth] Error al guardar token en Supabase:', e.message);
     }
-    res.status(200).json({ ok: true, user_id: data.user_id, saved: true, debug });
+    res.status(200).json({ ok: true, user_id: data.user_id, saved: true });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }

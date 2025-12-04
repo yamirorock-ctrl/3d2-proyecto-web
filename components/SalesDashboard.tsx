@@ -320,7 +320,48 @@ const SalesDashboard: React.FC<Props> = ({ orders, onUpdateStatus, onDelete, onR
 
                   {/* Actions */}
                   {(onUpdateStatus || onDelete) && (
-                    <div className="flex flex-col gap-2 lg:w-48">
+                    <div className="flex flex-col gap-2 lg:w-64">
+                      {/* Descargar etiqueta MercadoEnvíos si existe shipment */}
+                      {(order as any).ml_shipment_id && (
+                        <button
+                          onClick={async () => {
+                            try {
+                              const token = localStorage.getItem('ml_access_token');
+                              if (!token) {
+                                alert('Conectá MercadoLibre en Admin para descargar etiquetas.');
+                                return;
+                              }
+                              const resp = await fetch(`https://api.mercadolibre.com/shipments/${(order as any).ml_shipment_id}/label`, {
+                                headers: {
+                                  'Authorization': `Bearer ${token}`,
+                                  'Accept': 'application/pdf'
+                                }
+                              });
+                              if (!resp.ok) {
+                                const txt = await resp.text();
+                                console.error('Error label ML:', resp.status, txt);
+                                alert('No se pudo descargar la etiqueta. Probá nuevamente.');
+                                return;
+                              }
+                              const blob = await resp.blob();
+                              const url = window.URL.createObjectURL(blob);
+                              const a = document.createElement('a');
+                              a.href = url;
+                              a.download = `etiqueta-${(order as any).ml_shipment_id}.pdf`;
+                              a.click();
+                              window.URL.revokeObjectURL(url);
+                            } catch (e) {
+                              console.error('Excepción al descargar etiqueta:', e);
+                              alert('Error inesperado al descargar la etiqueta.');
+                            }
+                          }}
+                          className="px-4 py-2 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-md text-sm hover:bg-indigo-100 transition-colors flex items-center justify-center gap-2"
+                        >
+                          <Download size={14} />
+                          Etiqueta ML
+                        </button>
+                      )}
+
                       {onUpdateStatus && order.status === 'pending' && (
                         <button
                           onClick={() => onUpdateStatus(order.id, 'processing')}

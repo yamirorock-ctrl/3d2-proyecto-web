@@ -44,6 +44,8 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Missing zipCodeTo or dimensions' });
     }
 
+    // Eliminar la validación estricta de dimensiones y peso mínimo MercadoEnvíos
+
     // Obtener el token de ML del vendedor (el más reciente)
     const { data: tokenData, error: tokenError } = await supabase
       .from('ml_tokens')
@@ -77,8 +79,6 @@ export default async function handler(req, res) {
     url.searchParams.append('zip_code_to', zipCodeTo);
     url.searchParams.append('dimensions', dimensionsStr);
 
-    console.log('[ML Quote] Requesting:', url.toString());
-
     const mlResponse = await fetch(url.toString(), {
       method: 'GET',
       headers: {
@@ -88,13 +88,9 @@ export default async function handler(req, res) {
     });
 
     const responseText = await mlResponse.text();
-    console.log('[ML Quote] Request params:', { from: ML_ZIP_CODE_FROM, to: zipCodeTo, dimensions: dimensionsStr });
-    console.log('[ML Quote] Response status:', mlResponse.status);
-    console.log('[ML Quote] Response body:', responseText);
 
     if (!mlResponse.ok) {
       const errorData = responseText ? JSON.parse(responseText) : {};
-      console.error('[ML Quote] Failed to get shipping options:', errorData);
       
       // Si es 404 o error de ML, devolver costo estimado por defecto
       if (mlResponse.status === 404 || mlResponse.status === 400) {
@@ -120,7 +116,6 @@ export default async function handler(req, res) {
     }
 
     const data = JSON.parse(responseText);
-    console.log('[ML Quote] Parsed data options count:', data.options?.length || 0);
     
     // Extraer opciones de envío con más detalles de estimación
     const options = (data.options || []).map(opt => ({
@@ -167,8 +162,6 @@ export default async function handler(req, res) {
       opt.cost < min.cost ? opt : min, options[0]
     );
 
-    console.log('[ML Quote] Returning cheapest option:', { cost: cheapestOption.cost, carrier: cheapestOption.carrier });
-
     return res.status(200).json({
       success: true,
       options,
@@ -177,7 +170,7 @@ export default async function handler(req, res) {
     });
 
   } catch (error) {
-    console.error('[ML Quote] Exception:', error);
+    // ...existing code...
     return res.status(500).json({ 
       error: 'Internal server error', 
       message: error.message,

@@ -42,6 +42,8 @@ export default function MLCallback() {
           body: JSON.stringify({ code })
         });
         const data = await r.json();
+        // Log completo en consola para depuración
+        console.log('[MLCallback] Respuesta completa de /api/ml-oauth:', data);
         if (!r.ok || !data?.ok) {
           const errMsg = data?.error || `Fallo en el intercambio de tokens (status ${r.status})`;
           throw new Error(errMsg);
