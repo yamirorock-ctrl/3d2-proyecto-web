@@ -77,6 +77,16 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
   const [wholesaleImage, setWholesaleImage] = useState(form.wholesaleImage || '');
   const [wholesaleDescription, setWholesaleDescription] = useState(form.wholesaleDescription || '');
 
+  // Cálculo del precio final según el tipo de venta
+  const finalPrice =
+    saleType === 'unidad'
+      ? form.price
+      : saleType === 'pack'
+      ? form.price * unitsPerPack
+      : saleType === 'mayorista'
+      ? Math.round(form.price * wholesaleUnits * (1 - wholesaleDiscount / 100))
+      : form.price;
+
   // Category mode + localCats sync
   useEffect(() => {
     setLocalCats(Array.from(new Set((categories || []).filter(Boolean))));
@@ -340,7 +350,7 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
     // Guardar en Supabase si el destino es supabase
     if (uploadTarget === 'supabase') {
       import('../services/supabaseService').then(({ upsertProductToSupabase }) => {
-        upsertProductToSupabase(updatedForm).then(res => {
+        upsertProductToSupabase(updatedForm).then res => {
           if (res.success) {
             alert('Producto guardado en Supabase correctamente');
             onSave(updatedForm);
