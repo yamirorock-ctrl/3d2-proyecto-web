@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Redirigiendo...</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <style>body{font-family:Inter,Arial,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;background:#f8fafc;color:#334155}</style>
+  </head>
+  <body>
+    <div>
+      <h1>Redirigiendo…</h1>
+      <p>Cargando la aplicación.</p>
+    </div>
+    <script>
+      // SPA fallback para GitHub Pages
+      sessionStorage.setItem('redirect', location.pathname + location.search + location.hash);
+      location.replace(location.origin + '/');
+    </script>
+  </body>
+</html>

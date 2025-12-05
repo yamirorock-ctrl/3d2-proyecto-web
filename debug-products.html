@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Debug Products - 3D2 Store</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .status { padding: 10px; margin: 10px 0; border-radius: 5px; }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .info { background: #d1ecf1; color: #0c5460; }
+        pre { background: #f5f5f5; padding: 10px; overflow: auto; }
+        button { padding: 10px 20px; margin: 5px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <h1>3D2 Store - Diagnóstico de Productos</h1>
+    
+    <div id="status"></div>
+    
+    <h2>Acciones</h2>
+    <button onclick="checkSupabase()">1. Verificar Supabase</button>
+    <button onclick="checkLocalStorage()">2. Ver localStorage</button>
+    <button onclick="syncToSupabase()">3. Sincronizar a Supabase</button>
+    
+    <div id="results"></div>
+
+    <script type="module">
+        import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+        
+        const SUPABASE_URL = 'https://oyxzkeuvrvmqcvleekzo.supabase.co';
+        const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im95eHprZXV2cnZtcWN2bGVla3pvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQzODM4NTQsImV4cCI6MjA3OTk1OTg1NH0.S7XxmgBNpqofcKlZzFA78Ev3ic7ji9Vd9vRbJIOJbEw';
+        
+        const supabase = createClient(SUPABASE_URL, SUPABASE_ANON);
+        
+        window.checkSupabase = async function() {
+            const results = document.getElementById('results');
+            results.innerHTML = '<p>Consultando Supabase...</p>';
+            
+            try {
+                const { data, error } = await supabase
+                    .from('products')
+                    .select('*')
+                    .order('created_at', { ascending: false });
+                
+                if (error) throw error;
+                
+                results.innerHTML = `
+                    <div class="status success">
+                        <strong>✓ Productos en Supabase: ${data.length}</strong>
+                    </div>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                `;
+            } catch (error) {
+                results.innerHTML = `
+                    <div class="status error">
+                        <strong>✗ Error:</strong> ${error.message}
+                    </div>
+                `;
+            }
+        };
+        
+        window.checkLocalStorage = function() {
+            const results = document.getElementById('results');
+            const products = localStorage.getItem('products');
+            
+            if (products) {
+                const parsed = JSON.parse(products);
+                results.innerHTML = `
+                    <div class="status info">
+                        <strong>localStorage: ${parsed.length} productos</strong>
+                    </div>
+                    <pre>${JSON.stringify(parsed, null, 2)}</pre>
+                `;
+            } else {
+                results.innerHTML = `
+                    <div class="status error">
+                        <strong>✗ No hay productos en localStorage</strong>
+                    </div>
+                `;
+            }
+        };
+        
+        window.syncToSupabase = async function() {
+            const results = document.getElementById('results');
+            results.innerHTML = '<p>Sincronizando a Supabase...</p>';
+            
+            const products = localStorage.getItem('products');
+            if (!products) {
+                results.innerHTML = `
+                    <div class="status error">
+                        <strong>✗ No hay productos en localStorage para sincronizar</strong>
+                    </div>
+                `;
+                return;
+            }
+            
+            try {
+                const parsed = JSON.parse(products);
+                
+                // Primero eliminar todos los productos existentes
+                await supabase.from('products').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+                
+                // Insertar los productos de localStorage
+                const { data, error } = await supabase
+                    .from('products')
+                    .insert(parsed)
+                    .select();
+                
+                if (error) throw error;
+                
+                results.innerHTML = `
+                    <div class="status success">
+                        <strong>✓ Sincronización completada: ${data.length} productos</strong>
+                    </div>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                `;
+            } catch (error) {
+                results.innerHTML = `
+                    <div class="status error">
+                        <strong>✗ Error:</strong> ${error.message}
+                    </div>
+                `;
+            }
+        };
+        
+        // Auto-check al cargar
+        checkSupabase();
+    </script>
+</body>
+</html>
