@@ -350,7 +350,7 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
     // Guardar en Supabase si el destino es supabase
     if (uploadTarget === 'supabase') {
       import('../services/supabaseService').then(({ upsertProductToSupabase }) => {
-        upsertProductToSupabase(updatedForm).then res => {
+        upsertProductToSupabase(updatedForm).then(res => {
           if (res.success) {
             alert('Producto guardado en Supabase correctamente');
             onSave(updatedForm);
