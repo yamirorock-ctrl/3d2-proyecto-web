@@ -1,16 +1,18 @@
 import { createClient } from '@supabase/supabase-js';
 import { Product } from '../types';
 
-const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
+// Elimina la declaración duplicada de supabase y usa getClient()
 
 export async function saveProduct(product: Product) {
-  const { data, error } = await supabase.from('products').upsert([product]);
+  const client = getClient();
+  const { data, error } = await client.from('products').upsert([product]);
   if (error) throw error;
   return data;
 }
 
 export async function getProducts() {
-  const { data, error } = await supabase.from('products').select('*');
+  const client = getClient();
+  const { data, error } = await client.from('products').select('*');
   if (error) throw error;
   return data as Product[];
 }
