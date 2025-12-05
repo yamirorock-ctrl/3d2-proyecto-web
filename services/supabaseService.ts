@@ -1,3 +1,20 @@
+import { createClient } from '@supabase/supabase-js';
+import { Product } from '../types';
+
+const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
+
+export async function saveProduct(product: Product) {
+  const { data, error } = await supabase.from('products').upsert([product]);
+  if (error) throw error;
+  return data;
+}
+
+export async function getProducts() {
+  const { data, error } = await supabase.from('products').select('*');
+  if (error) throw error;
+  return data as Product[];
+}
+
 // Guarda un producto completo en la tabla 'products' de Supabase
 export async function saveProductToSupabase(product: any): Promise<{ success: boolean; error?: string }> {
   const client = getClient();
@@ -21,8 +38,6 @@ export async function upsertProductToSupabase(product: any): Promise<{ success: 
     return { success: false, error: (e as Error).message };
   }
 }
-import { createClient } from '@supabase/supabase-js';
-import type { Product } from '../types';
 
 let supabase:
   | ReturnType<typeof createClient>
@@ -79,7 +94,7 @@ export async function getAllProductsFromSupabase(): Promise<{ success: boolean; 
     const client = getClient();
     const { data, error } = await client
       .from('products')
-      .select('id,name,price,category,image,images,description,technology,featured,stock');
+      .select('id,name,price,category,image,images,description,technology,featured,stock,sale_type,pack_enabled,units_per_pack,mayorista_enabled,wholesale_units,wholesale_discount,wholesale_image,wholesale_description');
     if (error) return { success: false, error: error.message };
     // Asegurar tipos básicos y default arrays
     const products: Product[] = (data || []).map((p: any) => ({
@@ -92,7 +107,16 @@ export async function getAllProductsFromSupabase(): Promise<{ success: boolean; 
       description: p.description || '',
       technology: p.technology === 'Láser' ? 'Láser' : '3D',
       featured: !!p.featured,
-      stock: typeof p.stock === 'number' ? p.stock : (p.stock !== null && p.stock !== undefined ? Number(p.stock) : undefined)
+      stock: typeof p.stock === 'number' ? p.stock : (p.stock !== null && p.stock !== undefined ? Number(p.stock) : undefined),
+      // Packs y mayorista
+      saleType: p.sale_type || 'unidad',
+      packEnabled: !!p.pack_enabled,
+      unitsPerPack: p.units_per_pack ? Number(p.units_per_pack) : undefined,
+      mayoristaEnabled: !!p.mayorista_enabled,
+      wholesaleUnits: p.wholesale_units ? Number(p.wholesale_units) : undefined,
+      wholesaleDiscount: p.wholesale_discount ? Number(p.wholesale_discount) : undefined,
+      wholesaleImage: p.wholesale_image || undefined,
+      wholesaleDescription: p.wholesale_description || undefined
     }));
     return { success: true, products };
   } catch (e) {

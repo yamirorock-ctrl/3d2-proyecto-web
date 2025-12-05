@@ -119,6 +119,7 @@ const Checkout: React.FC<CheckoutProps> = ({ cart, onClearCart }) => {
     const quoteMlShipping = async () => {
       if (shippingMethod !== 'correo' || !customerPostalCode || customerPostalCode.length < 4) {
         setMlShippingCost(null);
+<<<<<<< HEAD
           setMlEstimatedDelivery(null);
         return;
       }
@@ -153,6 +154,34 @@ const Checkout: React.FC<CheckoutProps> = ({ cart, onClearCart }) => {
         console.log('[ML Quote] Cart items:', cart.map(i => ({ name: i.name, tech: i.technology, qty: i.quantity })));
         console.log('[ML Quote] Calculated dimensions:', dimensions);
 
+=======
+        setMlEstimatedDelivery(null);
+        return;
+      }
+
+      // Calcular dimensiones del paquete basado en los productos del carrito
+      let totalWidth = 0;
+      let totalHeight = 0;
+      let totalLength = 0;
+      let totalWeight = 0;
+      cart.forEach(item => {
+        const dim = item.dimensions ? item.dimensions : PRODUCT_DIMENSIONS[item.technology || 'default'];
+        const itemWeight = item.weight && item.weight > 0 ? item.weight : estimateProductWeight(item);
+        totalWeight += itemWeight * item.quantity;
+        totalLength += dim.length * 0.3 * item.quantity;
+        totalWidth = Math.max(totalWidth, dim.width);
+        totalHeight = Math.max(totalHeight, dim.height * Math.min(item.quantity, 3));
+      });
+      const dimensions = {
+        width: Math.min(40, Math.ceil(totalWidth + 5)),
+        height: Math.min(30, Math.ceil(totalHeight + 3)),
+        length: Math.min(50, Math.ceil(totalLength + 10)),
+        weight: Math.max(300, Math.ceil(totalWeight + 100))
+      };
+      
+      try {
+        setMlShippingLoading(true);
+>>>>>>> a99aad31460ce26d9264c105a3b3a48ba941a898
         const response = await fetch('https://3d2-bewhook.vercel.app/api/ml-quote-shipping', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -163,16 +192,39 @@ const Checkout: React.FC<CheckoutProps> = ({ cart, onClearCart }) => {
         });
 
         if (!response.ok) {
+<<<<<<< HEAD
           console.error('[ML Quote] Failed to quote shipping');
           setMlShippingCost(8000); // Costo estimado por defecto
+=======
+          setError('No se pudo cotizar el envío por MercadoEnvíos. Contactate con el vendedor para elegir otro método de entrega, este no cumple los requisitos para este medio.');
+          setMlShippingCost(null);
+          setMlEstimatedDelivery(null);
+>>>>>>> a99aad31460ce26d9264c105a3b3a48ba941a898
           return;
         }
 
         const data = await response.json();
+<<<<<<< HEAD
         console.log('[ML Quote] API Response:', data);
         console.log('[ML Quote] Options count:', data.options?.length || 0);
         console.log('[ML Quote] Default cost:', data.defaultCost);
         
+=======
+        // Refuerzo: bloquear si options está vacío
+        if (data.success && data.defaultCost && Array.isArray(data.options) && data.options.length === 0) {
+          setError('No se pudo cotizar el envío por MercadoEnvíos. Contactate con el vendedor para elegir otro método de entrega, este no cumple los requisitos para este medio.');
+          setMlShippingCost(data.defaultCost);
+          setMlEstimatedDelivery(null);
+          return;
+        }
+        
+        if (data.success && data.defaultCost && data.options && data.options.length > 0) {
+          setMlShippingCost(data.defaultCost);
+        } else {
+          setError('No se pudo cotizar el envío por MercadoEnvíos. Contactate con el vendedor para elegir otro método de entrega, este no cumple los requisitos para este medio.');
+        }
+
+>>>>>>> a99aad31460ce26d9264c105a3b3a48ba941a898
         if (data.success && data.defaultCost) {
           console.log('[ML Quote] Using cost:', data.defaultCost);
           setMlShippingCost(data.defaultCost);
@@ -529,7 +581,11 @@ const Checkout: React.FC<CheckoutProps> = ({ cart, onClearCart }) => {
             <button
               type="submit"
               disabled={isProcessing}
+<<<<<<< HEAD
               className="w-full bg-indigo-600 text-white py-4 rounded-lg font-semibold hover:bg-indigo-700 disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+=======
+              className={`w-full bg-indigo-600 text-white py-4 rounded-lg font-semibold hover:bg-indigo-700 disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center gap-2`}
+>>>>>>> a99aad31460ce26d9264c105a3b3a48ba941a898
             >
               {isProcessing ? (
                 'Procesando...'

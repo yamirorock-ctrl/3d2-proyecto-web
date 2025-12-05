@@ -54,12 +54,19 @@ export default async function handler(req, res) {
       res.status(500).json({ error: 'Faltan datos críticos de MercadoLibre', details: data });
       return;
     }
+<<<<<<< HEAD
     // Persist tokens y devolver depuración (commit for redeploy)
     let debug = {};
     try {
       const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
       const supabaseAnon = process.env.VITE_SUPABASE_ANON || process.env.SUPABASE_ANON_KEY;
       debug.supabaseEnv = { supabaseUrl, supabaseAnon };
+=======
+    // Persist tokens y devolver respuesta final
+    try {
+      const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
+      const supabaseAnon = process.env.VITE_SUPABASE_ANON || process.env.SUPABASE_ANON_KEY;
+>>>>>>> a99aad31460ce26d9264c105a3b3a48ba941a898
       if (supabaseUrl && supabaseAnon) {
         const supabase = createClient(supabaseUrl, supabaseAnon);
         const payload = {
@@ -71,6 +78,7 @@ export default async function handler(req, res) {
           token_type: data.token_type,
           updated_at: new Date().toISOString()
         };
+<<<<<<< HEAD
         debug.payload = payload;
         const { data: upserted, error: upsertError } = await supabase.from('ml_tokens').upsert(payload, { onConflict: 'user_id' }).select('user_id, updated_at').single();
         debug.upsertResult = { upserted, upsertError };
@@ -79,6 +87,15 @@ export default async function handler(req, res) {
       debug.persistenceError = e.message;
     }
     res.status(200).json({ ok: true, user_id: data.user_id, saved: true, debug });
+=======
+        await supabase.from('ml_tokens').upsert(payload, { onConflict: 'user_id' });
+      }
+    } catch (e) {
+      // Si falla la persistencia, loguear pero no exponer detalles al usuario
+      console.error('[ml-oauth] Error al guardar token en Supabase:', e.message);
+    }
+    res.status(200).json({ ok: true, user_id: data.user_id, saved: true });
+>>>>>>> a99aad31460ce26d9264c105a3b3a48ba941a898
   } catch (e) {
     res.status(500).json({ error: e.message });
   }

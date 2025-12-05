@@ -52,54 +52,28 @@ const UserLogin: React.FC<{ onLogin?: (username:string)=>void }> = ({ onLogin })
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50">
-      <div className="w-full max-w-md rounded-xl bg-white p-8 shadow-lg">
-        <h2 className="mb-4 text-xl font-bold">Ingresar</h2>
-        {message && (
-          <div className="mb-4 text-sm text-red-600">{message}</div>
-        )}
+    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="bg-white p-8 rounded-xl shadow-lg w-full max-w-md">
+        <h2 className="text-xl font-bold mb-4">Ingresar</h2>
+        {message && <div className="mb-4 text-sm text-red-600">{message}</div>}
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm text-slate-700">Usuario</label>
-            <input
-              value={username}
-              onChange={e => setUsername(e.target.value)}
-              className="mt-1 w-full rounded-md border-gray-200 p-2"
-            />
+            <input value={username} onChange={e=>setUsername(e.target.value)} className="mt-1 w-full rounded-md border-gray-200 p-2" />
           </div>
           <div>
             <label className="block text-sm text-slate-700">Contraseña</label>
-            <input
-              type="password"
-              value={password}
-              onChange={e => setPassword(e.target.value)}
-              className="mt-1 w-full rounded-md border-gray-200 p-2"
-            />
+            <input type="password" value={password} onChange={e=>setPassword(e.target.value)} className="mt-1 w-full rounded-md border-gray-200 p-2" />
           </div>
           <div className="flex items-center gap-3">
             <label className="inline-flex items-center gap-2">
-              <input
-                type="checkbox"
-                checked={remember}
-                onChange={e => setRemember(e.target.checked)}
-              />
+              <input type="checkbox" checked={remember} onChange={e=>setRemember(e.target.checked)} />
               <span className="text-sm text-slate-600">Recordarme</span>
             </label>
           </div>
           <div className="flex items-center justify-between">
-            <button
-              type="submit"
-              className="rounded-md bg-indigo-600 px-4 py-2 text-white"
-            >
-              Entrar
-            </button>
-            <button
-              type="button"
-              onClick={() => navigate('/')}
-              className="text-sm text-slate-500"
-            >
-              Volver
-            </button>
+            <button type="submit" className="px-4 py-2 bg-indigo-600 text-white rounded-md">Entrar</button>
+            <button type="button" onClick={()=>navigate('/')} className="text-sm text-slate-500">Volver</button>
           </div>
         </form>
       </div>

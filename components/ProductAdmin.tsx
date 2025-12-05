@@ -16,7 +16,6 @@ interface Props {
 }
 
 const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categories = [] }) => {
-    // ...existing code...
   const [form, setForm] = useState<Product>(() => {
     const base: Product = {
       id: nextId ?? 0,
@@ -69,6 +68,14 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
   const [isCompressing, setIsCompressing] = useState(false);
   const [compressionEnabled, setCompressionEnabled] = useState(true);
   const [isMigratingProduct, setIsMigratingProduct] = useState(false);
+
+  // Campos para packs y mayorista
+  const [saleType, setSaleType] = useState<'unidad' | 'pack' | 'mayorista'>(form.saleType || 'unidad');
+  const [unitsPerPack, setUnitsPerPack] = useState(form.unitsPerPack || 1);
+  const [wholesaleUnits, setWholesaleUnits] = useState(form.wholesaleUnits || 20);
+  const [wholesaleDiscount, setWholesaleDiscount] = useState(form.wholesaleDiscount || 20);
+  const [wholesaleImage, setWholesaleImage] = useState(form.wholesaleImage || '');
+  const [wholesaleDescription, setWholesaleDescription] = useState(form.wholesaleDescription || '');
 
   // Category mode + localCats sync
   useEffect(() => {
@@ -307,34 +314,43 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
       alert('La categoría es obligatoria');
       return;
     }
-    form.technology = technology;
-    if (form.images && form.images.length > 0) {
-      form.image = form.images[0].url;
+    // Sincronizar campos de tipo de venta
+    // Mapear a snake_case para Supabase
+    // Mapear y limpiar campos para Supabase
+    const {
+      saleType, unitsPerPack, wholesaleUnits, wholesaleDiscount, wholesaleImage, wholesaleDescription,
+      ...restForm
+    } = form;
+    const updatedForm = {
+      ...restForm,
+      sale_type: saleType,
+      units_per_pack: unitsPerPack,
+      wholesale_units: wholesaleUnits,
+      wholesale_discount: wholesaleDiscount,
+      wholesale_image: wholesaleImage,
+      wholesale_description: wholesaleDescription
+    };
+    updatedForm.technology = technology;
+    if (updatedForm.images && updatedForm.images.length > 0) {
+      updatedForm.image = updatedForm.images[0].url;
     }
-    if (typeof form.featured !== 'boolean') form.featured = false;
-    if (!form.id) form.id = nextId ?? Date.now();
-    // Guardar tipo de venta y datos relacionados
-    form.saleType = saleType;
-    form.packUnits = saleType === 'pack' ? packUnits : undefined;
-    form.wholesaleUnits = saleType === 'mayorista' ? wholesaleUnits : undefined;
-    form.wholesaleDiscount = saleType === 'mayorista' ? wholesaleDiscount : undefined;
-    form.baseUnitPrice = form.price;
-    form.price = finalPrice;
+    if (typeof updatedForm.featured !== 'boolean') updatedForm.featured = false;
+    if (!updatedForm.id) updatedForm.id = nextId ?? Date.now();
 
     // Guardar en Supabase si el destino es supabase
     if (uploadTarget === 'supabase') {
       import('../services/supabaseService').then(({ upsertProductToSupabase }) => {
-        upsertProductToSupabase(form).then(res => {
+        upsertProductToSupabase(updatedForm).then(res => {
           if (res.success) {
             alert('Producto guardado en Supabase correctamente');
-            onSave(form);
+            onSave(updatedForm);
           } else {
             alert('Error al guardar en Supabase: ' + (res.error || ''));
           }
         });
       });
     } else {
-      onSave(form);
+      onSave(updatedForm);
     }
     // No recargar ni navegar, solo actualizar estado
   };
@@ -421,7 +437,7 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
           {saleType === 'pack' && (
             <div className="sm:col-span-2">
               <label className="block text-sm font-medium text-slate-700 mb-1">Unidades por pack</label>
-              <input type="number" min={1} className="w-full border rounded px-3 py-2" value={packUnits} onChange={e => setPackUnits(Number(e.target.value))} />
+              <input type="number" min={1} className="w-full border rounded px-3 py-2" value={unitsPerPack} onChange={e => setUnitsPerPack(Number(e.target.value))} />
             </div>
           )}
           {saleType === 'mayorista' && (
@@ -703,6 +719,54 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
             />
             <p className="mt-1 text-xs text-slate-500">Si no se define, se estimará automáticamente según tecnología y dimensiones.</p>
           </div>
+
+          {/* Nuevos campos para tipo de venta */}
+          <div className="sm:col-span-2">
+            <label className="block text-sm font-medium text-slate-700 mb-2">Tipo de venta</label>
+            <select className="w-full border rounded px-3 py-2" value={saleType} onChange={e => setSaleType(e.target.value as any)}>
+              <option value="unidad">Por unidad</option>
+              <option value="pack">Pack</option>
+              <option value="mayorista">Mayorista</option>
+            </select>
+          </div>
+          {saleType === 'pack' && (
+            <div className="sm:col-span-2 grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">Unidades por pack</label>
+                <input type="number" min={1} className="w-full border rounded px-3 py-2" value={unitsPerPack} onChange={e => setUnitsPerPack(Number(e.target.value))} />
+              </div>
+            </div>
+          )}
+          {saleType === 'mayorista' && (
+            <div className="sm:col-span-2 grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">Unidades por pack mayorista</label>
+                <input type="number" min={1} className="w-full border rounded px-3 py-2" value={wholesaleUnits} onChange={e => setWholesaleUnits(Number(e.target.value))} />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">Descuento mayorista (%)</label>
+                <input type="number" min={0} max={100} className="w-full border rounded px-3 py-2" value={wholesaleDiscount} onChange={e => setWholesaleDiscount(Number(e.target.value))} />
+              </div>
+              <div className="col-span-2">
+                <label className="block text-sm font-medium text-slate-700 mb-2">Foto para mayorista</label>
+                <input type="file" accept="image/*" onChange={e => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    const reader = new FileReader();
+                    reader.onload = ev => setWholesaleImage(ev.target?.result as string);
+                    reader.readAsDataURL(file);
+                  } else {
+                    setWholesaleImage('');
+                  }
+                }} />
+                {wholesaleImage && <img src={wholesaleImage} alt="Foto mayorista" className="mt-2 w-24 h-24 object-cover rounded" />}
+              </div>
+              <div className="col-span-2">
+                <label className="block text-sm font-medium text-slate-700 mb-2">Descripción mayorista (opcional)</label>
+                <textarea className="w-full border rounded px-3 py-2" rows={2} value={wholesaleDescription} onChange={e => setWholesaleDescription(e.target.value)} />
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="mt-6 flex justify-end gap-3">

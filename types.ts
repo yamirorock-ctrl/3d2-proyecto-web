@@ -10,21 +10,20 @@ export interface Product {
   price: number;
   category: string;
   image: string;
-  images?: ProductImage[];
   description: string;
-  technology?: '3D' | 'Láser';
-  featured?: boolean;
-  stock?: number; // Cantidad disponible en inventario
-  dimensions?: {
-    width: number;  // cm
-    height: number; // cm
-    length: number; // cm
+  technology: '3D' | 'Láser';
+  dimensions: {
+    width: number;
+    height: number;
+    length: number;
   };
-  weight?: number; // gramos
-  saleType?: 'unidad' | 'pack' | 'mayorista';
+  weight?: number;
+  saleType: 'unidad' | 'pack' | 'mayorista';
   packUnits?: number;
   wholesaleUnits?: number;
   wholesaleDiscount?: number;
+  wholesaleImage?: string | null;
+  wholesaleDescription?: string;
 }
 
 export interface CartItem extends Product {
