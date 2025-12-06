@@ -20,8 +20,8 @@ import CustomOrderForm, { CustomOrder } from './components/CustomOrderForm';
 import { getCurrentUser, clearCurrentUser } from './utils/auth';
 import AdminGuard from './components/AdminGuard';
 import { Routes, Route, useNavigate } from 'react-router-dom';
-import { CheckCircle2, ArrowLeft, Mail, Phone } from 'lucide-react';
-import { getAllProductsFromSupabase } from './services/supabaseService';
+import { CheckCircle2, Mail, Phone } from 'lucide-react';
+import { getAllProducts, upsertProduct, deleteProduct } from './services/productService';
 
 // 🔧 MODO MANTENIMIENTO - Cambiar a true para activar mantenimiento
 const MAINTENANCE_MODE = false;
@@ -210,11 +210,10 @@ const App: React.FC = () => {
         const key = (import.meta as any).env?.VITE_SUPABASE_ANON;
         if (!url || !key) return; // Supabase no configurado
         
-        const res = await getAllProductsFromSupabase();
-        if (res.success && res.products) {
-          if (res.products.length > 0) {
+        const productsFromDB = await getAllProducts();
+        if (productsFromDB.length > 0) {
             // Normalizar images antes de usar
-            const normalizedProducts = res.products.map(p => {
+            const normalizedProducts = productsFromDB.map(p => {
               if (p.images && Array.isArray(p.images)) {
                 p.images = p.images.map((img: any) => {
                   if (typeof img === 'string') {
@@ -264,12 +263,10 @@ const App: React.FC = () => {
               }
             } catch {}
           } else {
-            // Tabla vacía: conservar locales (fallback)
-            console.warn('Supabase sin productos, usando localStorage como fallback');
-          }
+          // Tabla vacía: conservar locales (fallback)
+          console.warn('Supabase sin productos, usando localStorage como fallback');
         } else {
-          console.warn('Fallo al obtener productos de Supabase, usando localStorage');
-        }
+        console.warn('Fallo al obtener productos de Supabase, usando localStorage');
       } catch (e) {
         console.warn('No se pudo sincronizar productos desde Supabase:', (e as Error).message);
       }
@@ -285,10 +282,10 @@ const App: React.FC = () => {
       const url = (import.meta as any).env?.VITE_SUPABASE_URL;
       const key = (import.meta as any).env?.VITE_SUPABASE_ANON;
       if (!url || !key) { alert('Supabase no configurado'); return; }
-      const res = await getAllProductsFromSupabase();
-      if (res.success && res.products && res.products.length) {
+      const productsFromDB = await getAllProducts();
+      if (productsFromDB.length > 0) {
         // Normalizar images antes de usar
-        const normalizedProducts = res.products.map(p => {
+        const normalizedProducts = productsFromDB.map(p => {
           if (p.images && Array.isArray(p.images)) {
             p.images = p.images.map((img: any) => {
               if (typeof img === 'string') {
@@ -459,43 +456,35 @@ const App: React.FC = () => {
     setProducts(prev => [...prev, newProduct]);
     
     // Sincronizar con Supabase automáticamente
-    try {
-      const { upsertProductToSupabase } = await import('./services/supabaseService');
-      await upsertProductToSupabase(newProduct);
+    const { data, error } = await upsertProduct(newProduct);
+    if (error) {
+      console.warn('[Realtime] Error al agregar a Supabase:', error.message);
+    } else {
       console.log('[Realtime] Producto agregado a Supabase');
-    } catch (e) {
-      console.warn('[Realtime] Error al agregar a Supabase:', (e as Error).message);
     }
   };
 
   const handleEditProduct = async (prod: Product) => {
     setProducts(prev => prev.map(p => p.id === prod.id ? prod : p));
-    
+
     // Sincronizar con Supabase automáticamente
-    try {
-      const { upsertProductToSupabase } = await import('./services/supabaseService');
-      await upsertProductToSupabase(prod);
+    const { data, error } = await upsertProduct(prod);
+    if (error) {
+      console.warn('[Realtime] Error al editar en Supabase:', error.message);
+    } else {
       console.log('[Realtime] Producto editado en Supabase');
-    } catch (e) {
-      console.warn('[Realtime] Error al editar en Supabase:', (e as Error).message);
     }
   };
 
   const handleDeleteProduct = async (id: number) => {
     setProducts(prev => prev.filter(p => p.id !== id));
-    
+
     // Sincronizar con Supabase automáticamente
-    try {
-      const { createClient } = await import('@supabase/supabase-js');
-      const url = (import.meta as any).env?.VITE_SUPABASE_URL;
-      const key = (import.meta as any).env?.VITE_SUPABASE_ANON;
-      if (url && key) {
-        const supabase = createClient(url, key);
-        await supabase.from('products').delete().eq('id', id);
-        console.log('[Realtime] Producto eliminado de Supabase');
-      }
-    } catch (e) {
-      console.warn('[Realtime] Error al eliminar de Supabase:', (e as Error).message);
+    const { data, error } = await deleteProduct(id);
+    if (error) {
+      console.warn('[Realtime] Error al eliminar de Supabase:', error.message);
+    } else {
+      console.log('[Realtime] Producto eliminado de Supabase');
     }
   };
 
