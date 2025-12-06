@@ -328,11 +328,12 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
     // Mapear a snake_case para Supabase
     // Mapear y limpiar campos para Supabase
     const {
-      mayoristaEnabled, unitsPerPack, wholesaleUnits, wholesalediscount, wholesaleimage, wholesaledescription,
+      saleType, mayoristaEnabled, unitsPerPack, wholesaleUnits, wholesalediscount, wholesaleimage, wholesaledescription,
       ...restForm
     } = form;
     const updatedForm = {
       ...restForm,
+      sale_type: saleType,
       mayorista_enabled: mayoristaEnabled,
       unitsperpack: unitsPerPack,
       wholesaleunits: wholesaleUnits,
