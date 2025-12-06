@@ -1,9 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
 
-// 1. Definir las variables de entorno en la parte superior del archivo.
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
 // 2. Usar una única instancia del cliente (patrón singleton) para toda la aplicación.
 let supabaseClient: ReturnType<typeof createClient> | null = null;
 
@@ -19,11 +15,15 @@ export function getClient() {
   }
 
   // Si no, crearlo por primera vez.
-  if (!supabaseUrl || !supabaseAnonKey) {
-    throw new Error('Supabase URL or Anon Key are not defined in environment variables.');
+  // Se leen las variables de entorno aquí dentro para asegurar que estén disponibles en el momento de la ejecución.
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+  const supabaseAnonToken = import.meta.env.VITE_SUPABASE_ANON_TOKEN;
+
+  if (!supabaseUrl || !supabaseAnonToken) {
+    throw new Error('Supabase URL or Anon Token are not defined in environment variables.');
   }
 
-  supabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
+  supabaseClient = createClient(supabaseUrl, supabaseAnonToken, {
     db: { schema: 'public' } // Esta opción ayuda a invalidar el caché del esquema.
   });
 

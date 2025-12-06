@@ -185,9 +185,9 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
         }));
       } else {
         const envUrl = (import.meta as any).env?.VITE_SUPABASE_URL;
-        const envKey = (import.meta as any).env?.VITE_SUPABASE_ANON_KEY;
+        const envKey = (import.meta as any).env?.VITE_SUPABASE_ANON_TOKEN;
         if (!envUrl || !envKey) {
-          alert('Supabase no está configurado. Define VITE_SUPABASE_URL y VITE_SUPABASE_ANON_KEY en tu entorno antes de usar este destino.');
+          alert('Supabase no está configurado. Define VITE_SUPABASE_URL y VITE_SUPABASE_ANON_TOKEN en tu entorno antes de usar este destino.');
           if (!opts?.batch) setIsCompressing(false);
           return;
         }

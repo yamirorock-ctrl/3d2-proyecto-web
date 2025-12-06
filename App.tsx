@@ -207,7 +207,7 @@ const App: React.FC = () => {
     const syncFromSupabase = async () => {
       try {
         const url = (import.meta as any).env?.VITE_SUPABASE_URL;
-        const key = (import.meta as any).env?.VITE_SUPABASE_ANON_KEY;
+        const key = (import.meta as any).env?.VITE_SUPABASE_ANON_TOKEN;
         if (!url || !key) return; // Supabase no configurado
         
         const productsFromDB = await getAllProducts();
@@ -280,7 +280,7 @@ const App: React.FC = () => {
   (window as any).__forceSyncProducts = async () => {
     try {
       const url = (import.meta as any).env?.VITE_SUPABASE_URL;
-      const key = (import.meta as any).env?.VITE_SUPABASE_ANON_KEY;
+      const key = (import.meta as any).env?.VITE_SUPABASE_ANON_TOKEN;
       if (!url || !key) { alert('Supabase no configurado'); return; }
       const productsFromDB = await getAllProducts();
       if (productsFromDB.length > 0) {
@@ -705,7 +705,7 @@ const App: React.FC = () => {
           {cartNotice}
         </div>
       )}
-      {(!(import.meta as any).env?.VITE_SUPABASE_URL || !(import.meta as any).env?.VITE_SUPABASE_ANON_KEY) && (
+      {(!(import.meta as any).env?.VITE_SUPABASE_URL || !(import.meta as any).env?.VITE_SUPABASE_ANON_TOKEN) && (
         <div className="bg-yellow-100 text-yellow-800 text-xs sm:text-sm p-2 text-center">
           Aviso: Supabase no está configurado en este build. Se usarán datos locales. Pulsa "Forzar Sync Supabase" en Admin si ya configuraste las variables y redeployaste.
         </div>
