@@ -127,7 +127,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart }) => {
           {(['unidad','pack','mayorista'].filter(t => product[t+'Enabled'] || t === product.saleType).length > 1) && (
             <select className="ml-2 text-xs border rounded px-2 py-1" value={selectedSaleType} onChange={e => setSelectedSaleType(e.target.value as any)}>
               {product.saleType === 'unidad' && <option value="unidad">Unidad</option>}
-              {product.packEnabled && <option value="pack">Pack</option>}
+              {/* ...existing code... */}
               {product.mayoristaEnabled && <option value="mayorista">Mayorista</option>}
             </select>
           )}

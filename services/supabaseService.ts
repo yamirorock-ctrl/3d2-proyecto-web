@@ -112,7 +112,7 @@ export async function getAllProductsFromSupabase(): Promise<{ success: boolean; 
       stock: typeof p.stock === 'number' ? p.stock : (p.stock !== null && p.stock !== undefined ? Number(p.stock) : undefined),
       // Packs y mayorista
       saleType: p.sale_type || 'unidad',
-      packEnabled: !!p.pack_enabled,
+      // ...existing code...
       unitsPerPack: p.units_per_pack ? Number(p.units_per_pack) : undefined,
       mayoristaEnabled: !!p.mayorista_enabled,
       wholesaleUnits: p.wholesale_units ? Number(p.wholesale_units) : undefined,
