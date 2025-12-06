@@ -270,7 +270,7 @@ export async function updateShippingConfig(
 ): Promise<boolean> {
   const { error } = await supabase
     .from<ShippingConfig>('shipping_config')
-    .update({ ...updates, updated_at: new Date().toISOString() })
+    .update({ ...humps.decamelizeKeys(updates), updated_at: new Date().toISOString() })
     .eq('id', configId);
 
   if (error) {
