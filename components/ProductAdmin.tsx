@@ -2,8 +2,8 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Product, ProductImage } from '../types';
 import SmartImage from './SmartImage';
 import { saveFile } from '../services/imageStore';
-import { uploadToCloudinary } from '../services/cloudinary';
-import { uploadToSupabase, upsertProductToSupabase } from '../services/supabaseService';
+import { uploadToSupabase } from '../services/supabaseService';
+import { upsertProduct } from '../services/productService';
 import { compressImage } from '../utils/imageCompression';
 import { getBlob } from '../services/imageStore';
 
@@ -68,24 +68,6 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
   const [isCompressing, setIsCompressing] = useState(false);
   const [compressionEnabled, setCompressionEnabled] = useState(true);
   const [isMigratingProduct, setIsMigratingProduct] = useState(false);
-
-  // Campos para packs y mayorista
-  const [saleType, setSaleType] = useState<'unidad' | 'pack' | 'mayorista'>(form.sale_type || 'unidad');
-  const [unitsperpack, setUnitsperpack] = useState(form.unitsperpack || 1);
-  const [wholesaleUnits, setWholesaleUnits] = useState(form.wholesaleUnits || 20);
-  const [wholesaleDiscount, setWholesaleDiscount] = useState(form.wholesaleDiscount || 20);
-  const [wholesaleImage, setWholesaleImage] = useState(form.wholesaleImage || '');
-  const [wholesaledescription, setWholesaledescription] = useState(form.wholesaledescription || '');
-
-  // Cálculo del precio final según el tipo de venta
-  const finalPrice =
-    saleType === 'unidad'
-      ? form.price
-      : saleType === 'pack'
-      ? form.price * unitsperpack
-      : saleType === 'mayorista'
-      ? Math.round(form.price * wholesaleUnits * (1 - wholesaleDiscount / 100))
-      : form.price;
 
   // Category mode + localCats sync
   useEffect(() => {
@@ -324,44 +306,27 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
       alert('La categoría es obligatoria');
       return;
     }
-    // Sincronizar campos de tipo de venta
-    // Mapear a snake_case para Supabase
-    // Mapear y limpiar campos para Supabase
-    const {
-      sale_type: saleType, mayorista_enabled, unitsperpack, wholesaleUnits, wholesalediscount, wholesaleimage, wholesaledescription,
-      ...restForm
-    } = form;
-    const updatedForm = {
-      ...restForm,
-      sale_type: saleType,
-      mayorista_enabled,
-      unitsperpack: unitsperpack,
-      wholesaleunits: wholesaleUnits,
-      wholesalediscount,
-      wholesaleimage,
-      wholesaledescription: wholesaledescription,
-    };
-    updatedForm.technology = technology;
-    if (updatedForm.images && updatedForm.images.length > 0) {
-      updatedForm.image = updatedForm.images[0].url;
+    form.technology = technology;
+    if (form.images && form.images.length > 0) {
+      form.image = form.images[0].url;
     }
-    if (typeof updatedForm.featured !== 'boolean') updatedForm.featured = false;
-    if (!updatedForm.id) updatedForm.id = nextId ?? Date.now();
+    if (typeof form.featured !== 'boolean') form.featured = false;
+    if (!form.id) form.id = nextId ?? Date.now();
 
     // Guardar en Supabase si el destino es supabase
     if (uploadTarget === 'supabase') {
-      import('../services/supabaseService').then(({ upsertProductToSupabase }) => {
-        upsertProductToSupabase(updatedForm).then(res => {
-          if (res.success) {
-            alert('Producto guardado en Supabase correctamente');
-            onSave(updatedForm);
-          } else {
-            alert('Error al guardar en Supabase: ' + (res.error || ''));
+      // Usar la función importada estáticamente
+      upsertProduct(form).then(({ data, error }) => {
+        if (error) {
+          alert('Error al guardar en Supabase: ' + error.message);
+        } else {
+          alert('Producto guardado en Supabase correctamente');
+          if (data) {
+            onSave(data); // Enviar el producto actualizado con posible nuevo ID
           }
-        });
       });
     } else {
-      onSave(updatedForm);
+      onSave(form);
     }
     // No recargar ni navegar, solo actualizar estado
   };
@@ -404,9 +369,9 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
         }
       }
       const updatedProduct: Product = { ...form, images: updatedImages, image: updatedImages[0]?.url || form.image };
-      const res = await upsertProductToSupabase(updatedProduct);
-      if (!res.success) {
-        alert('Imágenes migradas, pero falló guardar el producto en Supabase: ' + (res.error || ''));
+      const { data, error } = await upsertProduct(updatedProduct);
+      if (error) {
+        alert('Imágenes migradas, pero falló guardar el producto en Supabase: ' + error.message);
       } else {
         alert('Producto migrado a Supabase correctamente');
       }
@@ -429,45 +394,6 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {/* Selector de tipo de venta */}
-          <div className="sm:col-span-2">
-            <label className="block text-sm font-medium text-slate-700 mb-1">Tipo de venta *</label>
-            <div className="flex gap-4">
-              <label className="inline-flex items-center gap-2">
-                <input type="radio" name="saleType" value="unidad" checked={saleType === 'unidad'} onChange={() => setSaleType('unidad')} /> Unidad
-              </label>
-              <label className="inline-flex items-center gap-2">
-                <input type="radio" name="saleType" value="pack" checked={saleType === 'pack'} onChange={() => setSaleType('pack')} /> Pack
-              </label>
-              <label className="inline-flex items-center gap-2">
-                <input type="radio" name="saleType" value="mayorista" checked={saleType === 'mayorista'} onChange={() => setSaleType('mayorista')} /> Mayorista
-              </label>
-            </div>
-          </div>
-          {/* Campos adicionales según tipo de venta */}
-          {saleType === 'pack' && (
-            <div className="sm:col-span-2">
-              <label className="block text-sm font-medium text-slate-700 mb-1">Unidades por pack</label>
-              <input type="number" min={1} className="w-full border rounded px-3 py-2" value={unitsperpack} onChange={e => setUnitsperpack(Number(e.target.value))} />
-            </div>
-          )}
-          {saleType === 'mayorista' && (
-            <div className="sm:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Unidades por venta mayorista</label>
-                <input type="number" min={1} className="w-full border rounded px-3 py-2" value={wholesaleUnits} onChange={e => setWholesaleUnits(Number(e.target.value))} />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Descuento (%)</label>
-                <input type="number" min={0} max={100} className="w-full border rounded px-3 py-2" value={wholesaleDiscount} onChange={e => setWholesaleDiscount(Number(e.target.value))} />
-              </div>
-            </div>
-          )}
-          {/* Muestra el precio final calculado */}
-          <div className="sm:col-span-2">
-            <label className="block text-sm font-medium text-slate-700 mb-1">Precio final</label>
-            <div className="font-bold text-lg text-indigo-700">${finalPrice.toFixed(2)}</div>
-          </div>
           <div className="sm:col-span-2">
             <label className="block text-sm font-medium text-slate-700 mb-2">Tecnología</label>
             <div className="flex gap-4">
@@ -730,8 +656,6 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
             />
             <p className="mt-1 text-xs text-slate-500">Si no se define, se estimará automáticamente según tecnología y dimensiones.</p>
           </div>
-
-          // ...existing code...
         </div>
 
         <div className="mt-6 flex justify-end gap-3">
