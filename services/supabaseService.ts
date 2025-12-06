@@ -47,8 +47,8 @@ let supabase:
 
 function getClient() {
   if (supabase) return supabase;
-  const url = (import.meta as any).env?.VITE_SUPABASE_URL;
-  const key = (import.meta as any).env?.VITE_SUPABASE_ANON;
+  const url = (import.meta as any).env?.SUPABASE_URL;
+  const key = (import.meta as any).env?.SUPABASE_ANON_KEY;
   if (!url || !key) throw new Error('Supabase no configurado (VITE_SUPABASE_URL / VITE_SUPABASE_ANON)');
   supabase = createClient(url, key);
   return supabase;
