@@ -1,5 +1,6 @@
 import { getClient } from './supabaseService';
 import { Product } from '../types';
+import { PostgrestError } from '@supabase/supabase-js';
 
 const supabase = getClient();
 
@@ -22,22 +23,51 @@ export async function getAllProducts(): Promise<Product[]> {
 }
 
 /**
- * Crear o actualizar un producto (Upsert).
- * Convierte el objeto de camelCase a snake_case antes de enviarlo.
+ * Prepara un objeto de producto para ser enviado a Supabase.
+ * Elimina las propiedades que no existen como columnas en la tabla 'products'.
+ * Esto evita errores como "column does not exist".
+ * @param product El objeto de producto a limpiar.
+ * @returns Un nuevo objeto de producto solo con las propiedades válidas.
  */
-export async function upsertProduct(product: Partial<Product>): Promise<{ product: Product | null; error: any }> {
+function sanitizeProductForUpsert(product: Partial<Product>): Partial<Product> {
+  // Crea una copia para no modificar el objeto original
+  const sanitizedProduct = { ...product };
+
+  // Lista de propiedades en el tipo `Product` que NO son columnas en la BBDD
+  const clientOnlyProperties: (keyof Product)[] = [
+    'packEnabled',
+    'mayoristaEnabled',
+    'wholesaleImage',
+    'wholesaleDescription'
+    // Agrega aquí cualquier otra propiedad que solo exista en el cliente
+  ];
+
+  // Elimina las propiedades que no deben ser enviadas a Supabase
+  for (const key of clientOnlyProperties) {
+    delete sanitizedProduct[key];
+  }
+
+  return sanitizedProduct;
+}
+
+/**
+ * Crear o actualizar un producto (Upsert).
+ */
+export async function upsertProduct(product: Partial<Product>): Promise<{ data: Product | null; error: PostgrestError | null }> {
+  const productToUpsert = sanitizeProductForUpsert(product);
+
   const { data, error } = await supabase
     .from('products')
-    .upsert(product as any) // `as any` es necesario porque el tipo espera camelCase
+    .upsert(productToUpsert)
     .select()
     .single();
 
   if (error) {
     console.error('Error en upsert de producto:', error);
-    return { product: null, error };
+    return { data: null, error };
   }
 
-  return { product: data as Product, error: null };
+  return { data, error: null };
 }
 
 /**

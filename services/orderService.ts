@@ -1,7 +1,21 @@
 import { getClient } from './supabaseService';
 import { Order, OrderItem, OrderStatus, ShippingMethod, ShippingConfig } from '../types';
+import { PostgrestError } from '@supabase/supabase-js';
 
 const supabase = getClient();
+
+/**
+ * ===== UTILITIES =====
+ */
+
+/**
+ * Función de utilidad para manejar errores de Supabase de forma centralizada.
+ * Registra el error en la consola y devuelve un objeto de error estandarizado.
+ */
+function handleSupabaseError(error: PostgrestError, context: string) {
+  console.error(`Error en ${context}:`, error);
+  return { data: null, error };
+}
 
 /**
  * Obtener configuración de envíos
@@ -11,13 +25,13 @@ export async function getShippingConfig(): Promise<ShippingConfig | null> {
     .from('shipping_config')
     .select('*')
     .single();
-
+  
+  // Aunque esta función no se refactoriza, podría usar handleSupabaseError si devolviera { data, error }
   if (error) {
     console.error('Error al obtener configuración de envíos:', error);
     return null;
   }
-
-  return data as ShippingConfig;
+  return data;
 }
 
 /**
@@ -39,21 +53,19 @@ function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: numbe
  * Calcular costo de envío según método y configuración
  */
 export async function calculateShippingCost(
+  config: ShippingConfig,
   shippingMethod: ShippingMethod,
   subtotal: number,
   destinationLat?: number,
   destinationLng?: number
 ): Promise<number> {
-  if (shippingMethod === 'retiro') {
-    return 0;
-  }
-
   if (shippingMethod === 'to_coordinate') {
     return 0; // Se coordinará después
   }
 
-  const config = await getShippingConfig();
-  if (!config) return 0;
+  if (shippingMethod === 'retiro') {
+    return 0;
+  }
 
   if (shippingMethod === 'moto') {
     // Si la compra es >= $40,000, envío gratis
@@ -70,18 +82,18 @@ export async function calculateShippingCost(
         destinationLng
       );
       
-      // Hasta 20 km: $20,000
-      if (distance <= 20) {
-        return 20000;
+      // Hasta `moto_base_distance_km`: `moto_base_fee`
+      if (distance <= config.moto_base_distance_km) {
+        return config.moto_base_fee;
       }
       
-      // Más de 20 km: $20,000 + ($4,000 × km adicionales)
-      const extraKm = Math.ceil(distance - 20);
-      return 20000 + (extraKm * 4000);
+      // Más de la distancia base: `moto_base_fee` + (`moto_fee_per_km` × km adicionales)
+      const extraKm = Math.ceil(distance - config.moto_base_distance_km);
+      return config.moto_base_fee + (extraKm * config.moto_fee_per_km);
     }
     
-    // Si no hay coordenadas, cobrar tarifa base de hasta 20 km
-    return 20000;
+    // Si no hay coordenadas, cobrar tarifa base
+    return config.moto_base_fee;
   }
 
   if (shippingMethod === 'correo') {
@@ -109,26 +121,27 @@ export async function createOrder(orderData: {
   total: number;
   shipping_method: ShippingMethod;
   notes?: string;
-}): Promise<{ order: Order | null; error: any }> {
+}): Promise<{ data: Order | null; error: PostgrestError | null }> {
+  // 1. Se elimina el uso de `as any` para mayor seguridad de tipos.
+  // 2. Se delega la gestión de `created_at` y `updated_at` a la base de datos.
+  //    (Requiere configurar `now()` como valor por defecto en las columnas de Supabase).
+  const newOrderData = {
+    ...orderData,
+    status: 'pending' as OrderStatus,
+  };
+
   const { data, error } = await supabase
     .from('orders')
-    .insert([
-      {
-        ...(orderData as any),
-        status: 'pending',
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      },
-    ])
+    .insert(newOrderData)
     .select()
     .single();
   
   if (error) {
-    console.error('Error al crear pedido:', error);
-    return { order: null, error };
+    return handleSupabaseError(error, 'createOrder');
   }
 
-  return { order: data as Order, error: null };
+  // Se devuelve un objeto consistente con el patrón { data, error }
+  return { data, error: null };
 }
 
 /**
@@ -141,56 +154,48 @@ export async function getOrderByNumber(orderNumber: string): Promise<Order | nul
     .eq('order_number', orderNumber)
     .single();
 
+  // Se podría refactorizar para usar el patrón { data, error }
   if (error) {
-    console.error('Error al obtener pedido:', error);
+    console.error('Error al obtener pedido por número:', error);
     return null;
   }
 
-  return data as Order;
+  return data;
 }
 
 /**
  * Obtener un pedido por ID
  */
-export async function getOrderById(orderId: string): Promise<Order | null> {
+export async function getOrderById(orderId: string): Promise<{ data: Order | null, error: PostgrestError | null }> {
   const { data, error } = await supabase
     .from('orders')
     .select('*')
     .eq('id', orderId)
     .single();
 
-  if (error) {
-    console.error('Error al obtener pedido:', error);
-    return null;
-  }
-
-  return data as Order;
+  return error ? handleSupabaseError(error, 'getOrderById') : { data, error: null };
 }
 
 /**
  * Obtener todos los pedidos (para admin)
  */
-export async function getAllOrders(): Promise<Order[]> {
+export async function getAllOrders(): Promise<{ data: Order[] | null, error: PostgrestError | null }> {
   const { data, error } = await supabase
     .from('orders')
     .select('*')
     .order('created_at', { ascending: false });
 
   if (error) {
-    console.error('Error al obtener pedidos:', error);
-    return [];
+    return handleSupabaseError(error, 'getAllOrders');
   }
 
-  return (data || []) as Order[];
+  return { data: data || [], error: null };
 }
 
 /**
  * Actualizar el estado de un pedido
  */
-export async function updateOrderStatus(
-  orderId: string,
-  status: OrderStatus
-): Promise<boolean> {
+export async function updateOrderStatus(orderId: string, status: OrderStatus): Promise<{ data: any | null, error: PostgrestError | null }> {
   const { error } = await supabase
     .from<Order>('orders')
     .update({ status, updated_at: new Date().toISOString() })
@@ -198,10 +203,10 @@ export async function updateOrderStatus(
 
   if (error) {
     console.error('Error al actualizar estado del pedido:', error);
-    return false;
+    return handleSupabaseError(error, 'updateOrderStatus');
   }
 
-  return true;
+  return { data: { success: true }, error: null };
 }
 
 /**
@@ -211,7 +216,7 @@ export async function updateOrderPayment(
   orderId: string,
   paymentId: string,
   paymentStatus: string
-): Promise<boolean> {
+): Promise<{ data: any | null, error: PostgrestError | null }> {
   const { error } = await supabase
     .from<Order>('orders')
     .update({
@@ -224,10 +229,10 @@ export async function updateOrderPayment(
 
   if (error) {
     console.error('Error al actualizar pago del pedido:', error);
-    return false;
+    return handleSupabaseError(error, 'updateOrderPayment');
   }
 
-  return true;
+  return { data: { success: true }, error: null };
 }
 
 /**
@@ -236,7 +241,7 @@ export async function updateOrderPayment(
 export async function updateOrderTracking(
   orderId: string,
   trackingNumber: string
-): Promise<boolean> {
+): Promise<{ data: any | null, error: PostgrestError | null }> {
   const { error } = await supabase
     .from<Order>('orders')
     .update({
@@ -248,10 +253,10 @@ export async function updateOrderTracking(
 
   if (error) {
     console.error('Error al actualizar tracking del pedido:', error);
-    return false;
+    return handleSupabaseError(error, 'updateOrderTracking');
   }
 
-  return true;
+  return { data: { success: true }, error: null };
 }
 
 /**
@@ -260,20 +265,20 @@ export async function updateOrderTracking(
 export async function updateShippingConfig(
   configId: string,
   updates: Partial<ShippingConfig>
-): Promise<boolean> {
+): Promise<{ data: any | null, error: PostgrestError | null }> {
+  // Se elimina `as any` y se deja que la BBDD maneje `updated_at`
   const { error } = await supabase
     .from<ShippingConfig>('shipping_config')
-    .update({ ...(updates as any), updated_at: new Date().toISOString() })
+    .update(updates)
     .eq('id', configId);
 
   if (error) {
     console.error('Error al actualizar configuración de envíos:', error);
-    return false;
+    return handleSupabaseError(error, 'updateShippingConfig');
   }
 
-  return true;
+  return { data: { success: true }, error: null };
 }
-
 /**
  * Eliminar una orden (solo admin)
  */
