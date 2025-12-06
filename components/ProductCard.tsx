@@ -30,8 +30,8 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart }) => {
   const wholesalePrice = Math.round(product.price * wholesaleUnits * (1 - wholesaleDiscount / 100));
 
   let displayPrice = product.price;
-  if (product.saleType === 'pack' && product.packUnits) {
-    displayPrice = product.price * product.packUnits;
+  if (product.saleType === 'pack' && product.unitsperpack) {
+    displayPrice = product.price * product.unitsperpack;
   } else if (product.saleType === 'mayorista' && product.wholesaleUnits && product.wholesaleDiscount) {
     displayPrice = Math.round(product.price * product.wholesaleUnits * (1 - product.wholesaleDiscount / 100));
   }
