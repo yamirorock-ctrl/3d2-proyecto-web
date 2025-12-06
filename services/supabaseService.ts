@@ -1,5 +1,4 @@
 import { createClient } from '@supabase/supabase-js';
-
 // 2. Usar una única instancia del cliente (patrón singleton) para toda la aplicación.
 let supabaseClient: ReturnType<typeof createClient> | null = null;
 
