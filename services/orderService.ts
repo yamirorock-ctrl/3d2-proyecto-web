@@ -1,6 +1,5 @@
 import { getClient } from './supabaseService';
 import { Order, OrderItem, OrderStatus, ShippingMethod, ShippingConfig } from '../types';
-import humps from 'humps';
 
 const supabase = getClient();
 
@@ -18,7 +17,7 @@ export async function getShippingConfig(): Promise<ShippingConfig | null> {
     return null;
   }
 
-  return data;
+  return data as ShippingConfig;
 }
 
 /**
@@ -111,14 +110,11 @@ export async function createOrder(orderData: {
   shipping_method: ShippingMethod;
   notes?: string;
 }): Promise<{ order: Order | null; error: any }> {
-  // Convertimos el objeto a snake_case para que coincida con la base de datos
-  const snakeCaseOrderData = humps.decamelizeKeys(orderData);
-
   const { data, error } = await supabase
     .from('orders')
     .insert([
       {
-        ...snakeCaseOrderData,
+        ...(orderData as any),
         status: 'pending',
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
@@ -132,10 +128,7 @@ export async function createOrder(orderData: {
     return { order: null, error };
   }
 
-  // Convertimos la respuesta de vuelta a camelCase para usar en el frontend
-  const camelCaseData = humps.camelizeKeys(data);
-
-  return { order: camelCaseData as Order, error: null };
+  return { order: data as Order, error: null };
 }
 
 /**
@@ -153,7 +146,7 @@ export async function getOrderByNumber(orderNumber: string): Promise<Order | nul
     return null;
   }
 
-  return humps.camelizeKeys(data) as Order;
+  return data as Order;
 }
 
 /**
@@ -171,7 +164,7 @@ export async function getOrderById(orderId: string): Promise<Order | null> {
     return null;
   }
 
-  return humps.camelizeKeys(data) as Order;
+  return data as Order;
 }
 
 /**
@@ -188,7 +181,7 @@ export async function getAllOrders(): Promise<Order[]> {
     return [];
   }
 
-  return humps.camelizeKeys(data || []) as Order[];
+  return (data || []) as Order[];
 }
 
 /**
@@ -270,7 +263,7 @@ export async function updateShippingConfig(
 ): Promise<boolean> {
   const { error } = await supabase
     .from<ShippingConfig>('shipping_config')
-    .update({ ...humps.decamelizeKeys(updates), updated_at: new Date().toISOString() })
+    .update({ ...(updates as any), updated_at: new Date().toISOString() })
     .eq('id', configId);
 
   if (error) {
