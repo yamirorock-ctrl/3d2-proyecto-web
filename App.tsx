@@ -266,6 +266,7 @@ const App: React.FC = () => {
           // Tabla vacía: conservar locales (fallback)
           // Esto se ejecuta si no hay productos en la DB o si hubo un error al obtenerlos.
           console.warn('No se obtuvieron productos de Supabase, usando localStorage como fallback.');
+        } // Cierre del if (productsFromDB.length > 0)
       } catch (e) {
         console.warn('No se pudo sincronizar productos desde Supabase:', (e as Error).message);
       }
