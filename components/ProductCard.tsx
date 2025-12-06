@@ -36,8 +36,6 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart }) => {
   const wholesaledescription = product.wholesaledescription;
   const packPrice = product.price * unitsperpack;
   const wholesalePrice = Math.round(product.price * wholesaleUnits * (1 - wholesaleDiscount / 100));
-
->>>>>>> a99aad31460ce26d9264c105a3b3a48ba941a898
   return (
     <div className="group bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden flex flex-col h-full">
       <div className="relative h-64 overflow-hidden bg-white p-8 flex items-center justify-center">
