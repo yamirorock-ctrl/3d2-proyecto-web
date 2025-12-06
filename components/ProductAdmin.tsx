@@ -70,7 +70,7 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
   const [isMigratingProduct, setIsMigratingProduct] = useState(false);
 
   // Campos para packs y mayorista
-  const [saleType, setSaleType] = useState<'unidad' | 'pack' | 'mayorista'>(form.saleType || 'unidad');
+  const [saleType, setSaleType] = useState<'unidad' | 'pack' | 'mayorista'>(form.sale_type || 'unidad');
   const [unitsPerPack, setUnitsPerPack] = useState(form.unitsPerPack || 1);
   const [wholesaleUnits, setWholesaleUnits] = useState(form.wholesaleUnits || 20);
   const [wholesaleDiscount, setWholesaleDiscount] = useState(form.wholesaleDiscount || 20);
@@ -328,13 +328,13 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
     // Mapear a snake_case para Supabase
     // Mapear y limpiar campos para Supabase
     const {
-      saleType, mayoristaEnabled, unitsPerPack, wholesaleUnits, wholesalediscount, wholesaleimage, wholesaledescription,
+      sale_type: saleType, mayorista_enabled, unitsPerPack, wholesaleUnits, wholesalediscount, wholesaleimage, wholesaledescription,
       ...restForm
     } = form;
     const updatedForm = {
       ...restForm,
       sale_type: saleType,
-      mayorista_enabled: mayoristaEnabled,
+      mayorista_enabled,
       unitsperpack: unitsPerPack,
       wholesaleunits: wholesaleUnits,
       wholesalediscount,

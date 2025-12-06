@@ -19,7 +19,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart }) => {
   const next = (e: React.MouseEvent) => { e.preventDefault(); e.stopPropagation(); setActive(a => (a + 1) % images.length); };
 
   // Lógica para mostrar info de venta y selector
-  const [selectedSaleType, setSelectedSaleType] = useState<'unidad' | 'pack' | 'mayorista'>(product.saleType || 'unidad');
+  const [selectedSaleType, setSelectedSaleType] = useState<'unidad' | 'pack' | 'mayorista'>(product.sale_type || 'unidad');
   // Simulación de props extendidas para packs y mayorista
   const unitsPerPack = product.unitsPerPack || 1;
   const wholesaleUnits = product.wholesaleUnits || 20;
@@ -30,9 +30,9 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart }) => {
   const wholesalePrice = Math.round(product.price * wholesaleUnits * (1 - wholesaleDiscount / 100));
 
   let displayPrice = product.price;
-  if (product.saleType === 'pack' && product.unitsperpack) {
+  if (product.sale_type === 'pack' && product.unitsperpack) {
     displayPrice = product.price * product.unitsperpack;
-  } else if (product.saleType === 'mayorista' && product.wholesaleUnits && product.wholesaleDiscount) {
+  } else if (product.sale_type === 'mayorista' && product.wholesaleUnits && product.wholesaleDiscount) {
     displayPrice = Math.round(product.price * product.wholesaleUnits * (1 - product.wholesaleDiscount / 100));
   }
 
@@ -124,9 +124,9 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart }) => {
             {selectedSaleType === 'mayorista' && `Mayorista x${wholesaleUnits} (desc. ${wholesaleDiscount}%)`}
           </span>
           {/* Selector si hay más de una opción */}
-          {(['unidad','pack','mayorista'].filter(t => product[t+'Enabled'] || t === product.saleType).length > 1) && (
+          {(['unidad','pack','mayorista'].filter(t => product[t+'_enabled'] || t === product.sale_type).length > 1) && (
             <select className="ml-2 text-xs border rounded px-2 py-1" value={selectedSaleType} onChange={e => setSelectedSaleType(e.target.value as any)}>
-              {product.saleType === 'unidad' && <option value="unidad">Unidad</option>}
+              {product.sale_type === 'unidad' && <option value="unidad">Unidad</option>}
               {/* ...existing code... */}
               {product.mayoristaEnabled && <option value="mayorista">Mayorista</option>}
             </select>
