@@ -1,5 +1,6 @@
 import { getClient } from './supabaseService';
 import { Order, OrderItem, OrderStatus, ShippingMethod, ShippingConfig } from '../types';
+import humps from 'humps';
 
 const supabase = getClient();
 
@@ -110,11 +111,14 @@ export async function createOrder(orderData: {
   shipping_method: ShippingMethod;
   notes?: string;
 }): Promise<{ order: Order | null; error: any }> {
+  // Convertimos el objeto a snake_case para que coincida con la base de datos
+  const snakeCaseOrderData = humps.decamelizeKeys(orderData);
+
   const { data, error } = await supabase
     .from('orders')
     .insert([
       {
-        ...orderData,
+        ...snakeCaseOrderData,
         status: 'pending',
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
@@ -122,13 +126,16 @@ export async function createOrder(orderData: {
     ])
     .select()
     .single();
-
+  
   if (error) {
     console.error('Error al crear pedido:', error);
     return { order: null, error };
   }
 
-  return { order: data, error: null };
+  // Convertimos la respuesta de vuelta a camelCase para usar en el frontend
+  const camelCaseData = humps.camelizeKeys(data);
+
+  return { order: camelCaseData as Order, error: null };
 }
 
 /**
@@ -146,7 +153,7 @@ export async function getOrderByNumber(orderNumber: string): Promise<Order | nul
     return null;
   }
 
-  return data;
+  return humps.camelizeKeys(data) as Order;
 }
 
 /**
@@ -164,7 +171,7 @@ export async function getOrderById(orderId: string): Promise<Order | null> {
     return null;
   }
 
-  return data;
+  return humps.camelizeKeys(data) as Order;
 }
 
 /**
@@ -181,7 +188,7 @@ export async function getAllOrders(): Promise<Order[]> {
     return [];
   }
 
-  return data || [];
+  return humps.camelizeKeys(data || []) as Order[];
 }
 
 /**
@@ -192,7 +199,7 @@ export async function updateOrderStatus(
   status: OrderStatus
 ): Promise<boolean> {
   const { error } = await supabase
-    .from('orders')
+    .from<Order>('orders')
     .update({ status, updated_at: new Date().toISOString() })
     .eq('id', orderId);
 
@@ -213,7 +220,7 @@ export async function updateOrderPayment(
   paymentStatus: string
 ): Promise<boolean> {
   const { error } = await supabase
-    .from('orders')
+    .from<Order>('orders')
     .update({
       payment_id: paymentId,
       payment_status: paymentStatus,
@@ -238,7 +245,7 @@ export async function updateOrderTracking(
   trackingNumber: string
 ): Promise<boolean> {
   const { error } = await supabase
-    .from('orders')
+    .from<Order>('orders')
     .update({
       tracking_number: trackingNumber,
       status: 'shipped',
@@ -262,7 +269,7 @@ export async function updateShippingConfig(
   updates: Partial<ShippingConfig>
 ): Promise<boolean> {
   const { error } = await supabase
-    .from('shipping_config')
+    .from<ShippingConfig>('shipping_config')
     .update({ ...updates, updated_at: new Date().toISOString() })
     .eq('id', configId);
 
@@ -279,7 +286,7 @@ export async function updateShippingConfig(
  */
 export async function deleteOrder(orderId: string): Promise<boolean> {
   const { error } = await supabase
-    .from('orders')
+    .from<Order>('orders')
     .delete()
     .eq('id', orderId);
 
