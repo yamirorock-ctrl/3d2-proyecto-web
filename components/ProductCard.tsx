@@ -19,9 +19,16 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart }) => {
   const next = (e: React.MouseEvent) => { e.preventDefault(); e.stopPropagation(); setActive(a => (a + 1) % images.length); };
 
 <<<<<<< HEAD
-=======
-  // Lógica para mostrar info de venta y selector
-  const [selectedSaleType, setSelectedSaleType] = useState<'unidad' | 'pack' | 'mayorista'>(product.saleType || 'unidad');
+      // Lógica para mostrar info de venta y selector
+      const [selectedSaleType, setSelectedSaleType] = useState<'unidad' | 'pack' | 'mayorista'>(product.saleType || 'unidad');
+      // Simulación de props extendidas para packs y mayorista
+      const unitsperpack = product.unitsperpack || 1;
+      const wholesaleUnits = product.wholesaleUnits || 20;
+      const wholesaleDiscount = product.wholesaleDiscount || 20;
+      const wholesaleImage = product.wholesaleImage;
+      const wholesaledescription = product.wholesaledescription;
+      const packPrice = product.price * unitsperpack;
+      const wholesalePrice = Math.round(product.price * wholesaleUnits * (1 - wholesaleDiscount / 100));
   // Simulación de props extendidas para packs y mayorista
   const unitsperpack = product.unitsperpack || 1;
   const wholesaleUnits = product.wholesaleUnits || 20;
