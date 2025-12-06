@@ -333,7 +333,7 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
     } = form;
     const updatedForm = {
       ...restForm,
-      mayorista_enable: mayoristaEnabled,
+      mayorista_enabled: mayoristaEnabled,
       unitsperpack: unitsPerPack,
       wholesaleunits: wholesaleUnits,
       wholesalediscount,
