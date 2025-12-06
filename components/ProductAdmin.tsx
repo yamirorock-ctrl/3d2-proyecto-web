@@ -71,18 +71,18 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
 
   // Campos para packs y mayorista
   const [saleType, setSaleType] = useState<'unidad' | 'pack' | 'mayorista'>(form.sale_type || 'unidad');
-  const [unitsPerPack, setUnitsPerPack] = useState(form.unitsPerPack || 1);
+  const [unitsperpack, setUnitsperpack] = useState(form.unitsperpack || 1);
   const [wholesaleUnits, setWholesaleUnits] = useState(form.wholesaleUnits || 20);
   const [wholesaleDiscount, setWholesaleDiscount] = useState(form.wholesaleDiscount || 20);
   const [wholesaleImage, setWholesaleImage] = useState(form.wholesaleImage || '');
-  const [wholesaleDescription, setWholesaleDescription] = useState(form.wholesaleDescription || '');
+  const [wholesaledescription, setWholesaledescription] = useState(form.wholesaledescription || '');
 
   // Cálculo del precio final según el tipo de venta
   const finalPrice =
     saleType === 'unidad'
       ? form.price
       : saleType === 'pack'
-      ? form.price * unitsPerPack
+      ? form.price * unitsperpack
       : saleType === 'mayorista'
       ? Math.round(form.price * wholesaleUnits * (1 - wholesaleDiscount / 100))
       : form.price;
@@ -328,18 +328,18 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
     // Mapear a snake_case para Supabase
     // Mapear y limpiar campos para Supabase
     const {
-      sale_type: saleType, mayorista_enabled, unitsPerPack, wholesaleUnits, wholesalediscount, wholesaleimage, wholesaledescription,
+      sale_type: saleType, mayorista_enabled, unitsperpack, wholesaleUnits, wholesalediscount, wholesaleimage, wholesaledescription,
       ...restForm
     } = form;
     const updatedForm = {
       ...restForm,
       sale_type: saleType,
       mayorista_enabled,
-      unitsperpack: unitsPerPack,
+      unitsperpack: unitsperpack,
       wholesaleunits: wholesaleUnits,
       wholesalediscount,
       wholesaleimage,
-      wholesaledescription
+      wholesaledescription: wholesaledescription,
     };
     updatedForm.technology = technology;
     if (updatedForm.images && updatedForm.images.length > 0) {
@@ -448,7 +448,7 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
           {saleType === 'pack' && (
             <div className="sm:col-span-2">
               <label className="block text-sm font-medium text-slate-700 mb-1">Unidades por pack</label>
-              <input type="number" min={1} className="w-full border rounded px-3 py-2" value={unitsPerPack} onChange={e => setUnitsPerPack(Number(e.target.value))} />
+              <input type="number" min={1} className="w-full border rounded px-3 py-2" value={unitsperpack} onChange={e => setUnitsperpack(Number(e.target.value))} />
             </div>
           )}
           {saleType === 'mayorista' && (

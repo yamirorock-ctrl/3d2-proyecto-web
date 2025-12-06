@@ -20,15 +20,15 @@ const AdminProductForm: React.FC<AdminProductFormProps> = ({ initial = {}, onSav
   const [error, setError] = useState('');
   // Estado para tipo de venta y lógica de precio
   const [saleType, setSaleType] = useState<'unidad' | 'pack' | 'mayorista'>(safeInitial.sale_type || 'unidad');
-  const [unitsPerPack, setUnitsPerPack] = useState(safeInitial.unitsperpack || 1);
+  const [unitsperpack, setUnitsperpack] = useState(safeInitial.unitsperpack || 1);
   const [wholesaleUnits, setWholesaleUnits] = useState(safeInitial.wholesaleUnits || 20);
   const [wholesaleDiscount, setWholesaleDiscount] = useState(safeInitial.wholesaleDiscount || 0);
   const [wholesaleImage, setWholesaleImage] = useState<string | null>(null);
-  const [wholesaleDescription, setWholesaleDescription] = useState('');
+  const [wholesaledescription, setWholesaledescription] = useState('');
 
   // Precios automáticos
   const [finalPrice, setFinalPrice] = useState(safeInitial.price || 0);
-  const packPrice = price * unitsPerPack;
+  const packPrice = price * unitsperpack;
   const wholesalePrice = Math.round(price * wholesaleUnits * (1 - wholesaleDiscount / 100));
 
   useEffect(() => {
@@ -39,7 +39,7 @@ const AdminProductForm: React.FC<AdminProductFormProps> = ({ initial = {}, onSav
     } else if (saleType === 'mayorista') {
       setFinalPrice(wholesalePrice);
     }
-  }, [saleType, price, unitsPerPack, wholesaleUnits, wholesaleDiscount]);
+  }, [saleType, price, unitsperpack, wholesaleUnits, wholesaleDiscount]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -69,11 +69,11 @@ const AdminProductForm: React.FC<AdminProductFormProps> = ({ initial = {}, onSav
       dimensions: { width, height, length },
       weight: weight > 0 ? weight : undefined,
       sale_type: saleType,
-      unitsperpack: saleType === 'pack' ? unitsPerPack : undefined,
+      unitsperpack: saleType === 'pack' ? unitsperpack : undefined,
       wholesaleUnits: saleType === 'mayorista' ? wholesaleUnits : undefined,
       wholesaleDiscount: saleType === 'mayorista' ? wholesaleDiscount : undefined,
       wholesaleImage: saleType === 'mayorista' ? wholesaleImage : undefined,
-      wholesaleDescription: saleType === 'mayorista' ? wholesaleDescription : undefined,
+      wholesaledescription: saleType === 'mayorista' ? wholesaledescription : undefined,
     } as Product;
     onSave(product);
   };
@@ -93,7 +93,7 @@ const AdminProductForm: React.FC<AdminProductFormProps> = ({ initial = {}, onSav
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Unidades por pack *</label>
-            <input type="number" min={1} className="w-full border rounded px-3 py-2" value={unitsPerPack} onChange={e=>setUnitsPerPack(Number(e.target.value))} required />
+            <input type="number" min={1} className="w-full border rounded px-3 py-2" value={unitsperpack} onChange={e=>setUnitsperpack(Number(e.target.value))} required />
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Precio del pack</label>
@@ -131,7 +131,7 @@ const AdminProductForm: React.FC<AdminProductFormProps> = ({ initial = {}, onSav
           </div>
           <div className="col-span-2">
             <label className="block text-sm font-medium text-gray-700 mb-2">Descripción mayorista (opcional)</label>
-            <textarea className="w-full border rounded px-3 py-2" rows={2} value={wholesaleDescription} onChange={e=>setWholesaleDescription(e.target.value)} />
+            <textarea className="w-full border rounded px-3 py-2" rows={2} value={wholesaledescription} onChange={e=>setWholesaledescription(e.target.value)} />
           </div>
         </div>
       )}

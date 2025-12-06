@@ -158,13 +158,13 @@ const Checkout: React.FC<CheckoutProps> = ({ cart, onClearCart }) => {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             zipCodeTo: customerPostalCode,
-            dimensions
+            dimensions,
           })
         });
 
         if (!response.ok) {
-          console.error('[ML Quote] Failed to quote shipping');
-          setMlShippingCost(8000); // Costo estimado por defecto
+          setError('No se pudo cotizar el envío por MercadoEnvíos. Contactate con el vendedor para elegir otro método de entrega, este no cumple los requisitos para este medio.');
+          setMlShippingCost(null);
           setMlEstimatedDelivery(null);
           return;
         }
@@ -173,13 +173,14 @@ const Checkout: React.FC<CheckoutProps> = ({ cart, onClearCart }) => {
         console.log('[ML Quote] API Response:', data);
         console.log('[ML Quote] Options count:', data.options?.length || 0);
         console.log('[ML Quote] Default cost:', data.defaultCost);
-        
-        if (data.success && data.defaultCost && data.options && data.options.length > 0) {
-          setMlShippingCost(data.defaultCost);
-        } else {
-          setError('No se pudo cotizar el envío por MercadoEnvíos. Contactate con el vendedor para elegir otro método de entrega, este no cumple los requisitos para este medio.');
-        }
 
+        // Refuerzo: bloquear si options está vacío
+        if (data.success && data.defaultCost && Array.isArray(data.options) && data.options.length === 0) {
+          setError('No se pudo cotizar el envío por MercadoEnvíos. Contactate con el vendedor para elegir otro método de entrega, este no cumple los requisitos para este medio.');
+          setMlShippingCost(data.defaultCost);
+          setMlEstimatedDelivery(null);
+          return;
+        }
         if (data.success && data.defaultCost) {
           console.log('[ML Quote] Using cost:', data.defaultCost);
           setMlShippingCost(data.defaultCost);
@@ -192,7 +193,7 @@ const Checkout: React.FC<CheckoutProps> = ({ cart, onClearCart }) => {
             setMlEstimatedDelivery(null);
           }
         } else {
-          console.warn('[ML Quote] No valid response, using fallback 8000');
+          console.warn('[ML Quote] No valid response or cost, using fallback 8000');
           setMlShippingCost(8000);
           setMlEstimatedDelivery(null);
         }
