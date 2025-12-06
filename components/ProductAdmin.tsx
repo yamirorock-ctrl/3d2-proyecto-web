@@ -730,7 +730,7 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
             <p className="mt-1 text-xs text-slate-500">Si no se define, se estimará automáticamente según tecnología y dimensiones.</p>
           </div>
 
-          // Eliminado: modelo duplicado de tipo de venta y campos pack/mayorista
+          // ...existing code...
         </div>
 
         <div className="mt-6 flex justify-end gap-3">
