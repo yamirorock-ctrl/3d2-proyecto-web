@@ -324,6 +324,7 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
           if (data) {
             onSave(data); // Enviar el producto actualizado con posible nuevo ID
           }
+        }
       });
     } else {
       onSave(form);
