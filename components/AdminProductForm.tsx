@@ -20,7 +20,7 @@ const AdminProductForm: React.FC<AdminProductFormProps> = ({ initial = {}, onSav
   const [error, setError] = useState('');
   // Estado para tipo de venta y lógica de precio
   const [saleType, setSaleType] = useState<'unidad' | 'pack' | 'mayorista'>(safeInitial.saleType || 'unidad');
-  const [unitsPerPack, setUnitsPerPack] = useState(safeInitial.packUnits || 1);
+  const [unitsPerPack, setUnitsPerPack] = useState(safeInitial.unitsperpack || 1);
   const [wholesaleUnits, setWholesaleUnits] = useState(safeInitial.wholesaleUnits || 20);
   const [wholesaleDiscount, setWholesaleDiscount] = useState(safeInitial.wholesaleDiscount || 0);
   const [wholesaleImage, setWholesaleImage] = useState<string | null>(null);

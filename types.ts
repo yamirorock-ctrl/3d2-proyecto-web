@@ -19,7 +19,7 @@ export interface Product {
   };
   weight?: number;
   saleType: 'unidad' | 'pack' | 'mayorista';
-  packUnits?: number;
+  unitsperpack?: number;
   wholesaleUnits?: number;
   wholesaleDiscount?: number;
   wholesaleImage?: string | null;
