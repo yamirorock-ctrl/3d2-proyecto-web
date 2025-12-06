@@ -68,7 +68,7 @@ const AdminProductForm: React.FC<AdminProductFormProps> = ({ initial = {}, onSav
       technology,
       dimensions: { width, height, length },
       weight: weight > 0 ? weight : undefined,
-      saleType,
+      sale_type: saleType,
       unitsperpack: saleType === 'pack' ? unitsPerPack : undefined,
       wholesaleUnits: saleType === 'mayorista' ? wholesaleUnits : undefined,
       wholesaleDiscount: saleType === 'mayorista' ? wholesaleDiscount : undefined,

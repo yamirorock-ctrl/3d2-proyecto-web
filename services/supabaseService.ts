@@ -111,10 +111,10 @@ export async function getAllProductsFromSupabase(): Promise<{ success: boolean; 
       featured: !!p.featured,
       stock: typeof p.stock === 'number' ? p.stock : (p.stock !== null && p.stock !== undefined ? Number(p.stock) : undefined),
       // Packs y mayorista
-      saleType: p.sale_type || 'unidad',
+      sale_type: p.sale_type || 'unidad',
       // ...existing code...
       unitsPerPack: p.units_per_pack ? Number(p.units_per_pack) : undefined,
-      mayoristaEnabled: !!p.mayorista_enabled,
+      mayorista_enabled: !!p.mayorista_enabled,
       wholesaleUnits: p.wholesale_units ? Number(p.wholesale_units) : undefined,
       wholesaleDiscount: p.wholesale_discount ? Number(p.wholesale_discount) : undefined,
       wholesaleImage: p.wholesale_image || undefined,
