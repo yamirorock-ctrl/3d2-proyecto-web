@@ -328,18 +328,17 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
     // Mapear a snake_case para Supabase
     // Mapear y limpiar campos para Supabase
     const {
-      saleType, packUnits, mayoristaEnabled, wholesaleUnits, wholesaleDiscount, wholesaleImage, wholesaleDescription,
+      mayoristaEnabled, unitsPerPack, wholesaleUnits, wholesalediscount, wholesaleimage, wholesaledescription,
       ...restForm
     } = form;
     const updatedForm = {
       ...restForm,
-      saleType,
-      packUnits,
-      mayoristaenabled: mayoristaEnabled,
+      mayorista_enable: mayoristaEnabled,
+      unitsperpack: unitsPerPack,
       wholesaleunits: wholesaleUnits,
-      wholesalediscount: wholesaleDiscount,
-      wholesaleimage: wholesaleImage,
-      wholesaledescription: wholesaleDescription
+      wholesalediscount,
+      wholesaleimage,
+      wholesaledescription
     };
     updatedForm.technology = technology;
     if (updatedForm.images && updatedForm.images.length > 0) {
