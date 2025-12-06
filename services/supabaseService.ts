@@ -96,7 +96,7 @@ export async function getAllProductsFromSupabase(): Promise<{ success: boolean; 
       saleType: p.sale_type || 'unidad',
       packEnabled: !!p.pack_enabled,
       unitsperpack: p.unitsperpack ? Number(p.unitsperpack) : undefined,
-      mayoristaEnabled: !!p.mayorista_enabled,
+      mayorista_enabled: !!p.mayorista_enabled,
       wholesaleUnits: p.wholesale_units ? Number(p.wholesale_units) : undefined,
       wholesaleDiscount: p.wholesale_discount ? Number(p.wholesale_discount) : undefined,
       wholesaleImage: p.wholesale_image || undefined,

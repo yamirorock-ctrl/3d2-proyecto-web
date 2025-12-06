@@ -18,24 +18,20 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart }) => {
   const prev = (e: React.MouseEvent) => { e.preventDefault(); e.stopPropagation(); setActive(a => (a - 1 + images.length) % images.length); };
   const next = (e: React.MouseEvent) => { e.preventDefault(); e.stopPropagation(); setActive(a => (a + 1) % images.length); };
 
+<<<<<<< HEAD
+=======
   // Lógica para mostrar info de venta y selector
-  const [selectedSaleType, setSelectedSaleType] = useState<'unidad' | 'pack' | 'mayorista'>(product.sale_type || 'unidad');
+  const [selectedSaleType, setSelectedSaleType] = useState<'unidad' | 'pack' | 'mayorista'>(product.saleType || 'unidad');
   // Simulación de props extendidas para packs y mayorista
-  const unitsPerPack = product.unitsPerPack || 1;
+  const unitsperpack = product.unitsperpack || 1;
   const wholesaleUnits = product.wholesaleUnits || 20;
   const wholesaleDiscount = product.wholesaleDiscount || 20;
   const wholesaleImage = product.wholesaleImage;
-  const wholesaleDescription = product.wholesaleDescription;
-  const packPrice = product.price * unitsPerPack;
+  const wholesaledescription = product.wholesaledescription;
+  const packPrice = product.price * unitsperpack;
   const wholesalePrice = Math.round(product.price * wholesaleUnits * (1 - wholesaleDiscount / 100));
 
-  let displayPrice = product.price;
-  if (product.sale_type === 'pack' && product.unitsperpack) {
-    displayPrice = product.price * product.unitsperpack;
-  } else if (product.sale_type === 'mayorista' && product.wholesaleUnits && product.wholesaleDiscount) {
-    displayPrice = Math.round(product.price * product.wholesaleUnits * (1 - product.wholesaleDiscount / 100));
-  }
-
+>>>>>>> a99aad31460ce26d9264c105a3b3a48ba941a898
   return (
     <div className="group bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden flex flex-col h-full">
       <div className="relative h-64 overflow-hidden bg-white p-8 flex items-center justify-center">
@@ -94,7 +90,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart }) => {
       <div className={`p-5 flex flex-col flex-grow ${product.images && product.images.length > 1 ? 'pt-3' : ''}`}>
         <div className="flex justify-between items-start mb-2">
           <h3 className="text-lg font-bold text-slate-900 line-clamp-1">{product.name}</h3>
-          <span className="text-lg font-bold text-indigo-600 ml-2 flex-shrink-0">${displayPrice}</span>
+          <span className="text-lg font-bold text-indigo-600 ml-2 flex-shrink-0">${product.price}</span>
         </div>
         
         {/* Stock indicator */}
@@ -116,35 +112,38 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart }) => {
           </div>
         )}
         
+<<<<<<< HEAD
+=======
         {/* Info de tipo de venta y selector */}
         <div className="mb-2">
           <span className="inline-block px-2 py-1 bg-indigo-50 text-indigo-700 text-xs font-medium rounded mr-2">
             {selectedSaleType === 'unidad' && 'Venta por unidad'}
-            {selectedSaleType === 'pack' && `Pack x${unitsPerPack} unidades`}
+            {selectedSaleType === 'pack' && `Pack x${unitsperpack} unidades`}
             {selectedSaleType === 'mayorista' && `Mayorista x${wholesaleUnits} (desc. ${wholesaleDiscount}%)`}
           </span>
           {/* Selector si hay más de una opción */}
-          {(['unidad','pack','mayorista'].filter(t => product[t+'_enabled'] || t === product.sale_type).length > 1) && (
+          {(['unidad','pack','mayorista'].filter(t => product[t+'Enabled'] || t === product.saleType).length > 1) && (
             <select className="ml-2 text-xs border rounded px-2 py-1" value={selectedSaleType} onChange={e => setSelectedSaleType(e.target.value as any)}>
-              {product.sale_type === 'unidad' && <option value="unidad">Unidad</option>}
-              {/* ...existing code... */}
-              {product.mayoristaEnabled && <option value="mayorista">Mayorista</option>}
+              {product.saleType === 'unidad' && <option value="unidad">Unidad</option>}
+              {product.packEnabled && <option value="pack">Pack</option>}
+              {product.mayorista_enabled && <option value="mayorista">Mayorista</option>}
             </select>
           )}
         </div>
         {/* Mostrar detalles según tipo de venta seleccionado */}
         {selectedSaleType === 'pack' && (
-          <div className="mb-2 text-xs text-slate-700">Pack de {unitsPerPack} unidades. Precio: <b>${packPrice}</b></div>
+          <div className="mb-2 text-xs text-slate-700">Pack de {unitsperpack} unidades. Precio: <b>${packPrice}</b></div>
         )}
         {selectedSaleType === 'mayorista' && (
           <div className="mb-2 text-xs text-slate-700">
             <div>Mayorista: {wholesaleUnits} unidades. Descuento: {wholesaleDiscount}%</div>
             <div>Precio final: <b>${wholesalePrice}</b></div>
             {wholesaleImage && <img src={wholesaleImage} alt="Mayorista" className="mt-1 w-20 h-20 object-cover rounded" />}
-            {wholesaleDescription && <div className="mt-1 text-slate-500">{wholesaleDescription}</div>}
+            {wholesaledescription && <div className="mt-1 text-slate-500">{wholesaledescription}</div>}
           </div>
         )}
         
+>>>>>>> a99aad31460ce26d9264c105a3b3a48ba941a898
         <p className="text-sm text-slate-500 mb-4 line-clamp-3 flex-grow">
           {product.description}
         </p>
