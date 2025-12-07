@@ -36,7 +36,7 @@ export default function MLCallback() {
 
     (async () => {
       try {
-        const r = await fetch('https://3d2-bewhook.vercel.app/api/ml-oauth', {
+        const r = await fetch('/api/ml-oauth', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ code })

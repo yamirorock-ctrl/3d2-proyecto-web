@@ -106,9 +106,11 @@ const Checkout: React.FC<CheckoutProps> = ({ cart, onClearCart }) => {
         return;
       }
 
-      const cost = await calculateShippingCost(shippingMethod, subtotal);
-      console.log('[CHECKOUT] setShippingCost=', cost);
-      setShippingCost(cost);
+      if (shippingConfig) {
+        const cost = await calculateShippingCost(shippingConfig, shippingMethod, subtotal);
+        console.log('[CHECKOUT] setShippingCost=', cost);
+        setShippingCost(cost);
+      }
     };
 
     updateShippingCost();
@@ -153,7 +155,7 @@ const Checkout: React.FC<CheckoutProps> = ({ cart, onClearCart }) => {
         console.log('[ML Quote] Cart items:', cart.map(i => ({ name: i.name, tech: i.technology, qty: i.quantity })));
         console.log('[ML Quote] Calculated dimensions:', dimensions);
 
-        const response = await fetch('https://3d2-bewhook.vercel.app/api/ml-quote-shipping', {
+        const response = await fetch('/api/ml-quote-shipping', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -246,7 +248,7 @@ const Checkout: React.FC<CheckoutProps> = ({ cart, onClearCart }) => {
         image: item.image,
       }));
 
-      const { order, error: orderError } = await createOrder({
+      const { data: order, error: orderError } = await createOrder({
         customer_name: customerName,
         customer_email: customerEmail,
         customer_phone: customerPhone,
@@ -261,6 +263,7 @@ const Checkout: React.FC<CheckoutProps> = ({ cart, onClearCart }) => {
         shipping_method: shippingMethod,
         notes: notes || undefined,
       });
+
 
       if (orderError || !order) {
         setError('Error al crear el pedido. Por favor intentá nuevamente.');
