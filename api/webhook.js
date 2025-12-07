@@ -7,7 +7,7 @@ import { createClient } from '@supabase/supabase-js';
 
 // Variables de servidor sin prefijo VITE, con fallback a VITE_* para compatibilidad
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
-const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_ANON || process.env.VITE_SUPABASE_ANON;
+const SUPABASE_ANON_KEY = process.env.VITE_SUPABASE_ANON_TOKEN || process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_ANON;
 const MP_ACCESS_TOKEN = process.env.MP_ACCESS_TOKEN || process.env.MP_ACCESS || process.env.VITE_MP_ACCESS;
 
 // Validación inicial: loguear qué está faltando
@@ -172,7 +172,7 @@ export default async function handler(req, res) {
       message: 'Webhook activo',
       lookingFor: {
         'SUPABASE_URL o VITE_SUPABASE_URL': Boolean(SUPABASE_URL),
-        'SUPABASE_ANON o VITE_SUPABASE_ANON': Boolean(SUPABASE_ANON_KEY),
+        'SUPABASE_ANON o VITE_SUPABASE_ANON_TOKEN': Boolean(SUPABASE_ANON_KEY),
         'MP_ACCESS o VITE_MP_ACCESS': Boolean(MP_ACCESS_TOKEN)
       },
       allEnvKeys: Object.keys(process.env).filter(k =>
