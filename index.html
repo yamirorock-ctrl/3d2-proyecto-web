@@ -51,17 +51,4 @@
   <script type="module" src="/index.tsx"></script>
 </body>
 </html>
-    <script>
-      // Si venimos desde 404.html, recuperar ruta y limpiar.
-      (function(){
-        var r = sessionStorage.getItem('redirect');
-        if (r) {
-          sessionStorage.removeItem('redirect');
-          var clean = r.replace(/^\/?/, '/');
-          if (location.pathname + location.search + location.hash !== clean) {
-            history.replaceState(null, '', clean);
-          }
-        }
-      })();
-    </script>
-    <script type="module" src="/index.tsx"></script>
+</html>
