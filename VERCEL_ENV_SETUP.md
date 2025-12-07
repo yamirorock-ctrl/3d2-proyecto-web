@@ -9,7 +9,7 @@ Agrega las siguientes variables:
 ### Supabase
 ```
 SUPABASE_URL = https://oyxzkeuvrvmqcvleekzo.supabase.co
-SUPABASE_ANON = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im95eHprZXV2cnZtcWN2bGVla3pvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQzODM4NTQsImV4cCI6MjA3OTk1OTg1NH0.S7XxmgBNpqofcKlZzFA78Ev3ic7ji9Vd9vRbJIOJbEw
+VITE_SUPABASE_ANON_TOKEN = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im95eHprZXV2cnZtcWN2bGVla3pvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQzODM4NTQsImV4cCI6MjA3OTk1OTg1NH0.S7XxmgBNpqofcKlZzFA78Ev3ic7ji9Vd9vRbJIOJbEw
 ```
 
 ### MercadoPago

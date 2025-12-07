@@ -30,7 +30,7 @@ VITE_MP_WEBHOOK_URL=https://TU-PROYECTO.vercel.app/api/webhook
 2. Settings → Environment Variables
 3. Verifica que existen:
    - `SUPABASE_URL` o `VITE_SUPABASE_URL`
-   - `SUPABASE_ANON` o `VITE_SUPABASE_ANON`
+  - `VITE_SUPABASE_ANON_TOKEN`
    - `MP_ACCESS` o `VITE_MP_ACCESS`
 
 ### 3. Verificar que el Webhook Funciona
@@ -48,7 +48,7 @@ Deberías ver algo como:
   "message": "Webhook activo",
   "lookingFor": {
     "SUPABASE_URL o VITE_SUPABASE_URL": true,
-    "SUPABASE_ANON o VITE_SUPABASE_ANON": true,
+    "VITE_SUPABASE_ANON_TOKEN": true,
     "MP_ACCESS o VITE_MP_ACCESS": true
   }
 }
@@ -94,7 +94,7 @@ https://TU-PROYECTO.vercel.app/api/webhook?test_payment_id=PAYMENT_ID&order_id=O
 
 ### "Variables de entorno faltantes en Vercel"
 - **Síntoma**: El webhook responde con `error: 'Server misconfigured'`
-- **Solución**: Agrega `SUPABASE_URL`, `SUPABASE_ANON`, y `MP_ACCESS` en Vercel → Settings → Environment Variables
+- **Solución**: Agrega `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_TOKEN`, y `VITE_MP_ACCESS` en Vercel → Settings → Environment Variables
 
 ### "El webhook no recibe notificaciones"
 - **Síntoma**: Los pagos se completan pero el estado no se actualiza

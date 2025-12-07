@@ -2,7 +2,8 @@
 
 interface ImportMetaEnv {
   readonly VITE_GEMINI_API_KEY: string;
-  // más variables de entorno aquí si las necesitas
+  readonly VITE_SUPABASE_URL: string;
+  readonly VITE_SUPABASE_ANON_TOKEN: string;
 }
 
 interface ImportMeta {

@@ -27,7 +27,7 @@ vercel
 Ve a tu proyecto en Vercel Dashboard → Settings → Environment Variables y agrega:
 
 - `VITE_SUPABASE_URL` = tu URL de Supabase
-- `VITE_SUPABASE_ANON_KEY` = tu anon key de Supabase
+- `VITE_SUPABASE_ANON_TOKEN` = tu anon key de Supabase
 - `VITE_MP_ACCESS_TOKEN` = tu access token de MercadoPago
 
 ### 6. Obtener la URL del webhook

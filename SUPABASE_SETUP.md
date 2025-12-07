@@ -71,7 +71,7 @@ Copia esta clave completa (es muy larga, asegúrate de copiarla toda)
 
 ```env
 VITE_SUPABASE_URL=https://xxxxxxxxxxxxx.supabase.co
-VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+VITE_SUPABASE_ANON_TOKEN=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 ```
 
 3. **IMPORTANTE**: Reemplaza con TUS valores reales de Supabase
@@ -102,7 +102,7 @@ Si tienes el servidor corriendo (`npm run dev`):
    - Value: Tu Project URL de Supabase
 
    **Secret 2:**
-   - Name: `VITE_SUPABASE_ANON_KEY`
+   - Name: `VITE_SUPABASE_ANON_TOKEN`
    - Value: Tu anon key de Supabase
 
 5. Haz commit y push de tus cambios

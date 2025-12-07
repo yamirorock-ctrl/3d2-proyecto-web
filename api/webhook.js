@@ -7,7 +7,7 @@ import { createClient } from '@supabase/supabase-js';
 
 // Variables de servidor sin prefijo VITE, con fallback a VITE_* para compatibilidad
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
-const SUPABASE_ANON_KEY = process.env.VITE_SUPABASE_ANON_TOKEN || process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_ANON;
+const SUPABASE_ANON_KEY = process.env.VITE_SUPABASE_ANON_TOKEN;
 const MP_ACCESS_TOKEN = process.env.MP_ACCESS_TOKEN || process.env.MP_ACCESS || process.env.VITE_MP_ACCESS;
 
 // Validación inicial: loguear qué está faltando

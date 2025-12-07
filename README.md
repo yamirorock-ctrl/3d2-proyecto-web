@@ -28,7 +28,7 @@ GEMINI_API_KEY=tu_clave_gemini
 VITE_CLOUDINARY_CLOUD_NAME=tu_cloud_name
 VITE_CLOUDINARY_UPLOAD_PRESET=tu_upload_preset_unsigned
 VITE_SUPABASE_URL=https://xxxxx.supabase.co
-VITE_SUPABASE_ANON_KEY=tu_anon_key
+VITE_SUPABASE_ANON_TOKEN=tu_anon_key
 VITE_SUPABASE_BUCKET=images
 ```
 
@@ -49,7 +49,7 @@ VITE_MP_PUBLIC_KEY=tu_public_key_mp
 1. Crear proyecto en Supabase y obtener `URL` y `anon key` (Settings > API).
 2. Ir a Storage > Crear bucket llamado `images` (o el que prefieras).
 3. Activar acceso público (Public bucket) para servir imágenes sin token.
-4. Añadir las variables `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` y opcionalmente `VITE_SUPABASE_BUCKET`.
+4. Añadir las variables `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_TOKEN` y opcionalmente `VITE_SUPABASE_BUCKET`.
 5. El botón "Probar Supabase" en el panel Admin permite validar upload/delete (permiso correcto).
 
 Si deseas políticas más estrictas, evita público y crea un endpoint backend firmado (no incluido aquí).

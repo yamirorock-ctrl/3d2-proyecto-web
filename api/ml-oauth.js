@@ -59,7 +59,7 @@ export default async function handler(req, res) {
     let debug = {};
     try {
       const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
-      const supabaseAnon = process.env.VITE_SUPABASE_ANON_TOKEN || process.env.SUPABASE_ANON_KEY;
+      const supabaseAnon = process.env.VITE_SUPABASE_ANON_TOKEN;
       debug.supabaseEnv = { supabaseUrl, supabaseAnon };
 =======
     // Persist tokens y devolver respuesta final

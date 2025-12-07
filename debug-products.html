@@ -29,9 +29,9 @@
         import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
         
         const SUPABASE_URL = 'https://oyxzkeuvrvmqcvleekzo.supabase.co';
-        const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im95eHprZXV2cnZtcWN2bGVla3pvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQzODM4NTQsImV4cCI6MjA3OTk1OTg1NH0.S7XxmgBNpqofcKlZzFA78Ev3ic7ji9Vd9vRbJIOJbEw';
+        const VITE_SUPABASE_ANON_TOKEN = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im95eHprZXV2cnZtcWN2bGVla3pvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQzODM4NTQsImV4cCI6MjA3OTk1OTg1NH0.S7XxmgBNpqofcKlZzFA78Ev3ic7ji9Vd9vRbJIOJbEw';
         
-        const supabase = createClient(SUPABASE_URL, SUPABASE_ANON);
+        const supabase = createClient(SUPABASE_URL, VITE_SUPABASE_ANON_TOKEN);
         
         window.checkSupabase = async function() {
             const results = document.getElementById('results');
