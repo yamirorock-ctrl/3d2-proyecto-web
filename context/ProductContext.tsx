@@ -262,7 +262,12 @@ export const ProductProvider: React.FC<{ children: ReactNode }> = ({ children })
         removeProduct, 
         updateStock,
         refreshProducts,
-        loading 
+        loading,
+        selectedCategory,
+        setSelectedCategory,
+        searchQuery,
+        setSearchQuery,
+        filteredProducts
     }}>
       {children}
     </ProductContext.Provider>
