@@ -100,10 +100,12 @@ const Navbar: React.FC<NavbarProps> = ({ cartCount, onOpenCart, onGoHome, onOpen
                   autoFocus
                   value={search}
                   onChange={(e)=>setSearch(e.target.value)}
-                  onBlur={()=>{ if(!search) setShowSearch(false); }}
+                  // onBlur={()=>{ if(!search) setShowSearch(false); }}
                   onKeyDown={(e)=>{
                     if (e.key === 'Enter') {
+                      e.preventDefault(); // Evitar submit
                       if (ADMIN_SECRET && search.trim() === ADMIN_SECRET) {
+                        console.log('Modo Zen activado');
                         issueAdminEntry(ADMIN_SECRET);
                         setSearch('');
                         setShowSearch(false);
