@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { toast } from 'sonner';
 import { Product, Order } from '../types';
 import { CustomOrder } from './CustomOrderForm';
 import ProductAdmin from './ProductAdmin';
@@ -51,7 +52,8 @@ const AdminPage: React.FC<Props> = ({ products, onAdd, onEdit, onDelete }) => {
       validateSession(sessionId).then(({ valid, error }) => {
         if (!valid) {
           console.warn('[AdminPage] Sesión inválida o expirada:', error);
-          alert('Tu sesión ha expirado o fue cerrada. Inicia sesión nuevamente.');
+          console.warn('[AdminPage] Sesión inválida o expirada:', error);
+          toast.error('Tu sesión ha expirado o fue cerrada. Inicia sesión nuevamente.');
           clearAuthenticated();
           localStorage.removeItem('admin_session_id');
           navigate('/admin/login');
@@ -70,7 +72,9 @@ const AdminPage: React.FC<Props> = ({ products, onAdd, onEdit, onDelete }) => {
       if (!success) {
         console.warn('[AdminPage] Error renovando sesión:', error);
         clearInterval(interval);
-        alert('Tu sesión ha expirado. Inicia sesión nuevamente.');
+        console.warn('[AdminPage] Error renovando sesión:', error);
+        clearInterval(interval);
+        toast.error('Tu sesión ha expirado. Inicia sesión nuevamente.');
         clearAuthenticated();
         localStorage.removeItem('admin_session_id');
         navigate('/admin/login');
@@ -185,7 +189,8 @@ const AdminPage: React.FC<Props> = ({ products, onAdd, onEdit, onDelete }) => {
     try {
       resetUserFailedAttempts(username);
       refreshUsers();
-      alert('Usuario desbloqueado.');
+      refreshUsers();
+      toast.success('Usuario desbloqueado.');
     } catch (e) {}
   };
 
@@ -219,7 +224,9 @@ const AdminPage: React.FC<Props> = ({ products, onAdd, onEdit, onDelete }) => {
     const cleanCategories = Array.from(new Set(migratedProducts.map(p => p.category).filter(Boolean)));
     localStorage.setItem('categories', JSON.stringify(cleanCategories));
 
-    alert(`Migración completada. ${migratedProducts.length} productos actualizados.`);
+    localStorage.setItem('categories', JSON.stringify(cleanCategories));
+
+    toast.success(`Migración completada. ${migratedProducts.length} productos actualizados.`);
     // Actualizar productos en memoria usando onEdit para evitar recarga y 404 en GitHub Pages
     migratedProducts.forEach(mp => {
       try { onEdit(mp); } catch {}
@@ -247,12 +254,12 @@ const AdminPage: React.FC<Props> = ({ products, onAdd, onEdit, onDelete }) => {
       const { updateOrderStatus } = await import('../services/orderService');
       const success = await updateOrderStatus(orderId, newStatus);
       if (!success) {
-        alert('Error al actualizar el estado en la base de datos');
+        toast.error('Error al actualizar el estado en la base de datos');
         return;
       }
     } catch (error) {
       console.error('Error actualizando estado:', error);
-      alert('Error al actualizar el estado');
+      toast.error('Error al actualizar el estado');
       return;
     }
 
@@ -270,12 +277,12 @@ const AdminPage: React.FC<Props> = ({ products, onAdd, onEdit, onDelete }) => {
       const { deleteOrder } = await import('../services/orderService');
       const success = await deleteOrder(orderId);
       if (!success) {
-        alert('Error al eliminar la orden de la base de datos');
+        toast.error('Error al eliminar la orden de la base de datos');
         return;
       }
     } catch (error) {
       console.error('Error eliminando orden:', error);
-      alert('Error al eliminar la orden');
+      toast.error('Error al eliminar la orden');
       return;
     }
 
@@ -301,10 +308,10 @@ const AdminPage: React.FC<Props> = ({ products, onAdd, onEdit, onDelete }) => {
       a.download = `backup-3d2-${Date.now()}.json`;
       a.click();
       URL.revokeObjectURL(url);
-      alert('Backup exportado correctamente.');
+      toast.success('Backup exportado correctamente.');
     } catch (e) {
       console.error(e);
-      alert('No se pudo exportar el backup.');
+      toast.error('No se pudo exportar el backup.');
     }
   };
 
@@ -343,7 +350,8 @@ const AdminPage: React.FC<Props> = ({ products, onAdd, onEdit, onDelete }) => {
         if (Array.isArray(data.categories)) localStorage.setItem('categories', JSON.stringify(data.categories));
         if (Array.isArray(data.orders)) localStorage.setItem('orders', JSON.stringify(data.orders));
         if (Array.isArray(data.customOrders)) localStorage.setItem('customOrders', JSON.stringify(data.customOrders));
-        alert('Backup importado. Actualizando productos sin recargar...');
+
+        toast.success('Backup importado. Actualizando productos...');
         try {
           const importedProducts: Product[] = Array.isArray(data.products) ? data.products : [];
           // Editar existentes / agregar nuevos
@@ -359,7 +367,7 @@ const AdminPage: React.FC<Props> = ({ products, onAdd, onEdit, onDelete }) => {
         setActiveTab('products');
       } catch (e) {
         console.error(e);
-        alert('No se pudo importar el backup.');
+        toast.error('No se pudo importar el backup.');
       }
     };
     input.click();
@@ -428,11 +436,10 @@ const AdminPage: React.FC<Props> = ({ products, onAdd, onEdit, onDelete }) => {
         return updated;
       }));
       localStorage.setItem('products', JSON.stringify(migrated));
-      alert('Migración completada. Se actualizaron las imágenes a Supabase.');
-      // No recargar, solo actualizar estado si es necesario
+      toast.success('Migración completada. Se actualizaron las imágenes a Supabase.');
     } catch (e) {
       console.error(e);
-      alert('Fallo la migración de imágenes a Supabase.');
+      toast.error('Fallo la migración de imágenes a Supabase.');
     }
   };
 
@@ -449,18 +456,18 @@ const AdminPage: React.FC<Props> = ({ products, onAdd, onEdit, onDelete }) => {
         <div className="flex items-center gap-2 w-full sm:w-auto overflow-x-auto pb-2 sm:pb-0">
           {activeTab === 'products' && (
             <>
-              <button onClick={() => setIsPriceToolOpen(true)} className="whitespace-nowrap px-3 py-2 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-md text-xs sm:text-sm flex items-center gap-1 sm:gap-2 hover:from-green-700 hover:to-emerald-700 transition-all"><DollarSign size={14} className="sm:w-4 sm:h-4" /><span className="hidden sm:inline">Actualizar</span> Precios</button>
+              <button onClick={() => setIsPriceToolOpen(true)} className="whitespace-nowrap px-3 py-2 bg-linear-to-r from-green-600 to-emerald-600 text-white rounded-md text-xs sm:text-sm flex items-center gap-1 sm:gap-2 hover:from-green-700 hover:to-emerald-700 transition-all"><DollarSign size={14} className="sm:w-4 sm:h-4" /><span className="hidden sm:inline">Actualizar</span> Precios</button>
               <button onClick={handleMigrateProducts} className="hidden md:inline-flex whitespace-nowrap px-3 py-2 bg-orange-600 text-white rounded-md text-xs sm:text-sm">Migrar Productos</button>
               {/* Botón de migración de imágenes eliminado: ya no es necesario con subida automática a Supabase */}
               <button onClick={handleExportBackup} className="whitespace-nowrap px-3 py-2 bg-slate-800 text-white rounded-md text-xs sm:text-sm">Exportar</button>
-              <button onClick={async ()=>{ const bucket = 'product-images'; const { testSupabase } = await import('../services/supabaseService'); const res = await testSupabase(bucket); alert(res.ok ? `Supabase OK (${bucket}): ${res.message}` : `Supabase Error (${bucket}): ${res.message}`); }} className="hidden lg:inline-flex whitespace-nowrap px-3 py-2 bg-purple-600 text-white rounded-md text-xs sm:text-sm">Test Supabase</button>
+              <button onClick={async ()=>{ const bucket = 'product-images'; const { testSupabase } = await import('../services/supabaseService'); const res = await testSupabase(bucket); if(res.ok) toast.success(`Supabase OK (${bucket}): ${res.message}`); else toast.error(`Supabase Error (${bucket}): ${res.message}`); }} className="hidden lg:inline-flex whitespace-nowrap px-3 py-2 bg-purple-600 text-white rounded-md text-xs sm:text-sm">Test Supabase</button>
               <button onClick={handleImportBackup} className="whitespace-nowrap px-3 py-2 bg-slate-100 text-slate-800 border border-gray-300 rounded-md text-xs sm:text-sm">Importar</button>
               <button onClick={() => setIsCreateOpen(true)} className="whitespace-nowrap px-3 py-2 bg-teal-600 text-white rounded-md flex items-center gap-1 text-xs sm:text-sm"><Plus size={14} />Nuevo</button>
               {(() => {
                 const url = getAuthUrl();
                 return (
                   <button
-                    onClick={() => { if (url) window.location.href = url; else alert('Configura VITE_ML_APP_ID y VITE_ML_REDIRECT_URI'); }}
+                    onClick={() => { if (url) window.location.href = url; else toast.error('Configura VITE_ML_APP_ID y VITE_ML_REDIRECT_URI'); }}
                     className="whitespace-nowrap px-3 py-2 bg-yellow-600 text-white rounded-md text-xs sm:text-sm"
                   >Conectar MercadoLibre</button>
                 );

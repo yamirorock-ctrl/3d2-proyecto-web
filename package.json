@@ -17,12 +17,15 @@
     "@supabase/supabase-js": "^2.86.0",
     "@types/humps": "^2.0.6",
     "browser-image-compression": "^2.0.2",
+    "date-fns": "^4.1.0",
     "humps": "^2.0.1",
     "localforage": "^1.10.0",
     "lucide-react": "^0.554.0",
     "react": "^19.2.1",
     "react-dom": "^19.2.1",
-    "react-router-dom": "^7.9.6"
+    "react-router-dom": "^7.9.6",
+    "recharts": "^3.5.1",
+    "sonner": "^2.0.7"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.17",

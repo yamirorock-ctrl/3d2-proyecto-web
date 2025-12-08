@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { Toaster } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import CartDrawer from './components/CartDrawer';
@@ -153,7 +154,10 @@ const MainLayout: React.FC = () => {
 
        <ChatAssistant products={products} />
        
+       <ChatAssistant products={products} />
+       
        <Footer />
+       <Toaster position="top-right" richColors />
     </div>
   );
 };

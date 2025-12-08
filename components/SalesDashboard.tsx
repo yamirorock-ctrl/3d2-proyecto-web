@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { Order } from '../types';
 import { TrendingUp, Package, DollarSign, Clock, Download, Calendar, CheckCircle, Loader, XCircle, Trash2, RefreshCw, Truck } from 'lucide-react';
 
@@ -128,7 +129,7 @@ const SalesDashboard: React.FC<Props> = ({ orders, onUpdateStatus, onDelete, onR
 
       {/* Métricas principales */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        <div className="bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-xl p-4 sm:p-6 text-white shadow-lg">
+        <div className="bg-linear-to-br from-indigo-500 to-indigo-600 rounded-xl p-4 sm:p-6 text-white shadow-lg">
           <div className="flex items-center justify-between mb-2">
             <DollarSign size={20} className="opacity-80 sm:w-6 sm:h-6" />
             <TrendingUp size={16} className="opacity-60 sm:w-5 sm:h-5" />
@@ -137,7 +138,7 @@ const SalesDashboard: React.FC<Props> = ({ orders, onUpdateStatus, onDelete, onR
           <p className="text-2xl sm:text-3xl font-bold">${metrics.total.toFixed(2)}</p>
         </div>
 
-        <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-xl p-4 sm:p-6 text-white shadow-lg">
+        <div className="bg-linear-to-br from-green-500 to-green-600 rounded-xl p-4 sm:p-6 text-white shadow-lg">
           <div className="flex items-center justify-between mb-2">
             <Package size={20} className="opacity-80 sm:w-6 sm:h-6" />
           </div>
@@ -145,7 +146,7 @@ const SalesDashboard: React.FC<Props> = ({ orders, onUpdateStatus, onDelete, onR
           <p className="text-2xl sm:text-3xl font-bold">{filteredOrders.length}</p>
         </div>
 
-        <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl p-4 sm:p-6 text-white shadow-lg">
+        <div className="bg-linear-to-br from-blue-500 to-blue-600 rounded-xl p-4 sm:p-6 text-white shadow-lg">
           <div className="flex items-center justify-between mb-2">
             <Clock size={20} className="opacity-80 sm:w-6 sm:h-6" />
           </div>
@@ -153,12 +154,31 @@ const SalesDashboard: React.FC<Props> = ({ orders, onUpdateStatus, onDelete, onR
           <p className="text-2xl sm:text-3xl font-bold">{metrics.processing}</p>
         </div>
 
-        <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl p-4 sm:p-6 text-white shadow-lg">
+        <div className="bg-linear-to-br from-purple-500 to-purple-600 rounded-xl p-4 sm:p-6 text-white shadow-lg">
           <div className="flex items-center justify-between mb-2">
             <Calendar size={20} className="opacity-80 sm:w-6 sm:h-6" />
           </div>
           <p className="text-xs sm:text-sm opacity-90 mb-1">Pendientes</p>
           <p className="text-2xl sm:text-3xl font-bold">{metrics.pending}</p>
+        </div>
+      </div>
+
+      {/* Gráfico de Ventas por Producto (Top 5) */}
+      <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
+        <h4 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
+          <TrendingUp size={20} className="text-indigo-600" />
+          Top 5 Productos (Ingresos)
+        </h4>
+        <div className="h-64 w-full">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={metrics.topProducts}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} />
+              <XAxis dataKey="name" fontSize={12} tickFormatter={(val) => val.length > 15 ? val.slice(0, 15)+'...' : val} />
+              <YAxis />
+              <Tooltip formatter={(value: number) => [`$${value.toFixed(2)}`, 'Ingresos']} />
+              <Bar dataKey="total" fill="#4f46e5" name="Ingresos ($)" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
         </div>
       </div>
 
