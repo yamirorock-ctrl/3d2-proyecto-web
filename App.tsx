@@ -72,7 +72,7 @@ const MainLayout: React.FC = () => {
 
   if (MAINTENANCE_MODE && window.location.pathname !== '/admin/login' && window.location.pathname !== '/admin') {
       return (
-        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-500 to-purple-600 p-4">
+        <div className="min-h-screen flex items-center justify-center bg-linear-to-br from-indigo-500 to-purple-600 p-4">
           <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full text-center">
             <div className="mb-6">
               <div className="w-20 h-20 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">

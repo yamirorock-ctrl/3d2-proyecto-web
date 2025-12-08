@@ -22,8 +22,8 @@ const Navbar: React.FC<NavbarProps> = ({ cartCount, onOpenCart, onGoHome, onOpen
   const [search, setSearch] = useState('');
   const [showSearch, setShowSearch] = useState(false);
   const navigate = useNavigate();
-  // Leer el secreto desde env; si falta, intenta desde localStorage (no exponer por defecto)
-  const ADMIN_SECRET = (import.meta as any).env?.VITE_ADMIN_SECRET || localStorage.getItem('ADMIN_SECRET') || '';
+  // Leer el secreto desde env; fallback a 'modozen' si falta
+  const ADMIN_SECRET = ((import.meta as any).env?.VITE_ADMIN_SECRET || 'modozen').trim();
 
   const issueAdminEntry = (secret: string) => {
     const s = (secret || '').trim();
@@ -52,15 +52,15 @@ const Navbar: React.FC<NavbarProps> = ({ cartCount, onOpenCart, onGoHome, onOpen
             onClick={onGoHome}
           >
             {/* Logo Container with Neon Effect */}
-            <div className="relative h-12 w-12 flex items-center justify-center flex-shrink-0">
+            <div className="relative h-12 w-12 flex items-center justify-center shrink-0">
                {/* Static Glow Layer (Background Blur) */}
-               <div className="absolute -inset-2 bg-gradient-to-tr from-cyan-400 via-indigo-500 to-purple-600 rounded-full blur-md opacity-40 group-hover:opacity-75 transition-opacity duration-500"></div>
+               <div className="absolute -inset-2 bg-linear-to-tr from-cyan-400 via-indigo-500 to-purple-600 rounded-full blur-md opacity-40 group-hover:opacity-75 transition-opacity duration-500"></div>
                
                {/* Spinning Neon Border Layer */}
-               <div className="absolute -inset-[2px] rounded-full bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-600 animate-[spin_3s_linear_infinite]"></div>
+               <div className="absolute -inset-[2px] rounded-full bg-linear-to-r from-cyan-400 via-blue-500 to-purple-600 animate-[spin_3s_linear_infinite]"></div>
                
                {/* Inner Circle with Image */}
-               <div className="relative h-full w-full rounded-full bg-white z-10 flex items-center justify-center border-[2px] border-white overflow-hidden">
+               <div className="relative h-full w-full rounded-full bg-white z-10 flex items-center justify-center border-2 border-white overflow-hidden">
                   <img 
                     src="/LOGO.jpg" 
                     alt="3D2 Logo" 
@@ -70,7 +70,7 @@ const Navbar: React.FC<NavbarProps> = ({ cartCount, onOpenCart, onGoHome, onOpen
             </div>
 
             <div className="flex flex-col justify-center">
-              <h1 className="text-2xl font-black tracking-wider text-slate-900 leading-none group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-indigo-600 group-hover:to-purple-600 transition-all">
+              <h1 className="text-2xl font-black tracking-wider text-slate-900 leading-none group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-linear-to-r group-hover:from-indigo-600 group-hover:to-purple-600 transition-all">
                 3D2
               </h1>
               <span className="text-xs font-semibold text-indigo-600 tracking-widest uppercase">

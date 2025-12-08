@@ -37,14 +37,14 @@ const Home: React.FC = () => {
               alt="3D Printing Background" 
               className="w-full h-full object-cover opacity-20"
             />
-            <div className="absolute inset-0 bg-gradient-to-r from-slate-950 via-slate-900/90 to-transparent"></div>
+            <div className="absolute inset-0 bg-linear-to-r from-slate-950 via-slate-900/90 to-transparent"></div>
           </div>
           
           {/* Animated 3D Logo Chip */}
           <div className="absolute right-8 top-1/2 -translate-y-1/2 z-10 hidden lg:block">
             <div className="relative w-64 h-64 animate-float">
               <div className="absolute inset-0 animate-spin-slow">
-                <div className="w-full h-full rounded-3xl bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 shadow-2xl shadow-indigo-500/50 flex items-center justify-center transform perspective-1000 rotate-y-12 p-8">
+                <div className="w-full h-full rounded-3xl bg-linear-to-br from-indigo-500 via-purple-500 to-pink-500 shadow-2xl shadow-indigo-500/50 flex items-center justify-center transform perspective-1000 rotate-y-12 p-8">
                   <img 
                     src="/LOGO.jpg" 
                     alt="3D² Logo" 
@@ -53,7 +53,7 @@ const Home: React.FC = () => {
                 </div>
               </div>
               {/* Glow effect */}
-              <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 blur-xl opacity-50 animate-pulse"></div>
+              <div className="absolute inset-0 rounded-3xl bg-linear-to-br from-indigo-500 via-purple-500 to-pink-500 blur-xl opacity-50 animate-pulse"></div>
             </div>
           </div>
           
