@@ -1,11 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { toast } from 'sonner';
 import { Product, ProductImage } from '../types';
 import SmartImage from './SmartImage';
-import { saveFile } from '../services/imageStore';
 import { uploadToSupabase } from '../services/supabaseService';
 import { upsertProduct } from '../services/productService';
 import { compressImage } from '../utils/imageCompression';
-import { getBlob } from '../services/imageStore';
 
 interface Props {
   onClose: () => void;
@@ -54,20 +53,12 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
   const [technology, setTechnology] = useState<'3D'|'Láser'>(() => (product?.technology ?? '3D'));
   const uniqueCats = useMemo(() => Array.from(new Set((categories || []).filter(Boolean))), [categories]);
   const [localCats, setLocalCats] = useState<string[]>(uniqueCats);
-  const [previewSrc, setPreviewSrc] = useState<string>(product?.images?.[0]?.url ?? (product?.images?.[0]?.storageKey ? `lf:${product.images[0].storageKey}` : (product?.image ?? '')));
+  const [previewSrc, setPreviewSrc] = useState<string>(product?.images?.[0]?.url ?? (product?.image ?? ''));
   const [newImgUrl, setNewImgUrl] = useState('');
   const [newImgColor, setNewImgColor] = useState('');
   const [newCategoryText, setNewCategoryText] = useState('');
-  const [uploadTarget, setUploadTarget] = useState<'local' | 'cloudinary' | 'supabase'>(() => {
-    const imgs = product?.images || [];
-    if (imgs.some(i => i.url && i.url.includes('/storage/v1/object'))) return 'supabase';
-    if (imgs.some(i => i.storageKey)) return 'local';
-    return 'supabase';
-  });
-  const [supabaseBucket, setSupabaseBucket] = useState('product-images');
   const [isCompressing, setIsCompressing] = useState(false);
   const [compressionEnabled, setCompressionEnabled] = useState(true);
-  const [isMigratingProduct, setIsMigratingProduct] = useState(false);
 
   // Category mode + localCats sync
   useEffect(() => {
@@ -92,14 +83,14 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
   // Preview principal
   useEffect(() => {
     const primaryImg = form.images && form.images.length > 0 ? form.images[0] : undefined;
-    const primary = primaryImg?.url ?? (primaryImg?.storageKey ? `lf:${primaryImg.storageKey}` : form.image);
+    const primary = primaryImg?.url ?? form.image;
     setPreviewSrc(primary ?? '');
   }, [form.image, form.images]);
 
   const handleAddCategory = () => {
     const name = (newCategoryText || form.category || '').trim();
     const clean = name;
-    if (!clean) return alert('Nombre inválido');
+    if (!clean) return toast.error('Nombre inválido');
     try {
       const raw = localStorage.getItem('categories');
       const arr = raw ? JSON.parse(raw) as string[] : [];
@@ -114,7 +105,7 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
 
   const handleRemoveCategory = (catToRemove?: string) => {
     const target = catToRemove ?? form.category;
-    if (!target) return alert('No hay categoría seleccionada');
+    if (!target) return toast.error('No hay categoría seleccionada');
     if (!confirm(`Eliminar categoría "${target}" de la lista? Esto no modificará productos existentes.`)) return;
     try {
       const raw = localStorage.getItem('categories');
@@ -127,7 +118,7 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
         setForm(prev => ({ ...prev, category: '' }));
         setCategoryMode(newLocal.length > 0 ? 'select' : 'other');
       }
-      alert('Categoría eliminada.');
+      toast.success('Categoría eliminada.');
     } catch (e) { console.error(e); }
   };
 
@@ -163,7 +154,7 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
 
       // Validar tamaño después de compresión
       if (processedFile.size > 2 * 1024 * 1024) {
-        alert('La imagen aún supera 2MB después de la compresión. Usa una imagen más pequeña o una URL externa.');
+        toast.error('La imagen aún supera 2MB después de la compresión. Usa una imagen más pequeña o una URL externa.');
         if (!opts?.batch) setIsCompressing(false);
         return;
       }
@@ -171,38 +162,28 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
       // Nombre único: product-{id}-{timestamp}.webp
       let fileName = `product-${form.id}-${Date.now()}.webp`;
 
-      if (uploadTarget === 'local') {
-        const key = await saveFile(processedFile);
-        setForm(prev => ({
-          ...prev,
-          images: [...(prev.images || []), { storageKey: key, color: (opts?.color ?? newImgColor) || undefined }]
-        }));
-      } else if (uploadTarget === 'cloudinary') {
-        const url = await uploadToCloudinary(processedFile);
-        setForm(prev => ({
-          ...prev,
-          images: [...(prev.images || []), { url, color: (opts?.color ?? newImgColor) || undefined }]
-        }));
-      } else {
-        const envUrl = (import.meta as any).env?.VITE_SUPABASE_URL;
-        const envKey = (import.meta as any).env?.VITE_SUPABASE_ANON_TOKEN;
-        if (!envUrl || !envKey) {
-          alert('Supabase no está configurado. Define VITE_SUPABASE_URL y VITE_SUPABASE_ANON_TOKEN en tu entorno antes de usar este destino.');
+      // Subida forzada a SUPABASE
+      const envUrl = (import.meta as any).env?.VITE_SUPABASE_URL;
+      const envKey = (import.meta as any).env?.VITE_SUPABASE_ANON_TOKEN;
+      if (!envUrl || !envKey) {
+          toast.error('Supabase no está configurado. Define VITE_SUPABASE_URL y VITE_SUPABASE_ANON_TOKEN en tu entorno.');
           if (!opts?.batch) setIsCompressing(false);
           return;
-        }
-        // Subir con nombre único
-        const url = await uploadToSupabase(processedFile, supabaseBucket, fileName);
-        setForm(prev => ({
+      }
+      
+      const bucket = 'product-images';
+      // Subir con nombre único
+      const url = await uploadToSupabase(processedFile, bucket, fileName);
+      setForm(prev => ({
           ...prev,
           images: [...(prev.images || []), { url, color: (opts?.color ?? newImgColor) || undefined }]
-        }));
-      }
+      }));
+      
       setNewImgUrl('');
       if (!opts?.batch) setNewImgColor('');
     } catch (e) {
       console.error(e);
-      alert((e as Error).message || 'No se pudo guardar la imagen.');
+      toast.error((e as Error).message || 'No se pudo guardar la imagen en Supabase.');
     } finally {
       if (!opts?.batch) setIsCompressing(false);
     }
@@ -215,8 +196,7 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
     setIsCompressing(true);
     try {
       for (const f of arr) {
-        // Procesar secuencialmente para evitar picos de memoria
-        // Mantener mismo color para todo el lote
+        // Procesar secuencialmente
         await handleFile(f, { color: savedColor, batch: true });
       }
     } finally {
@@ -228,7 +208,7 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
   const addImageByUrl = async () => {
     const url = newImgUrl.trim();
     if (!url) {
-      alert('Por favor ingresa una URL de imagen');
+      toast.error('Por favor ingresa una URL de imagen');
       return;
     }
     const allowedExt = ['.jpg', '.jpeg', '.png', '.webp', '.gif'];
@@ -237,25 +217,6 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
     if (!hasExt) {
       const proceed = confirm('La URL no parece terminar en una extensión de imagen (.jpg/.png/.webp). ¿Deseas intentar de todos modos?');
       if (!proceed) return;
-    }
-    try {
-      const res = await fetch(url, { method: 'HEAD' });
-      const ct = res.headers.get('content-type') || '';
-      if (!ct.includes('image/')) {
-        alert('La URL no parece ser una imagen directa (content-type). Usa un enlace directo a .jpg/.png/.webp o sube el archivo.');
-        return;
-      }
-    } catch (e) {
-      console.warn('No se pudo verificar la URL (HEAD). Intentando agregar de todos modos.', e);
-    }
-    // Intento GET ligero opcional con abort para detectar accesibilidad sin bloquear por CORS
-    try {
-      const ac = new AbortController();
-      const t = setTimeout(() => ac.abort(), 2500);
-      await fetch(url, { method: 'GET', mode: 'cors', cache: 'no-store', signal: ac.signal });
-      clearTimeout(t);
-    } catch (e) {
-      console.warn('GET de prueba falló (posible CORS/hotlink). Se agregará igual y SmartImage mostrará error si no carga.', e);
     }
     setForm(prev => ({
       ...prev,
@@ -294,16 +255,16 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.name || form.name.trim().length === 0) {
-      alert('El nombre es obligatorio');
+      toast.error('El nombre es obligatorio');
       return;
     }
     if (!form.price || Number(form.price) <= 0) {
-      alert('El precio debe ser mayor a 0');
+      toast.error('El precio debe ser mayor a 0');
       return;
     }
     const finalCategory = form.category;
     if (!finalCategory || finalCategory.trim().length === 0) {
-      alert('La categoría es obligatoria');
+      toast.error('La categoría es obligatoria');
       return;
     }
     form.technology = technology;
@@ -313,76 +274,17 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
     if (typeof form.featured !== 'boolean') form.featured = false;
     if (!form.id) form.id = nextId ?? Date.now();
 
-    // Guardar en Supabase si el destino es supabase
-    if (uploadTarget === 'supabase') {
-      // Usar la función importada estáticamente
-      upsertProduct(form).then(({ data, error }) => {
-        if (error) {
-          alert('Error al guardar en Supabase: ' + error.message);
-        } else {
-          alert('Producto guardado en Supabase correctamente');
-          if (data) {
-            onSave(data); // Enviar el producto actualizado con posible nuevo ID
-          }
-        }
-      });
-    } else {
-      onSave(form);
-    }
-    // No recargar ni navegar, solo actualizar estado
-  };
-
-  // Migrar imágenes del producto actual a Supabase
-  const migrateCurrentProductToSupabase = async () => {
-    if (!form || !form.images || form.images.length === 0) {
-      alert('Este producto no tiene imágenes para migrar.');
-      return;
-    }
-    setIsMigratingProduct(true);
-    try {
-      const updatedImages: ProductImage[] = [];
-      for (const img of form.images) {
-        if (img.url && img.url.startsWith('data:image')) {
-          try {
-            const res = await fetch(img.url);
-            const blob = await res.blob();
-            const fileName = `product-${form.id}-${Date.now()}.webp`;
-            const url = await uploadToSupabase(new File([blob], fileName, { type: blob.type || 'image/webp' }), supabaseBucket || 'product-images', fileName);
-            updatedImages.push({ url, color: img.color });
-          } catch {
-            updatedImages.push(img);
-          }
-        } else if (img.storageKey) {
-          try {
-            const blob = await getBlob(img.storageKey);
-            if (blob) {
-              const fileName = `product-${form.id}-${Date.now()}.webp`;
-              const url = await uploadToSupabase(new File([blob], fileName, { type: blob.type || 'image/webp' }), supabaseBucket || 'product-images', fileName);
-              updatedImages.push({ url, color: img.color });
-            } else {
-              updatedImages.push(img);
-            }
-          } catch {
-            updatedImages.push(img);
-          }
-        } else {
-          updatedImages.push(img);
-        }
-      }
-      const updatedProduct: Product = { ...form, images: updatedImages, image: updatedImages[0]?.url || form.image };
-      const { data, error } = await upsertProduct(updatedProduct);
+    // Guardar SIEMPRE en Supabase (base de datos)
+    upsertProduct(form).then(({ data, error }) => {
       if (error) {
-        alert('Imágenes migradas, pero falló guardar el producto en Supabase: ' + error.message);
+          toast.error('Error al guardar en Supabase: ' + error.message);
       } else {
-        alert('Producto migrado a Supabase correctamente');
+          toast.success('Producto guardado correctamente');
+          if (data) {
+            onSave(data); // Enviar el producto actualizado 
+          }
       }
-      setForm(updatedProduct);
-    } catch (e) {
-      console.error(e);
-      alert('Error al migrar el producto a Supabase');
-    } finally {
-      setIsMigratingProduct(false);
-    }
+    });
   };
 
   return (
@@ -464,17 +366,6 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
             <label className="block text-sm font-medium text-slate-700 mb-2">Imágenes y Colores</label>
             <div className="mt-1 grid gap-2">
               <div className="flex gap-2 items-center">
-                <label className="text-xs text-slate-600">Destino:</label>
-                <select value={uploadTarget} onChange={(e)=>setUploadTarget(e.target.value as any)} className="text-sm border rounded px-2 py-1">
-                  <option value="local">Local (IndexedDB)</option>
-                  <option value="cloudinary">Cloudinary</option>
-                  <option value="supabase">Supabase</option>
-                </select>
-                {uploadTarget === 'supabase' && (
-                  <input type="text" value={supabaseBucket} onChange={(e)=>setSupabaseBucket(e.target.value)} className="text-sm border rounded px-2 py-1" placeholder="Bucket (ej: product-images)" />
-                )}
-              </div>
-              <div className="flex gap-2 items-center">
                 <input
                   type="text"
                   placeholder="URL de imagen"
@@ -491,10 +382,8 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
                 />
                 <button type="button" onClick={addImageByUrl} className="px-4 py-2 rounded-md bg-indigo-600 text-white text-sm whitespace-nowrap hover:bg-indigo-700">Agregar</button>
               </div>
-              <div className="text-xs text-slate-400">O sube una imagen desde tu equipo:</div>
-              <div className="bg-yellow-50 p-2 rounded text-xs text-yellow-800 mb-2">
-                ⚠️ Recomendación: Usa URLs externas siempre que sea posible. Subir archivos llena la memoria del navegador muy rápido y puede borrar tus datos.
-              </div>
+              <div className="text-xs text-slate-400">O sube una imagen desde tu equipo (se guardará en Supabase):</div>
+              
               <div className="flex gap-2 items-center">
                 <input 
                   type="file" 
@@ -513,11 +402,6 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
                   />
                   Comprimir WebP
                 </label>
-                {uploadTarget === 'supabase' && (
-                  <button type="button" onClick={migrateCurrentProductToSupabase} disabled={isMigratingProduct} className="px-3 py-2 rounded-md bg-purple-600 text-white text-xs whitespace-nowrap hover:bg-purple-700">
-                    {isMigratingProduct ? 'Migrando…' : 'Migrar este producto a Supabase'}
-                  </button>
-                )}
               </div>
               {isCompressing && (
                 <div className="bg-blue-50 p-2 rounded text-xs text-blue-700 flex items-center gap-2">
@@ -525,7 +409,7 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"></circle>
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                   </svg>
-                  Comprimiendo imagen a WebP...
+                  Comprimiendo imagen a WebP y subiendo a Supabase...
                 </div>
               )}
 

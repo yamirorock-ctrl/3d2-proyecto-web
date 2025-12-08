@@ -3,7 +3,7 @@ import { toast } from 'sonner';
 import { Product, Order } from '../types';
 import { CustomOrder } from './CustomOrderForm';
 import ProductAdmin from './ProductAdmin';
-import { Trash2, Edit, Plus, ArrowLeft, Package, Users, Mail, Phone, Calendar, CheckCircle, Clock, ShoppingCart, TrendingUp, DollarSign, ShieldAlert, RefreshCw, ListChecks, ShoppingBag } from 'lucide-react';
+import { Trash2, Edit, Plus, ArrowLeft, Package, Users, Mail, Phone, Calendar, CheckCircle, Clock, ShoppingCart, TrendingUp, DollarSign, ShieldAlert, RefreshCw, ListChecks, ShoppingBag, Settings, LogOut, ChevronDown, Database, Upload, Download, Wrench } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { clearAuthenticated, resetUserFailedAttempts, isUserLocked } from '../utils/auth';
 import { saveDataUrl, getBlob } from '../services/imageStore';
@@ -30,6 +30,7 @@ const AdminPage: React.FC<Props> = ({ products, onAdd, onEdit, onDelete }) => {
   const [customOrders, setCustomOrders] = useState<CustomOrder[]>([]);
   const [salesOrders, setSalesOrders] = useState<Order[]>([]);
   const [isPriceToolOpen, setIsPriceToolOpen] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   const navigate = useNavigate();
 
   const storedUser = localStorage.getItem('admin_user');
@@ -52,7 +53,6 @@ const AdminPage: React.FC<Props> = ({ products, onAdd, onEdit, onDelete }) => {
       validateSession(sessionId).then(({ valid, error }) => {
         if (!valid) {
           console.warn('[AdminPage] Sesión inválida o expirada:', error);
-          console.warn('[AdminPage] Sesión inválida o expirada:', error);
           toast.error('Tu sesión ha expirado o fue cerrada. Inicia sesión nuevamente.');
           clearAuthenticated();
           localStorage.removeItem('admin_session_id');
@@ -70,8 +70,6 @@ const AdminPage: React.FC<Props> = ({ products, onAdd, onEdit, onDelete }) => {
     const interval = setInterval(async () => {
       const { success, error } = await renewSession(sessionId);
       if (!success) {
-        console.warn('[AdminPage] Error renovando sesión:', error);
-        clearInterval(interval);
         console.warn('[AdminPage] Error renovando sesión:', error);
         clearInterval(interval);
         toast.error('Tu sesión ha expirado. Inicia sesión nuevamente.');
@@ -233,6 +231,7 @@ const AdminPage: React.FC<Props> = ({ products, onAdd, onEdit, onDelete }) => {
     });
     // Opcional: podrías navegar a 'products' tab si no está
     setActiveTab('products');
+    setShowSettings(false);
   };
 
   const handleUpdateOrderStatus = (orderId: number, newStatus: CustomOrder['status']) => {
@@ -309,6 +308,7 @@ const AdminPage: React.FC<Props> = ({ products, onAdd, onEdit, onDelete }) => {
       a.click();
       URL.revokeObjectURL(url);
       toast.success('Backup exportado correctamente.');
+      setShowSettings(false);
     } catch (e) {
       console.error(e);
       toast.error('No se pudo exportar el backup.');
@@ -365,6 +365,7 @@ const AdminPage: React.FC<Props> = ({ products, onAdd, onEdit, onDelete }) => {
           });
         } catch (e) { console.warn('No se pudo fusionar productos en memoria', e); }
         setActiveTab('products');
+        setShowSettings(false);
       } catch (e) {
         console.error(e);
         toast.error('No se pudo importar el backup.');
@@ -437,6 +438,7 @@ const AdminPage: React.FC<Props> = ({ products, onAdd, onEdit, onDelete }) => {
       }));
       localStorage.setItem('products', JSON.stringify(migrated));
       toast.success('Migración completada. Se actualizaron las imágenes a Supabase.');
+      setShowSettings(false);
     } catch (e) {
       console.error(e);
       toast.error('Fallo la migración de imágenes a Supabase.');
@@ -444,44 +446,88 @@ const AdminPage: React.FC<Props> = ({ products, onAdd, onEdit, onDelete }) => {
   };
 
   return (
-    <div className="max-w-6xl mx-auto p-3 sm:p-6">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 sm:mb-6 gap-3">
-        <div className="flex items-center gap-2 sm:gap-4">
-          <button onClick={() => navigate(-1)} className="p-2 bg-gray-100 rounded-md"><ArrowLeft size={20} /></button>
-          <h2 className="text-xl sm:text-2xl font-bold">Panel Admin</h2>
-          {storedUser && (
-            <div className="hidden sm:block ml-4 text-sm text-slate-500">Usuario: <span className="font-medium text-slate-700">{storedUser}</span></div>
-          )}
+    <div className="max-w-6xl mx-auto p-3 sm:p-6" onClick={() => setShowSettings(false)}>
+      <div className="flex flex-col sm:flex-row items-center justify-between mb-6 gap-3">
+        <div className="flex items-center gap-4 w-full sm:w-auto">
+          <button onClick={() => navigate(-1)} className="p-2 hover:bg-gray-100 rounded-full transition-colors"><ArrowLeft size={20} /></button>
+          <div className="flex flex-col">
+            <h2 className="text-2xl font-bold bg-linear-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">Panel Admin</h2>
+            {storedUser && <span className="text-xs text-slate-400">Logueado como {storedUser}</span>}
+          </div>
         </div>
-        <div className="flex items-center gap-2 w-full sm:w-auto overflow-x-auto pb-2 sm:pb-0">
+
+        <div className="flex items-center gap-2 w-full sm:w-auto overflow-x-auto pb-0 sm:pb-0" onClick={(e) => e.stopPropagation()}>
           {activeTab === 'products' && (
             <>
-              <button onClick={() => setIsPriceToolOpen(true)} className="whitespace-nowrap px-3 py-2 bg-linear-to-r from-green-600 to-emerald-600 text-white rounded-md text-xs sm:text-sm flex items-center gap-1 sm:gap-2 hover:from-green-700 hover:to-emerald-700 transition-all"><DollarSign size={14} className="sm:w-4 sm:h-4" /><span className="hidden sm:inline">Actualizar</span> Precios</button>
-              <button onClick={handleMigrateProducts} className="hidden md:inline-flex whitespace-nowrap px-3 py-2 bg-orange-600 text-white rounded-md text-xs sm:text-sm">Migrar Productos</button>
-              {/* Botón de migración de imágenes eliminado: ya no es necesario con subida automática a Supabase */}
-              <button onClick={handleExportBackup} className="whitespace-nowrap px-3 py-2 bg-slate-800 text-white rounded-md text-xs sm:text-sm">Exportar</button>
-              <button onClick={async ()=>{ const bucket = 'product-images'; const { testSupabase } = await import('../services/supabaseService'); const res = await testSupabase(bucket); if(res.ok) toast.success(`Supabase OK (${bucket}): ${res.message}`); else toast.error(`Supabase Error (${bucket}): ${res.message}`); }} className="hidden lg:inline-flex whitespace-nowrap px-3 py-2 bg-purple-600 text-white rounded-md text-xs sm:text-sm">Test Supabase</button>
-              <button onClick={handleImportBackup} className="whitespace-nowrap px-3 py-2 bg-slate-100 text-slate-800 border border-gray-300 rounded-md text-xs sm:text-sm">Importar</button>
-              <button onClick={() => setIsCreateOpen(true)} className="whitespace-nowrap px-3 py-2 bg-teal-600 text-white rounded-md flex items-center gap-1 text-xs sm:text-sm"><Plus size={14} />Nuevo</button>
-              {(() => {
-                const url = getAuthUrl();
-                return (
-                  <button
-                    onClick={() => { if (url) window.location.href = url; else toast.error('Configura VITE_ML_APP_ID y VITE_ML_REDIRECT_URI'); }}
-                    className="whitespace-nowrap px-3 py-2 bg-yellow-600 text-white rounded-md text-xs sm:text-sm"
-                  >Conectar MercadoLibre</button>
-                );
-              })()}
+              <button onClick={() => setIsCreateOpen(true)} className="whitespace-nowrap px-4 py-2 bg-indigo-600 text-white rounded-lg flex items-center gap-2 text-sm font-medium hover:bg-indigo-700 shadow-md transform hover:-translate-y-0.5 transition-all">
+                <Plus size={16} /> Crear Producto
+              </button>
             </>
           )}
-          <button 
-            onClick={() => navigate('/admin/orders')} 
-            className="whitespace-nowrap px-3 py-2 bg-indigo-600 text-white rounded-md flex items-center gap-1 text-xs sm:text-sm hover:bg-indigo-700 transition-colors"
-          >
-            <ShoppingBag size={14} />
-            Pedidos
+
+          <div className="relative">
+            <button
+              onClick={() => setShowSettings(!showSettings)}
+              className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 text-slate-600 flex items-center gap-2 transition-colors relative"
+            >
+              <Settings size={20} />
+              <ChevronDown size={14} className={`transition-transform duration-200 ${showSettings ? 'rotate-180' : ''}`} />
+            </button>
+
+            {showSettings && (
+              <div className="absolute right-0 top-full mt-2 w-64 bg-white rounded-xl shadow-xl border border-gray-100 p-2 z-50 animate-in fade-in zoom-in-95 duration-200">
+                <div className="text-xs font-semibold text-slate-400 px-3 py-2 uppercase tracking-wider">Herramientas</div>
+                
+                <button onClick={() => { setIsPriceToolOpen(true); setShowSettings(false); }} className="w-full text-left px-3 py-2 rounded-lg text-sm text-slate-700 hover:bg-gray-50 flex items-center gap-2">
+                  <DollarSign size={16} className="text-green-600" /> Precios Masivos
+                </button>
+                
+                <button onClick={handleMigrateProducts} className="w-full text-left px-3 py-2 rounded-lg text-sm text-slate-700 hover:bg-gray-50 flex items-center gap-2">
+                  <Wrench size={16} className="text-orange-500" /> Corregir Datos (Migrar)
+                </button>
+                
+                <div className="h-px bg-gray-100 my-1" />
+                <div className="text-xs font-semibold text-slate-400 px-3 py-2 uppercase tracking-wider">Base de Datos</div>
+                
+                <button onClick={handleExportBackup} className="w-full text-left px-3 py-2 rounded-lg text-sm text-slate-700 hover:bg-gray-50 flex items-center gap-2">
+                  <Download size={16} className="text-slate-500" /> Crear Backup Local
+                </button>
+                
+                <button onClick={handleImportBackup} className="w-full text-left px-3 py-2 rounded-lg text-sm text-slate-700 hover:bg-gray-50 flex items-center gap-2">
+                  <Upload size={16} className="text-slate-500" /> Restaurar Backup
+                </button>
+                
+                <button onClick={async ()=>{ 
+                  const bucket = 'product-images'; 
+                  const { testSupabase } = await import('../services/supabaseService'); 
+                  const res = await testSupabase(bucket); 
+                  if(res.ok) toast.success(`Conexión OK: ${res.message}`); else toast.error(`Error conexión: ${res.message}`); 
+                }} className="w-full text-left px-3 py-2 rounded-lg text-sm text-slate-700 hover:bg-gray-50 flex items-center gap-2">
+                  <Database size={16} className="text-purple-600" /> Testear Supabase
+                </button>
+                
+                <div className="h-px bg-gray-100 my-1" />
+                <div className="text-xs font-semibold text-slate-400 px-3 py-2 uppercase tracking-wider">Integraciones</div>
+
+                {(() => {
+                  const url = getAuthUrl();
+                  return (
+                    <button
+                      onClick={() => { if (url) window.location.href = url; else toast.error('Falta configuración de ML en .env'); }}
+                      className="w-full text-left px-3 py-2 rounded-lg text-sm text-slate-700 hover:bg-gray-50 flex items-center gap-2"
+                    >
+                      <ShoppingBag size={16} className="text-yellow-500" /> Conectar MercadoLibre
+                    </button>
+                  );
+                })()}
+
+              </div>
+            )}
+          </div>
+
+          <button onClick={handleLogout} className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Cerrar Sesión">
+            <LogOut size={20} />
           </button>
-          <button onClick={handleLogout} className="whitespace-nowrap px-3 py-2 bg-white border border-gray-200 rounded-md text-xs sm:text-sm text-slate-700">Salir</button>
         </div>
       </div>
 
