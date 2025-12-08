@@ -175,7 +175,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart }) => {
               key={idx}
               title={img.color || `Variante ${idx+1}`}
               onClick={(e) => handleThumbnailClick(e, idx)}
-              className={`h-8 w-8 flex-shrink-0 rounded-lg border ${idx===active ? 'border-indigo-500' : 'border-gray-200'} overflow-hidden bg-white p-0.5 flex items-center justify-center`}
+              className={`h-8 w-8 shrink-0 rounded-lg border ${idx===active ? 'border-indigo-500' : 'border-gray-200'} overflow-hidden bg-white p-0.5 flex items-center justify-center`}
             >
               <SmartImage src={img.url} storageKey={img.storageKey} alt={img.color || `var-${idx+1}`} className="max-h-full max-w-full object-contain" showError />
             </button>
@@ -183,10 +183,10 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart }) => {
         </div>
       )}
       
-      <div className={`p-5 flex flex-col flex-grow ${images.length > 1 ? 'pt-3' : ''}`}>
+      <div className={`p-5 flex flex-col grow ${images.length > 1 ? 'pt-3' : ''}`}>
         <div className="flex justify-between items-start mb-2">
           <h3 className="text-lg font-bold text-slate-900 line-clamp-1">{product.name}</h3>
-          <span className="text-lg font-bold text-indigo-600 ml-2 flex-shrink-0">
+          <span className="text-lg font-bold text-indigo-600 ml-2 shrink-0">
             {selectedSaleType === 'unidad' && `$${product.price}`}
             {selectedSaleType === 'pack' && `$${packPrice}`}
             {selectedSaleType === 'mayorista' && `$${wholesalePrice}`}
@@ -243,7 +243,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart }) => {
           </div>
         )}
 
-        <p className="text-sm text-slate-500 mb-4 line-clamp-3 flex-grow">
+        <p className="text-sm text-slate-500 mb-4 line-clamp-3 grow">
           {product.description}
         </p>
 
