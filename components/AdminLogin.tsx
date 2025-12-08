@@ -28,7 +28,7 @@ const AdminLogin: React.FC = () => {
       try {
         const token = sessionStorage.getItem('admin_entry_token');
         const tsRaw = sessionStorage.getItem('admin_entry_ts');
-        const secret = (import.meta as any).env?.VITE_ADMIN_SECRET || '';
+        const secret = ((import.meta as any).env?.VITE_ADMIN_SECRET || 'modozen').trim();
         const now = Date.now();
         const ts = tsRaw ? parseInt(tsRaw, 10) : 0;
         let valid = false;

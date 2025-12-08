@@ -199,7 +199,8 @@ const Navbar: React.FC<NavbarProps> = ({ cartCount, onOpenCart, onGoHome, onOpen
                   onChange={(e)=>setSearch(e.target.value)}
                   onKeyDown={(e)=>{
                     if (e.key === 'Enter') {
-                      if (ADMIN_SECRET && search.trim() === ADMIN_SECRET) {
+                      e.preventDefault();
+                      if (ADMIN_SECRET && search.trim().toLowerCase() === ADMIN_SECRET.toLowerCase()) {
                         const ts = Date.now();
                         const minute = Math.floor(ts / 60000);
                         const raw = ADMIN_SECRET + ':' + minute;
