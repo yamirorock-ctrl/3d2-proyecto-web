@@ -177,11 +177,11 @@ const Checkout: React.FC<CheckoutProps> = ({ cart, onClearCart }) => {
         console.log('[ML Quote] Default cost:', data.defaultCost);
 
         // Refuerzo: bloquear si options está vacío
+        // Refuerzo: Si options está vacío pero tenemos defaultCost, asumimos que es válido (tal vez fallback del server o costo único)
+        // Eliminado bloqueo estricto que causaba falso positivo.
         if (data.success && data.defaultCost && Array.isArray(data.options) && data.options.length === 0) {
-          setError('No se pudo cotizar el envío por MercadoEnvíos. Contactate con el vendedor para elegir otro método de entrega, este no cumple los requisitos para este medio.');
-          setMlShippingCost(data.defaultCost);
-          setMlEstimatedDelivery(null);
-          return;
+           console.warn('[ML Quote] Options empty but cost provided. Proceeding.');
+           // No seteamos error aquí si ya hay un costo operativo.
         }
         if (data.success && data.defaultCost) {
           console.log('[ML Quote] Using cost:', data.defaultCost);
