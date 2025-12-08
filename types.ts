@@ -23,14 +23,19 @@ export interface Product {
   weight?: number; // gramos
 
   // Propiedades para tipos de venta (pack, mayorista)
-  saleType?: 'unidad' | 'pack' | 'mayorista';
+  saleType?: 'unidad' | 'pack' | 'mayorista'; // DEPRECATED for product config (used for cart items)
+  
+  // Configuración de Packs
   packEnabled?: boolean;
   unitsPerPack?: number;
+  packDiscount?: number; // Porcentaje de descuento (0-100)
+
+  // Configuración Mayorista (Crudo)
   mayoristaEnabled?: boolean;
-  wholesaleUnits?: number;
-  wholesaleDiscount?: number;
-  wholesaleImage?: string;
-  wholesaleDescription?: string;
+  wholesaleUnits?: number; // Mínimo de unidades para precio mayorista
+  wholesaleDiscount?: number; // Porcentaje de descuento (0-100)
+  wholesaleImage?: string; // Imagen del producto crudo
+  wholesaleDescription?: string; // Nota legal o descripción crudo
 }
 
 export interface CartItem extends Product {

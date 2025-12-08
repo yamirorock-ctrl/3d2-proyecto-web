@@ -106,26 +106,33 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   }, [cart]);
 
-  const addToCart = (product: Product) => {
-    if (product.stock === 0) {
+  const addToCart = (product: Product, quantity: number = 1) => {
+    if (product.stock !== undefined && product.stock === 0) {
       alert('Este producto está agotado');
       return;
     }
 
     setCart(prev => {
-      const existing = prev.find(item => item.id === product.id);
+      // Diferenciar por ID y saleType (para no mezclar unidad con mayorista)
+      const targetSaleType = product.saleType || 'unidad';
+      const existing = prev.find(item => item.id === product.id && (item.saleType || 'unidad') === targetSaleType);
       
       if (existing) {
-        if (product.stock !== undefined && existing.quantity >= product.stock) {
+        const newTotal = existing.quantity + quantity;
+        if (product.stock !== undefined && newTotal > product.stock) {
           alert(`Solo hay ${product.stock} unidades disponibles de este producto`);
           return prev;
         }
         return prev.map(item => 
-          item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
+          (item.id === product.id && (item.saleType || 'unidad') === targetSaleType)
+            ? { ...item, quantity: newTotal } 
+            : item
         );
       }
       
-      return [...prev, { ...product, quantity: 1 }];
+      // Si el producto viene con una cantidad predefinida (ej: pack), usarla como base si no se especifica otra
+      // Pero aquí `quantity` ya viene del argumento.
+      return [...prev, { ...product, quantity: quantity, saleType: targetSaleType }];
     });
     setIsCartOpen(true);
   };

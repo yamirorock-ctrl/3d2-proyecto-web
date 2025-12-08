@@ -5,7 +5,7 @@ import SmartImage from './SmartImage';
 
 interface ProductCardProps {
   product: Product;
-  onAddToCart: (product: Product) => void;
+  onAddToCart: (product: Product, quantity?: number) => void;
 }
 
 // --- Sub-componentes para mejorar la legibilidad ---
@@ -78,6 +78,7 @@ const useProductCalculations = (product: Product) => {
 
     const availableSaleTypes = (['unidad', 'pack', 'mayorista'] as const).filter(type => {
       if (type === 'unidad') return product.saleType === 'unidad' || !product.saleType;
+      // Checks packEnabled, mayoristaEnabled
       return product[`${type}Enabled` as keyof Product];
     });
 
@@ -120,6 +121,35 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart }) => {
     setActive(index);
   };
 
+  const handleAddToCart = () => {
+    let finalPrice = product.price;
+    let quantityToAdd = 1;
+    let finalImage = images[active]?.url || product.image;
+
+    if (selectedSaleType === 'pack') {
+        const singlePackPrice = Math.round(product.price * unitsPerPack * (1 - (product.packDiscount || 0)/100));
+        finalPrice = singlePackPrice; 
+        quantityToAdd = 1; 
+        if (product.weight) {
+             product = { ...product, weight: product.weight * unitsPerPack };
+        }
+    } else if (selectedSaleType === 'mayorista') {
+        finalPrice = wholesalePrice; 
+        quantityToAdd = 1; 
+        if (wholesaleImage) finalImage = wholesaleImage;
+        if (product.weight) {
+             product = { ...product, weight: product.weight * wholesaleUnits };
+        }
+    }
+
+    onAddToCart({ 
+        ...product, 
+        price: finalPrice, 
+        saleType: selectedSaleType,
+        image: finalImage,
+    }, quantityToAdd);
+  };
+
   return (
     <div className="group bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden flex flex-col h-full">
       <ImageCarousel images={images} productName={product.name} active={active} setActive={setActive} />
@@ -156,7 +186,11 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart }) => {
       <div className={`p-5 flex flex-col flex-grow ${images.length > 1 ? 'pt-3' : ''}`}>
         <div className="flex justify-between items-start mb-2">
           <h3 className="text-lg font-bold text-slate-900 line-clamp-1">{product.name}</h3>
-          <span className="text-lg font-bold text-indigo-600 ml-2 flex-shrink-0">${product.price}</span>
+          <span className="text-lg font-bold text-indigo-600 ml-2 flex-shrink-0">
+            {selectedSaleType === 'unidad' && `$${product.price}`}
+            {selectedSaleType === 'pack' && `$${packPrice}`}
+            {selectedSaleType === 'mayorista' && `$${wholesalePrice}`}
+          </span>
         </div>
         
         <div className="mb-2">
@@ -165,31 +199,50 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart }) => {
         
         {/* Info de tipo de venta y selector */}
         <div className="mb-2">
-          <span className="inline-block px-2 py-1 bg-indigo-50 text-indigo-700 text-xs font-medium rounded mr-2">
-            {selectedSaleType === 'unidad' && 'Venta por unidad'}
-            {selectedSaleType === 'pack' && `Pack x${unitsPerPack} unidades`}
-            {selectedSaleType === 'mayorista' && `Mayorista x${wholesaleUnits} (desc. ${wholesaleDiscount}%)`}
-          </span>
-          {availableSaleTypes.length > 1 && (
-            <select className="ml-2 text-xs border rounded px-2 py-1" value={selectedSaleType} onChange={e => setSelectedSaleType(e.target.value as 'unidad' | 'pack' | 'mayorista')}>
-              {availableSaleTypes.map(type => (
-                <option key={type} value={type}>{type.charAt(0).toUpperCase() + type.slice(1)}</option>
-              ))}
-            </select>
-          )}
+          <div className="flex flex-wrap gap-2 items-center">
+            <span className={`inline-block px-2 py-1 text-xs font-medium rounded ${
+                selectedSaleType === 'unidad' ? 'bg-slate-100 text-slate-700' : 
+                selectedSaleType === 'pack' ? 'bg-indigo-100 text-indigo-700' : 
+                'bg-amber-100 text-amber-800'
+            }`}>
+              {selectedSaleType === 'unidad' && 'Unidad'}
+              {selectedSaleType === 'pack' && `Pack x${unitsPerPack}`}
+              {selectedSaleType === 'mayorista' && `Mayorista x${wholesaleUnits}`}
+            </span>
+            
+            {availableSaleTypes.length > 1 && (
+              <select 
+                className="text-xs border border-gray-300 rounded px-2 py-1 bg-white focus:ring-2 focus:ring-indigo-500 outline-none" 
+                value={selectedSaleType} 
+                onChange={e => setSelectedSaleType(e.target.value as any)}
+              >
+                {availableSaleTypes.map(type => (
+                  <option key={type} value={type}>
+                    {type === 'unidad' ? 'Unidad' : 
+                     type === 'pack' ? `Pack` : 
+                     'Mayorista'}
+                  </option>
+                ))}
+              </select>
+            )}
+          </div>
         </div>
+
         {/* Mostrar detalles según tipo de venta seleccionado */}
         {selectedSaleType === 'pack' && (
-          <div className="mb-2 text-xs text-slate-700">Pack de {unitsPerPack} unidades. Precio: <b>${packPrice}</b></div>
-        )}
-        {selectedSaleType === 'mayorista' && (
-          <div className="mb-2 text-xs text-slate-700">
-            <div>Mayorista: {wholesaleUnits} unidades. Descuento: {wholesaleDiscount}%</div>
-            <div>Precio final: <b>${wholesalePrice}</b></div>
-            {wholesaleImage && <img src={wholesaleImage} alt="Mayorista" className="mt-1 w-20 h-20 object-cover rounded" />}
-            {wholesaleDescription && <div className="mt-1 text-slate-500">{wholesaleDescription}</div>}
+          <div className="mb-2 text-xs text-slate-700 bg-indigo-50 p-2 rounded border border-indigo-100">
+             🔥 <b>Pack Ahorro:</b> Llevando {unitsPerPack} pagas <b>${packPrice}</b> (Cada uno queda en ${Math.round(packPrice/unitsPerPack)})
           </div>
         )}
+        {selectedSaleType === 'mayorista' && (
+          <div className="mb-2 text-xs text-amber-900 bg-amber-50 p-2 rounded border border-amber-100">
+            <div>📦 <b>Lote Mayorista (Crudo):</b> {wholesaleUnits} unidades.</div>
+            <div>Precio Lote: <b>${wholesalePrice}</b></div>
+            <div className="text-amber-700/80 mt-1 italic">Nota: Se entrega sin pintar/lijar.</div>
+            {wholesaleImage && <SmartImage src={wholesaleImage} className="mt-2 w-full h-24 object-cover rounded" />}
+          </div>
+        )}
+
         <p className="text-sm text-slate-500 mb-4 line-clamp-3 flex-grow">
           {product.description}
         </p>
@@ -208,18 +261,22 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart }) => {
               </>
             )}
             {product.weight && (
-              <p>Peso: {product.weight} g</p>
+              <p>Peso unitario: {product.weight} g</p>
             )}
           </div>
         )}
         
         <button 
-          onClick={() => onAddToCart({ ...product, image: images[active]?.url || product.image })}
+          onClick={handleAddToCart}
           disabled={product.stock === 0}
-          className={`w-full py-3 px-4 font-medium rounded-xl flex items-center justify-center gap-2 transition-all duration-200 ease-out ${
+          className={`w-full py-3 px-4 font-medium rounded-xl flex items-center justify-center gap-2 transition-all duration-200 ease-out active:scale-95 ${
             product.stock === 0
               ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-              : 'bg-slate-900 text-white hover:bg-indigo-600 hover:scale-[1.02] hover:shadow-lg active:scale-95 active:bg-indigo-700'
+              : selectedSaleType === 'mayorista' 
+                 ? 'bg-amber-500 text-white hover:bg-amber-600 shadow-amber-200'
+                 : selectedSaleType === 'pack'
+                    ? 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-indigo-200'
+                    : 'bg-slate-900 text-white hover:bg-slate-800'
           }`}
         >
           <Plus size={18} />

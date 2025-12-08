@@ -539,7 +539,155 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
               className="mt-1 block w-full rounded-md border-gray-200"
               placeholder="Opcional. 3D: usar valor del slicer; Láser: se estima si falta"
             />
-            <p className="mt-1 text-xs text-slate-500">Si no se define, se estimará automáticamente según tecnología y dimensiones.</p>
+          </div>
+
+          {/* Sección de Configuración de Packs */}
+          <div className="sm:col-span-2 border-t pt-4 mt-2">
+            <h4 className="font-semibold text-slate-800 mb-2 flex items-center gap-2">
+              <span className="bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded text-xs">Packs</span>
+              Configuración de Venta por Pack
+            </h4>
+            <div className="flex flex-col sm:flex-row gap-4 items-start bg-slate-50 p-3 rounded-md">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input 
+                  type="checkbox" 
+                  checked={!!form.packEnabled} 
+                  onChange={e => handleChange('packEnabled', e.target.checked)}
+                  className="rounded text-indigo-600 focus:ring-indigo-500"
+                />
+                <span className="text-sm font-medium text-slate-700">Habilitar Pack</span>
+              </label>
+              
+              {form.packEnabled && (
+                <>
+                  <div>
+                    <label className="block text-xs font-medium text-slate-600">Unidades por Pack</label>
+                    <input 
+                      type="number" 
+                      min={2}
+                      value={form.unitsPerPack ?? ''}
+                      onChange={e => handleChange('unitsPerPack', Number(e.target.value))}
+                      className="mt-1 block w-24 rounded-md border-gray-200 text-sm"
+                      placeholder="Ej: 3"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-slate-600">% Descuento Pack</label>
+                    <input 
+                      type="number" 
+                      min={0} 
+                      max={100}
+                      value={form.packDiscount ?? ''}
+                      onChange={e => handleChange('packDiscount', Number(e.target.value))}
+                      className="mt-1 block w-24 rounded-md border-gray-200 text-sm"
+                      placeholder="%"
+                    />
+                  </div>
+                  <div className="text-xs text-slate-500 flex items-center mt-6">
+                    {form.price && form.unitsPerPack && form.packDiscount ? (
+                      <span>
+                        Precio Pack: <b className="text-indigo-600">${Math.round((form.price * form.unitsPerPack) * (1 - (form.packDiscount/100)))}</b> 
+                        <span className="ml-1 text-slate-400 line-through">${form.price * form.unitsPerPack}</span>
+                      </span>
+                    ) : ''}
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+
+          {/* Sección de Configuración Mayorista */}
+          <div className="sm:col-span-2 border-t pt-4 mt-2">
+            <h4 className="font-semibold text-slate-800 mb-2 flex items-center gap-2">
+              <span className="bg-amber-100 text-amber-700 px-2 py-0.5 rounded text-xs">Mayorista (Crudo)</span>
+              Configuración de Venta Mayorista
+            </h4>
+            <div className="bg-amber-50/50 p-3 rounded-md border border-amber-100">
+              <div className="flex flex-col sm:flex-row gap-4 items-start mb-3">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input 
+                    type="checkbox" 
+                    checked={!!form.mayoristaEnabled} 
+                    onChange={e => handleChange('mayoristaEnabled', e.target.checked)}
+                    className="rounded text-amber-600 focus:ring-amber-500"
+                  />
+                  <span className="text-sm font-medium text-slate-700">Habilitar Mayorista</span>
+                </label>
+
+                {form.mayoristaEnabled && (
+                  <>
+                    <div>
+                      <label className="block text-xs font-medium text-slate-600">% Descuento Crudo</label>
+                      <input 
+                        type="number" 
+                        min={0} 
+                        max={100}
+                        value={form.wholesaleDiscount ?? ''}
+                        onChange={e => handleChange('wholesaleDiscount', Number(e.target.value))}
+                        className="mt-1 block w-24 rounded-md border-gray-200 text-sm"
+                        placeholder="%"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-slate-600">Cant. Mínima</label>
+                      <input 
+                        type="number" 
+                        min={1}
+                        value={form.wholesaleUnits ?? ''}
+                        onChange={e => handleChange('wholesaleUnits', Number(e.target.value))}
+                        className="mt-1 block w-24 rounded-md border-gray-200 text-sm"
+                        placeholder="Unidades"
+                      />
+                    </div>
+                    <div className="text-xs text-slate-500 flex items-center mt-6">
+                      {form.price && form.wholesaleDiscount ? (
+                        <span>
+                          Precio Unidad Cruda: <b className="text-amber-600">${Math.round(form.price * (1 - (form.wholesaleDiscount/100)))}</b> 
+                          <span className="ml-1 text-slate-400 line-through">${form.price}</span>
+                        </span>
+                      ) : ''}
+                    </div>
+                  </>
+                )}
+              </div>
+              
+              {form.mayoristaEnabled && (
+                <div className="mt-2 text-sm">
+                  <label className="block text-xs font-medium text-slate-600 mb-1">Imagen del Producto Crudo (Opcional)</label>
+                  <div className="flex gap-3 items-center">
+                    {form.wholesaleImage ? (
+                      <div className="relative group">
+                        <SmartImage src={form.wholesaleImage} className="h-16 w-16 object-cover rounded border" />
+                        <button 
+                          type="button" 
+                          onClick={() => setForm(prev => ({ ...prev, wholesaleImage: undefined }))}
+                          className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="h-16 w-16 border-2 border-dashed border-gray-300 rounded flex items-center justify-center text-gray-400 text-xs">
+                        Sin foto
+                      </div>
+                    )}
+                    <div className="flex-1">
+                      <input
+                        type="text"
+                        placeholder="URL de imagen cruda..."
+                        value={form.wholesaleImage || ''}
+                        onChange={(e) => handleChange('wholesaleImage', e.target.value)}
+                        className="block w-full rounded-md border-gray-200 text-sm mb-1"
+                      />
+                      <p className="text-xs text-slate-500">
+                        O usa el cargador principal arriba y copia la URL generada aquí. 
+                        (Pronto: cargador dedicado)
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
