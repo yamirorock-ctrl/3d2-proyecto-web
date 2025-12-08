@@ -151,22 +151,40 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart }) => {
   };
 
   return (
-    <div className="group bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden flex flex-col h-full">
-      <ImageCarousel images={images} productName={product.name} active={active} setActive={setActive} />
-      
-      <div className="absolute top-3 left-3">
-        <span className="px-3 py-1 bg-white/90 backdrop-blur text-xs font-bold uppercase tracking-wider rounded-full text-slate-800 shadow-sm">
-          {product.category}
-        </span>
-      </div>
-      {product.featured && (
-        <div className="absolute top-3 right-3">
-          <span className="px-2.5 py-1 bg-yellow-300/90 text-yellow-900 text-xs font-bold rounded-full shadow-sm flex items-center gap-1">
-            <Star size={12} className="text-yellow-900" />
-            Destacado
+    <div className={`group bg-white rounded-2xl border transition-all duration-300 overflow-hidden flex flex-col h-full ${
+        selectedSaleType === 'pack' ? 'border-indigo-400 shadow-indigo-100 hover:shadow-indigo-200' :
+        selectedSaleType === 'mayorista' ? 'border-amber-400 shadow-amber-100 hover:shadow-amber-200' :
+        'border-gray-100 shadow-sm hover:shadow-xl'
+    }`}>
+      <div className="relative">
+        <ImageCarousel images={images} productName={product.name} active={active} setActive={setActive} />
+        
+        {/* Badges de Tipo de Venta sobre la imagen */}
+        {selectedSaleType === 'pack' && (
+           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-indigo-600/90 text-white px-4 py-2 rounded-xl font-bold text-lg shadow-lg backdrop-blur-sm pointer-events-none z-10 animate-fade-in">
+             PACK x{unitsPerPack}
+           </div>
+        )}
+        {selectedSaleType === 'mayorista' && (
+           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-amber-600/90 text-white px-4 py-2 rounded-xl font-bold text-lg shadow-lg backdrop-blur-sm pointer-events-none z-10 animate-fade-in">
+             MAYORISTA x{wholesaleUnits}
+           </div>
+        )}
+
+        <div className="absolute top-3 left-3">
+          <span className="px-3 py-1 bg-white/90 backdrop-blur text-xs font-bold uppercase tracking-wider rounded-full text-slate-800 shadow-sm">
+            {product.category}
           </span>
         </div>
-      )}
+        {product.featured && (
+          <div className="absolute top-3 right-3">
+            <span className="px-2.5 py-1 bg-yellow-300/90 text-yellow-900 text-xs font-bold rounded-full shadow-sm flex items-center gap-1">
+              <Star size={12} className="text-yellow-900" />
+              Destacado
+            </span>
+          </div>
+        )}
+      </div>
 
       {images.length > 1 && (
         <div className="px-4 pt-2 pb-1 flex gap-2 items-center overflow-x-auto scrollbar-hide">
@@ -230,14 +248,14 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart }) => {
 
         {/* Mostrar detalles según tipo de venta seleccionado */}
         {selectedSaleType === 'pack' && (
-          <div className="mb-2 text-xs text-slate-700 bg-indigo-50 p-2 rounded border border-indigo-100">
+          <div className="mb-2 text-xs text-slate-700 bg-indigo-50 p-2 rounded border border-indigo-100 animate-fade-in">
              🔥 <b>Pack Ahorro:</b> Llevando {unitsPerPack} pagas <b>${packPrice}</b> (Cada uno queda en ${Math.round(packPrice/unitsPerPack)})
           </div>
         )}
         {selectedSaleType === 'mayorista' && (
-          <div className="mb-2 text-xs text-amber-900 bg-amber-50 p-2 rounded border border-amber-100">
+          <div className="mb-2 text-xs text-amber-900 bg-amber-50 p-2 rounded border border-amber-100 animate-fade-in">
             <div>📦 <b>Lote Mayorista (Crudo):</b> {wholesaleUnits} unidades.</div>
-            <div>Precio Lote: <b>${wholesalePrice}</b></div>
+            <div>Precio Lote: <b>${wholesalePrice}</b> (Unidad: ${Math.round(wholesalePrice/wholesaleUnits)})</div>
             <div className="text-amber-700/80 mt-1 italic">Nota: Se entrega sin pintar/lijar.</div>
             {wholesaleImage && <SmartImage src={wholesaleImage} className="mt-2 w-full h-24 object-cover rounded" />}
           </div>
@@ -252,17 +270,13 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart }) => {
           <div className="mb-3 text-xs text-slate-600">
             {product.dimensions && (
               <>
-                <p>
-                  Dimensiones: {product.dimensions.width}×{product.dimensions.height}×{product.dimensions.length} cm
-                </p>
+                <span>Dim: {product.dimensions.width}×{product.dimensions.height}×{product.dimensions.length}cm</span>
                 {product.technology === 'Láser' && product.dimensions.height && (
-                  <p>Grosor: {Math.round(product.dimensions.height * 10)} mm</p>
+                  <span className="ml-2">({Math.round(product.dimensions.height * 10)}mm)</span>
                 )}
               </>
             )}
-            {product.weight && (
-              <p>Peso unitario: {product.weight} g</p>
-            )}
+            {/* Ocultamos peso para no saturar, o lo dejamos si es necesario para el usuario */}
           </div>
         )}
         
@@ -273,9 +287,9 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart }) => {
             product.stock === 0
               ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
               : selectedSaleType === 'mayorista' 
-                 ? 'bg-amber-500 text-white hover:bg-amber-600 shadow-amber-200'
+                 ? 'bg-amber-500 text-white hover:bg-amber-600 shadow-lg shadow-amber-200'
                  : selectedSaleType === 'pack'
-                    ? 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-indigo-200'
+                    ? 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg shadow-indigo-200'
                     : 'bg-slate-900 text-white hover:bg-slate-800'
           }`}
         >

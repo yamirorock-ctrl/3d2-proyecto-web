@@ -87,8 +87,21 @@ export interface ShippingConfig {
   moto_free_threshold: number; // Monto mínimo para envío gratis en moto
   moto_radius_km: number; // Radio en km para envío en moto
   correo_cost: number; // Costo fijo de envío por correo
+  // Campos legacy o calculados en runtime si fuera necesario
+  moto_base_fee?: number;
+  moto_fee_per_km?: number;
+  moto_base_distance_km?: number;
   created_at: string;
   updated_at: string;
+}
+
+export interface ShippingZone {
+  id: string;
+  name: string;
+  price: number;
+  free_threshold?: number;
+  zip_ranges: { min: number; max: number }[];
+  active: boolean;
 }
 
 export interface Message {

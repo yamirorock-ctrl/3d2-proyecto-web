@@ -10,7 +10,8 @@
 
 /* 3D Logo Animations */
 @keyframes float {
-  0%, 100% {
+  0%,
+  100% {
     transform: translateY(-20px);
   }
   50% {
@@ -42,4 +43,19 @@
 
 .rotate-y-12 {
   transform: rotateY(12deg);
+}
+
+/* Animations added by AI */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.animate-fade-in {
+  animation: fadeIn 0.5s ease-out forwards;
 }

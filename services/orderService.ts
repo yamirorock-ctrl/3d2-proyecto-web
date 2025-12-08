@@ -56,8 +56,7 @@ export async function calculateShippingCost(
   config: ShippingConfig,
   shippingMethod: ShippingMethod,
   subtotal: number,
-  destinationLat?: number,
-  destinationLng?: number
+  destinationPostalCode?: string
 ): Promise<number> {
   if (shippingMethod === 'to_coordinate') {
     return 0; // Se coordinará después
@@ -68,32 +67,50 @@ export async function calculateShippingCost(
   }
 
   if (shippingMethod === 'moto') {
-    // Si la compra es >= $40,000, envío gratis
-    if (subtotal >= config.moto_free_threshold) {
+    // 1. Verificar umbral global de envío gratis (si existe en config)
+    if (config.moto_free_threshold > 0 && subtotal >= config.moto_free_threshold) {
       return 0;
     }
+
+    // 2. Si no hay CP, devolvemos el costo base "fallback" o 0?
+    // Costo base legacy guardado en config o hardcoded
+    const fallbackPrice = (config as any).moto_base_fee || 0; 
     
-    // Si < $40,000, calcular costo según distancia
-    if (destinationLat && destinationLng) {
-      const distance = calculateDistance(
-        config.store_lat,
-        config.store_lng,
-        destinationLat,
-        destinationLng
-      );
-      
-      // Hasta `moto_base_distance_km`: `moto_base_fee`
-      if (distance <= config.moto_base_distance_km) {
-        return config.moto_base_fee;
+    if (!destinationPostalCode) {
+      return fallbackPrice;
+    }
+
+    // 3. Buscar zona correspondiente al CP
+    const zip = parseInt(destinationPostalCode.replace(/\D/g, ''), 10);
+    if (isNaN(zip)) return fallbackPrice;
+
+    // Fetch zones from DB
+    const { data: zones } = await supabase
+      .from('shipping_zones')
+      .select('*')
+      .eq('active', true);
+
+    if (!zones) return fallbackPrice;
+
+    // Encontrar la zona que machea
+    const matchedZone = zones.find((zone: any) => {
+      const ranges = zone.zip_ranges || [];
+      return ranges.some((r: any) => zip >= r.min && zip <= r.max);
+    });
+
+    if (matchedZone) {
+      // Verificar free threshold específico de la zona
+      if (matchedZone.free_threshold && subtotal >= matchedZone.free_threshold) {
+        return 0;
       }
-      
-      // Más de la distancia base: `moto_base_fee` + (`moto_fee_per_km` × km adicionales)
-      const extraKm = Math.ceil(distance - config.moto_base_distance_km);
-      return config.moto_base_fee + (extraKm * config.moto_fee_per_km);
+      return Number(matchedZone.price);
     }
     
-    // Si no hay coordenadas, cobrar tarifa base
-    return config.moto_base_fee;
+    // Si no machea ninguna zona -> Fuera de rango o precio base?
+    // User requested: "CABA = X, GBA = Y". What if user is in Cordoba? 
+    // Moto shouldn't be allowed? Or fallback to expensive price?
+    // For now: Fallback price.
+    return fallbackPrice;
   }
 
   if (shippingMethod === 'correo') {

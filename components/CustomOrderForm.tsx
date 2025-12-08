@@ -183,6 +183,12 @@ const CustomOrderForm: React.FC<Props> = ({ onSubmit }) => {
           </p>
         </div>
 
+        <div className="bg-indigo-50 border border-indigo-100 rounded-lg p-4 mb-4">
+          <p className="text-sm text-indigo-800 font-medium text-center">
+            ℹ️ Política de Trabajo: Para iniciar cualquier diseño o impresión personalizada, se requiere el abono del <b>50% de seña</b>. El saldo restante se cancela al finalizar el trabajo, antes del envío/retiro.
+          </p>
+        </div>
+
         <button
           type="submit"
           className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-4 px-6 rounded-lg transition-colors flex items-center justify-center gap-2"
@@ -192,7 +198,7 @@ const CustomOrderForm: React.FC<Props> = ({ onSubmit }) => {
         </button>
 
         <p className="text-xs text-center text-slate-500">
-          Te responderemos en menos de 24 horas con un presupuesto personalizado
+          Te responderemos en menos de 24 horas con un presupuesto y link de pago de la seña.
         </p>
       </form>
     </div>
