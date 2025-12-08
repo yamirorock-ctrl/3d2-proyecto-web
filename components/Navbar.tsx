@@ -36,7 +36,8 @@ const Navbar: React.FC<NavbarProps> = ({ cartCount, onOpenCart, onGoHome, onOpen
       sessionStorage.setItem('admin_entry_token', token);
       sessionStorage.setItem('admin_entry_ts', String(ts));
     } catch {}
-    navigate('/admin/login');
+    // Forzamos la redirección real para evitar problemas de ruteo
+    window.location.href = '/admin/login';
   };
   // Logo local servido desde /public respetando la base de Vite
   // Usar logo JPG absoluto desde /public
@@ -104,7 +105,7 @@ const Navbar: React.FC<NavbarProps> = ({ cartCount, onOpenCart, onGoHome, onOpen
                   onKeyDown={(e)=>{
                     if (e.key === 'Enter') {
                       e.preventDefault(); // Evitar submit
-                      if (ADMIN_SECRET && search.trim() === ADMIN_SECRET) {
+                      if (ADMIN_SECRET && search.trim().toLowerCase() === ADMIN_SECRET.toLowerCase()) {
                         console.log('Modo Zen activado');
                         issueAdminEntry(ADMIN_SECRET);
                         setSearch('');
