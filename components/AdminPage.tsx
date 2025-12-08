@@ -456,7 +456,7 @@ const AdminPage: React.FC<Props> = ({ products, onAdd, onEdit, onDelete }) => {
           </div>
         </div>
 
-        <div className="flex items-center gap-2 w-full sm:w-auto overflow-x-auto pb-0 sm:pb-0" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center gap-2 w-full sm:w-auto pb-0" onClick={(e) => e.stopPropagation()}>
           {activeTab === 'products' && (
             <>
               <button onClick={() => setIsCreateOpen(true)} className="whitespace-nowrap px-4 py-2 bg-indigo-600 text-white rounded-lg flex items-center gap-2 text-sm font-medium hover:bg-indigo-700 shadow-md transform hover:-translate-y-0.5 transition-all">
@@ -475,7 +475,7 @@ const AdminPage: React.FC<Props> = ({ products, onAdd, onEdit, onDelete }) => {
             </button>
 
             {showSettings && (
-              <div className="absolute right-0 top-full mt-2 w-64 bg-white rounded-xl shadow-xl border border-gray-100 p-2 z-50 animate-in fade-in zoom-in-95 duration-200">
+              <div className="absolute right-0 top-full mt-2 w-72 bg-white rounded-xl shadow-xl border border-gray-100 p-2 z-50 animate-in fade-in zoom-in-95 duration-200">
                 <div className="text-xs font-semibold text-slate-400 px-3 py-2 uppercase tracking-wider">Herramientas</div>
                 
                 <button onClick={() => { setIsPriceToolOpen(true); setShowSettings(false); }} className="w-full text-left px-3 py-2 rounded-lg text-sm text-slate-700 hover:bg-gray-50 flex items-center gap-2">
