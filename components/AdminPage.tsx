@@ -351,20 +351,25 @@ const AdminPage: React.FC<Props> = ({ products, onAdd, onEdit, onDelete }) => {
         if (Array.isArray(data.orders)) localStorage.setItem('orders', JSON.stringify(data.orders));
         if (Array.isArray(data.customOrders)) localStorage.setItem('customOrders', JSON.stringify(data.customOrders));
 
-        toast.success('Backup importado. Actualizando productos...');
+        toast.info('Subiendo productos a Supabase...');
         try {
           const importedProducts: Product[] = Array.isArray(data.products) ? data.products : [];
-          // Editar existentes / agregar nuevos
-          const existingIds = new Set(products.map(p=>p.id));
-          importedProducts.forEach(p => {
-            if (existingIds.has(p.id)) {
-              try { onEdit(p); } catch {}
-            } else {
-              try { onAdd(p); } catch {}
-            }
-          });
-        } catch (e) { console.warn('No se pudo fusionar productos en memoria', e); }
-        setActiveTab('products');
+          const { upsertProductsBulk } = await import('../services/productService');
+          
+          const { data: saved, error } = await upsertProductsBulk(importedProducts);
+          
+          if (error) {
+            console.error('Error en carga masiva:', error);
+            toast.error('Error guardando en Supabase: ' + error.message);
+          } else {
+            toast.success(`Importación exitosa: ${saved?.length || 0} productos guardados.`);
+            // Recargar para ver los cambios reflejados desde Supabase
+            setTimeout(() => window.location.reload(), 1500);
+          }
+        } catch (e) { 
+          console.warn('Error en proceso de importación', e);
+          toast.error('Hubo un problema al procesar la importación.');
+        }
         setShowSettings(false);
       } catch (e) {
         console.error(e);

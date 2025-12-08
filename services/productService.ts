@@ -80,3 +80,22 @@ export async function deleteProduct(productId: number): Promise<{ data: any | nu
   }
   return { data: { success: true }, error: null };
 }
+
+/**
+ * Insertar o actualizar múltiples productos (Bulk Upsert).
+ */
+export async function upsertProductsBulk(products: Partial<Product>[]): Promise<{ data: Product[] | null; error: PostgrestError | null }> {
+  const productsToUpsert = products.map(p => sanitizeProductForUpsert(p));
+
+  const { data, error } = await supabase
+    .from('products')
+    .upsert(productsToUpsert as any)
+    .select();
+
+  if (error) {
+    console.error('Error en bulk upsert:', error);
+    return { data: null, error };
+  }
+
+  return { data: data as Product[], error: null };
+}
