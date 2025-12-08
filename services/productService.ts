@@ -36,13 +36,49 @@ function sanitizeProductForUpsert(product: Partial<Product>): Partial<Product> {
     // la añadirías aquí para que sea filtrada. Por ejemplo: 'isHovering'.
   ];
 
-  const sanitizedProduct = { ...product };
+  const sanitizedProduct: any = { ...product };
 
+  // Eliminar propiedades solo de cliente
   for (const key of clientOnlyProperties) {
-    // Elimina las propiedades que son solo para el cliente
     if (key in sanitizedProduct) {
       delete sanitizedProduct[key];
     }
+  }
+
+  // Mapping manual CamelCase -> SnakeCase para nuevos campos
+  // Supabase js client a veces maneja esto, pero si falla, lo forzamos.
+  if (sanitizedProduct.packEnabled !== undefined) {
+    sanitizedProduct.pack_enabled = sanitizedProduct.packEnabled;
+    delete sanitizedProduct.packEnabled;
+  }
+  if (sanitizedProduct.unitsPerPack !== undefined) {
+    sanitizedProduct.units_per_pack = sanitizedProduct.unitsPerPack;
+    delete sanitizedProduct.unitsPerPack;
+  }
+  if (sanitizedProduct.packDiscount !== undefined) {
+    sanitizedProduct.pack_discount = sanitizedProduct.packDiscount;
+    delete sanitizedProduct.packDiscount;
+  }
+  if (sanitizedProduct.mayoristaEnabled !== undefined) {
+    sanitizedProduct.mayorista_enabled = sanitizedProduct.mayoristaEnabled;
+    delete sanitizedProduct.mayoristaEnabled;
+  }
+  if (sanitizedProduct.wholesaleUnits !== undefined) {
+    sanitizedProduct.wholesale_min_units = sanitizedProduct.wholesaleUnits; // Mapear a columna correcta
+    sanitizedProduct.wholesale_units = sanitizedProduct.wholesaleUnits; // Legacy alias if needed
+    delete sanitizedProduct.wholesaleUnits;
+  }
+  if (sanitizedProduct.wholesaleDiscount !== undefined) {
+    sanitizedProduct.wholesale_discount = sanitizedProduct.wholesaleDiscount;
+    delete sanitizedProduct.wholesaleDiscount;
+  }
+  if (sanitizedProduct.wholesaleImage !== undefined) {
+    sanitizedProduct.wholesale_image = sanitizedProduct.wholesaleImage;
+    delete sanitizedProduct.wholesaleImage;
+  }
+  if (sanitizedProduct.wholesaleDescription !== undefined) {
+    sanitizedProduct.wholesale_description = sanitizedProduct.wholesaleDescription;
+    delete sanitizedProduct.wholesaleDescription;
   }
 
   return sanitizedProduct;
