@@ -2,7 +2,7 @@ import { getClient } from './supabaseService';
 import { Order, OrderItem, OrderStatus, ShippingMethod, ShippingConfig } from '../types';
 import { PostgrestError } from '@supabase/supabase-js';
 
-const supabase = getClient();
+const supabase = getClient() as any;
 
 /**
  * ===== UTILITIES =====
@@ -216,7 +216,7 @@ export async function getAllOrders(): Promise<{ data: Order[] | null, error: Pos
  */
 export async function updateOrderStatus(orderId: string, status: OrderStatus): Promise<{ data: any | null, error: PostgrestError | null }> {
   const { error } = await supabase
-    .from<Order>('orders')
+    .from('orders')
     .update({ status, updated_at: new Date().toISOString() })
     .eq('id', orderId);
 
@@ -237,7 +237,7 @@ export async function updateOrderPayment(
   paymentStatus: string
 ): Promise<{ data: any | null, error: PostgrestError | null }> {
   const { error } = await supabase
-    .from<Order>('orders')
+    .from('orders')
     .update({
       payment_id: paymentId,
       payment_status: paymentStatus,
@@ -262,7 +262,7 @@ export async function updateOrderTracking(
   trackingNumber: string
 ): Promise<{ data: any | null, error: PostgrestError | null }> {
   const { error } = await supabase
-    .from<Order>('orders')
+    .from('orders')
     .update({
       tracking_number: trackingNumber,
       status: 'shipped',
@@ -287,7 +287,7 @@ export async function updateShippingConfig(
 ): Promise<{ data: any | null, error: PostgrestError | null }> {
   // Se elimina `as any` y se deja que la BBDD maneje `updated_at`
   const { error } = await supabase
-    .from<ShippingConfig>('shipping_config')
+    .from('shipping_config')
     .update(updates)
     .eq('id', configId);
 
@@ -303,7 +303,7 @@ export async function updateShippingConfig(
  */
 export async function deleteOrder(orderId: string): Promise<boolean> {
   const { error } = await supabase
-    .from<Order>('orders')
+    .from('orders')
     .delete()
     .eq('id', orderId);
 

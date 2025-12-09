@@ -191,7 +191,7 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
 
   const handleFiles = async (files?: FileList | File[]) => {
     if (!files || (files as FileList).length === 0) return;
-    const arr = Array.from(files as any);
+    const arr = Array.from(files) as File[];
     const savedColor = newImgColor;
     setIsCompressing(true);
     try {
