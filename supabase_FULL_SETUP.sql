@@ -9,31 +9,31 @@
 -- 4. Seguridad (Row Level Security)
 
 -- ==========================================
+-- ==========================================
 -- 1. ZONAS DE ENVÍO (MOTO)
 -- ==========================================
-
-CREATE TABLE IF NOT EXISTS public.shipping_zones (
-    id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-    created_at timestamp with time zone DEFAULT now(),
-    name text NOT NULL, 
-    price numeric NOT NULL DEFAULT 0,
-    free_threshold numeric, 
-    zip_ranges jsonb DEFAULT '[]'::jsonb, 
-    active boolean DEFAULT true
-);
-
--- Insertar datos base SOLO si la tabla está vacía
-INSERT INTO public.shipping_zones (name, price, zip_ranges, active)
-SELECT 'CABA', 4500, '[{"min": 1000, "max": 1499}]'::jsonb, true
-WHERE NOT EXISTS (SELECT 1 FROM public.shipping_zones LIMIT 1);
-
-INSERT INTO public.shipping_zones (name, price, zip_ranges, active)
-SELECT 'GBA Zona 1', 7500, '[{"min": 1500, "max": 1899}]'::jsonb, true
-WHERE NOT EXISTS (SELECT 1 FROM public.shipping_zones WHERE name = 'GBA Zona 1');
-
-INSERT INTO public.shipping_zones (name, price, zip_ranges, active)
-SELECT 'GBA Zona 2', 9500, '[{"min": 1900, "max": 2999}]'::jsonb, true
-WHERE NOT EXISTS (SELECT 1 FROM public.shipping_zones WHERE name = 'GBA Zona 2');
+-- [DESACTIVADO] El cliente eliminó la opción Moto.
+-- CREATE TABLE IF NOT EXISTS public.shipping_zones (
+--     id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+--     created_at timestamp with time zone DEFAULT now(),
+--     name text NOT NULL, 
+--     price numeric NOT NULL DEFAULT 0,
+--     free_threshold numeric, 
+--     zip_ranges jsonb DEFAULT '[]'::jsonb, 
+--     active boolean DEFAULT true
+-- );
+--
+-- INSERT INTO public.shipping_zones (name, price, zip_ranges, active)
+-- SELECT 'CABA', 4500, '[{"min": 1000, "max": 1499}]'::jsonb, true
+-- WHERE NOT EXISTS (SELECT 1 FROM public.shipping_zones LIMIT 1);
+--
+-- INSERT INTO public.shipping_zones (name, price, zip_ranges, active)
+-- SELECT 'GBA Zona 1', 7500, '[{"min": 1500, "max": 1899}]'::jsonb, true
+-- WHERE NOT EXISTS (SELECT 1 FROM public.shipping_zones WHERE name = 'GBA Zona 1');
+--
+-- INSERT INTO public.shipping_zones (name, price, zip_ranges, active)
+-- SELECT 'GBA Zona 2', 9500, '[{"min": 1900, "max": 2999}]'::jsonb, true
+-- WHERE NOT EXISTS (SELECT 1 FROM public.shipping_zones WHERE name = 'GBA Zona 2');
 
 
 -- ==========================================

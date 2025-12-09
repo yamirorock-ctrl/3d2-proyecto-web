@@ -117,6 +117,11 @@ const Checkout: React.FC<CheckoutProps> = ({ cart, onClearCart }) => {
   }, [shippingMethod, subtotal, mlShippingCost]);
 
   // Cotizar envío ML cuando el usuario ingresa código postal y selecciona correo
+  // Force shippingMethod to 'correo'
+  useEffect(() => {
+    setShippingMethod('correo');
+  }, []);
+
   useEffect(() => {
     const quoteMlShipping = async () => {
       if (shippingMethod !== 'correo' || !customerPostalCode || customerPostalCode.length < 4) {
@@ -423,84 +428,51 @@ const Checkout: React.FC<CheckoutProps> = ({ cart, onClearCart }) => {
               <h2 className="text-xl font-semibold mb-4">Método de Entrega</h2>
 
               <div className="space-y-3">
-                  {/* Envío en moto */}
-                  <label className="flex items-start p-4 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-indigo-500 transition-colors">
-                    <input
-                      type="radio"
-                      name="shipping"
-                      value="moto"
-                      checked={shippingMethod === 'moto'}
-                      onChange={(e) => setShippingMethod(e.target.value as ShippingMethod)}
-                      className="mt-1 mr-3"
-                    />
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <Truck className="text-indigo-600" size={20} />
-                        <span className="font-medium">Envío en Moto</span>
-                        {subtotal >= (shippingConfig?.moto_free_threshold || 40000) && (
-                          <span className="ml-auto text-green-600 font-bold">GRATIS</span>
-                        )}
-                      </div>
-                      <p className="text-sm text-gray-600 mt-1">
-                        {subtotal >= (shippingConfig?.moto_free_threshold || 40000)
-                          ? `Envío gratis en tu compra`
-                          : `Hasta 20 km: $20,000 | Km extra: $4,000 c/u`}
-                      </p>
-                      {subtotal < (shippingConfig?.moto_free_threshold || 40000) && (
-                        <p className="text-xs text-indigo-600 font-medium mt-1">
-                          💡 Envío gratis desde ${(shippingConfig?.moto_free_threshold || 40000).toLocaleString()}
-                        </p>
-                      )}
-                    </div>
-                  </label>
 
-                  {/* Envío por correo */}
-                  <label className="flex items-start p-4 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-indigo-500 transition-colors">
-                    <input
-                      type="radio"
-                      name="shipping"
-                      value="correo"
-                      checked={shippingMethod === 'correo'}
-                      onChange={(e) => setShippingMethod(e.target.value as ShippingMethod)}
-                      className="mt-1 mr-3"
-                    />
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <Package className="text-indigo-600" size={20} />
-                        <span className="font-medium">MercadoEnvíos</span>
-                        <span className="ml-auto font-bold">
-                          {mlShippingLoading ? (
-                            <span className="text-gray-400">Calculando...</span>
-                          ) : mlShippingCost !== null ? (
-                            <span className="text-indigo-600">${mlShippingCost.toLocaleString()}</span>
-                          ) : (
-                            <span className="text-gray-400">Ingresá CP</span>
-                          )}
-                        </span>
-                      </div>
-                      <p className="text-sm text-gray-600 mt-1">
-                        {customerPostalCode && customerPostalCode.length >= 4
-                          ? mlEstimatedDelivery 
-                            ? `Llega aproximadamente el ${new Date(mlEstimatedDelivery).toLocaleDateString('es-AR', { day: 'numeric', month: 'long' })}`
-                            : 'Costo calculado por MercadoEnvíos (tiempos sujetos a disponibilidad)'
-                          : 'Ingresá tu código postal para ver el costo'}
-                      </p>
-                    </div>
-                  </label>
 
                 {/* Nota de tiempos de entrega */}
-                {/* Nota de tiempos de entrega */}
-                <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-4 flex items-start gap-3">
+                <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-4 flex items-start gap-3">
                   <span className="text-xl">⚠️</span>
                   <p className="text-sm text-amber-900 leading-relaxed">
                     <strong>Importante:</strong> La mercadería tiene una demora de entrega de <span className="font-bold">2 a 7 días hábiles</span>.
                   </p>
                 </div>
-              </div>
+
+                {/* Método de Envío: MercadoEnvíos (Único) */}
+                <div className="border-2 border-indigo-500 bg-indigo-50/30 rounded-lg p-4 relative">
+                    <div className="flex items-center gap-3">
+                       <div className="bg-indigo-100 p-2 rounded-full text-indigo-600">
+                          <Package size={24} />
+                       </div>
+                       <div className="flex-1">
+                          <h3 className="font-semibold text-slate-900">MercadoEnvíos</h3>
+                          <p className="text-sm text-slate-600">
+                            {customerPostalCode && customerPostalCode.length >= 4 
+                              ? mlEstimatedDelivery 
+                                ? `Llega aprox. el ${new Date(mlEstimatedDelivery).toLocaleDateString('es-AR', { day: 'numeric', month: 'long' })}`
+                                : 'Calculando tiempo...'
+                              : 'Ingresá tu CP arriba para cotizar'}
+                          </p>
+                       </div>
+                       <div className="text-right">
+                          {subtotal >= 40000 ? (
+                            <div className="flex flex-col items-end">
+                              <span className="text-green-600 font-bold text-lg">GRATIS</span>
+                              <span className="text-xs text-green-700 bg-green-100 px-2 py-0.5 rounded-full">Superaste los $40.000</span>
+                            </div>
+                          ) : (
+                             <span className="font-bold text-lg text-slate-900">
+                                {mlShippingLoading ? '...' : mlShippingCost !== null ? `$${mlShippingCost.toLocaleString()}` : '-'}
+                             </span>
+                          )}
+                       </div>
+                    </div>
+                </div>
+
+              </div> {/* Close space-y-3 */}
 
               {/* Dirección de envío */}
-              {shippingMethod && (
-                <div className="mt-4">
+              <div className="mt-4">
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     <MapPin className="inline mr-1" size={16} />
                     Dirección de entrega *
@@ -513,10 +485,9 @@ const Checkout: React.FC<CheckoutProps> = ({ cart, onClearCart }) => {
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
                     required
                   />
-                </div>
-              )}
-            </div>
-
+              </div>
+            </div> {/* Close Método de Entrega section */}
+            
             {/* Notas */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
