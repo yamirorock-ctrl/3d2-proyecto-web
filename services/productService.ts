@@ -19,7 +19,22 @@ export async function getAllProducts(): Promise<Product[]> {
     return [];
   }
 
-  return (data || []) as Product[];
+  const mappedProducts = (data || []).map((p: any) => ({
+    ...p,
+    // Map snake_case keys from DB to camelCase properties in Product interface
+    unitEnabled: p.unit_enabled,
+    packEnabled: p.pack_enabled,
+    unitsPerPack: p.units_per_pack,
+    packDiscount: p.pack_discount,
+    mayoristaEnabled: p.mayorista_enabled,
+    wholesaleUnits: p.wholesale_min_units ?? p.wholesale_units,
+    wholesaleDiscount: p.wholesale_discount,
+    wholesaleImage: p.wholesale_image,
+    wholesaleDescription: p.wholesale_description,
+    // Cleanup snake_case keys if desired, though usually harmless to keep
+  }));
+
+  return mappedProducts as Product[];
 }
 
 /**
