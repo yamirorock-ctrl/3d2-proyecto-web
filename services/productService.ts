@@ -47,6 +47,10 @@ function sanitizeProductForUpsert(product: Partial<Product>): Partial<Product> {
 
   // Mapping manual CamelCase -> SnakeCase para nuevos campos
   // Supabase js client a veces maneja esto, pero si falla, lo forzamos.
+  if (sanitizedProduct.unitEnabled !== undefined) {
+    sanitizedProduct.unit_enabled = sanitizedProduct.unitEnabled;
+    delete sanitizedProduct.unitEnabled;
+  }
   if (sanitizedProduct.packEnabled !== undefined) {
     sanitizedProduct.pack_enabled = sanitizedProduct.packEnabled;
     delete sanitizedProduct.packEnabled;

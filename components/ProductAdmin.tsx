@@ -541,6 +541,25 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
             />
           </div>
 
+          {/* Sección de Configuración de Venta Unitaria */}
+          <div className="sm:col-span-2 border-t pt-4 mt-2">
+             <h4 className="font-semibold text-slate-800 mb-2 flex items-center gap-2">
+                <span className="bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded text-xs">Unidad</span>
+                Configuración de Venta Unitaria
+             </h4>
+             <div className="flex flex-col sm:flex-row gap-4 items-start bg-slate-50 p-3 rounded-md">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input 
+                    type="checkbox" 
+                    checked={form.unitEnabled !== false} // Default to true if undefined
+                    onChange={e => handleChange('unitEnabled', e.target.checked)}
+                    className="rounded text-emerald-600 focus:ring-emerald-500"
+                  />
+                  <span className="text-sm font-medium text-slate-700">Habilitar Venta por Unidad</span>
+                </label>
+             </div>
+          </div>
+
           {/* Sección de Configuración de Packs */}
           <div className="sm:col-span-2 border-t pt-4 mt-2">
             <h4 className="font-semibold text-slate-800 mb-2 flex items-center gap-2">

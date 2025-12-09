@@ -26,6 +26,7 @@ export interface Product {
   saleType?: 'unidad' | 'pack' | 'mayorista'; // DEPRECATED for product config (used for cart items)
   
   // Configuración de Packs
+  unitEnabled?: boolean; // Habilitar venta por unidad
   packEnabled?: boolean;
   unitsPerPack?: number;
   packDiscount?: number; // Porcentaje de descuento (0-100)

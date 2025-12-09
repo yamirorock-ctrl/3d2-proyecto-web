@@ -77,9 +77,10 @@ const useProductCalculations = (product: Product) => {
     const wholesalePrice = Math.round(product.price * wholesaleUnits * (1 - wholesaleDiscount / 100));
 
     const availableSaleTypes = (['unidad', 'pack', 'mayorista'] as const).filter(type => {
-      if (type === 'unidad') return product.saleType === 'unidad' || !product.saleType;
-      // Checks packEnabled, mayoristaEnabled
-      return product[`${type}Enabled` as keyof Product];
+      if (type === 'unidad') return product.unitEnabled !== false; // Default true
+      if (type === 'pack') return product.packEnabled;
+      if (type === 'mayorista') return product.mayoristaEnabled;
+      return false;
     });
 
     return {
@@ -113,7 +114,18 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart }) => {
     availableSaleTypes,
   } = useProductCalculations(product);
 
-  const [selectedSaleType, setSelectedSaleType] = useState<'unidad' | 'pack' | 'mayorista'>(availableSaleTypes[0] || 'unidad');
+  // Initialize with the first available sale type. Default to 'unidad' if something fails, but logic below handles it.
+  const [selectedSaleType, setSelectedSaleType] = useState<'unidad' | 'pack' | 'mayorista'>(
+      availableSaleTypes.length > 0 ? availableSaleTypes[0] : 'unidad'
+  );
+
+  // Update selected if current selection becomes unavailable (e.g. data refresh)
+  // This effect ensures if props change, we don't get stuck on a disabled type
+  React.useEffect(() => {
+     if (!availableSaleTypes.includes(selectedSaleType) && availableSaleTypes.length > 0) {
+         setSelectedSaleType(availableSaleTypes[0]);
+     }
+  }, [availableSaleTypes, selectedSaleType]);
 
   const handleThumbnailClick = (e: React.MouseEvent, index: number) => {
     e.preventDefault();
