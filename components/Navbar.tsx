@@ -172,122 +172,129 @@ const Navbar: React.FC<NavbarProps> = ({ cartCount, onOpenCart, onGoHome, onOpen
 
       {/* Mobile Menu Overlay */}
       {isMobileMenuOpen && (
-        <>
+        <div className="fixed inset-0 z-50 md:hidden">
+          {/* Backdrop */}
           <div 
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 md:hidden"
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
             onClick={() => setIsMobileMenuOpen(false)}
           />
-          <div className="fixed inset-y-0 right-0 w-72 bg-white shadow-2xl z-50 md:hidden transform transition-transform duration-300 ease-in-out">
-            <div className="flex flex-col h-full">
-              {/* Mobile Menu Header */}
-              <div className="flex items-center justify-between p-4 border-b border-gray-200">
-                <h2 className="text-lg font-bold text-slate-900">Menú</h2>
+          
+          {/* Sidebar */}
+          <div className="absolute inset-y-0 right-0 w-[80%] max-w-sm bg-white shadow-2xl flex flex-col h-full animate-fade-in">
+             {/* Header */}
+             <div className="flex items-center justify-between p-4 border-b border-gray-100 bg-slate-50/50">
+                <h2 className="text-lg font-bold text-slate-900">Navegación</h2>
                 <button 
                   onClick={() => setIsMobileMenuOpen(false)}
-                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                  className="p-2 hover:bg-red-50 hover:text-red-600 rounded-full transition-colors"
+                  aria-label="Cerrar menú"
                 >
                   <X size={24} />
                 </button>
-              </div>
+             </div>
 
-              {/* Barra de búsqueda móvil (incluye secreto) */}
-              <div className="px-4 py-3 border-b border-gray-200 flex items-center gap-2">
-                <Search size={18} className="text-slate-600" />
-                <input
-                  placeholder="Buscar productos..."
-                  value={search}
-                  onChange={(e)=>setSearch(e.target.value)}
-                  onKeyDown={(e)=>{
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      if (ADMIN_SECRET && search.trim().toLowerCase() === ADMIN_SECRET.toLowerCase()) {
-                        const ts = Date.now();
-                        const minute = Math.floor(ts / 60000);
-                        const raw = ADMIN_SECRET + ':' + minute;
-                        const token = btoa(unescape(encodeURIComponent(raw))).replace(/=+$/,'');
-                        try {
-                          sessionStorage.setItem('admin_entry_token', token);
-                          sessionStorage.setItem('admin_entry_ts', String(ts));
-                        } catch {}
-                        navigate('/admin/login');
-                        setSearch('');
-                        setIsMobileMenuOpen(false);
-                      } else {
+             {/* Search */}
+             <div className="p-4 border-b border-gray-100">
+               <div className="relative flex items-center bg-gray-50 rounded-lg border border-gray-200 focus-within:ring-2 focus-within:ring-indigo-500 focus-within:border-indigo-500 transition-all">
+                  <Search size={18} className="absolute left-3 text-slate-400" />
+                  <input
+                    placeholder="Buscar productos..."
+                    value={search}
+                    onChange={(e)=>setSearch(e.target.value)}
+                    onKeyDown={(e)=>{
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        // Secret Admin Entry
+                        if (ADMIN_SECRET && search.trim().toLowerCase() === ADMIN_SECRET.toLowerCase()) {
+                          const ts = Date.now();
+                          const minute = Math.floor(ts / 60000);
+                          const raw = ADMIN_SECRET + ':' + minute;
+                          const token = btoa(unescape(encodeURIComponent(raw))).replace(/=+$/,'');
+                          try {
+                            sessionStorage.setItem('admin_entry_token', token);
+                            sessionStorage.setItem('admin_entry_ts', String(ts));
+                          } catch {}
+                          window.location.href = '/admin/login'; // Force reload/redirect
+                          setSearch('');
+                          setIsMobileMenuOpen(false);
+                          return;
+                        }
+                        
                         if (search.trim() && onSearch) {
                           onSearch(search.trim());
                         }
                         setSearch('');
+                        setIsMobileMenuOpen(false);
                       }
-                    }
-                    if (e.key === 'Escape') {
-                      setSearch('');
-                    }
-                  }}
-                  className="flex-1 rounded-md border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                />
-              </div>
+                    }}
+                    className="w-full bg-transparent pl-10 pr-4 py-2.5 text-sm text-slate-900 outline-none placeholder:text-slate-400"
+                  />
+               </div>
+             </div>
 
-              {/* Mobile Menu Content */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-2">
+             {/* Links */}
+             <div className="flex-1 overflow-y-auto p-4 space-y-1">
                 <button 
-                  onClick={() => { onGoHome(); onCategorySelect?.('Destacados'); setIsMobileMenuOpen(false); }}
-                  className="w-full text-left px-4 py-3 text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 rounded-lg transition-colors font-medium"
+                   onClick={() => { onGoHome(); onCategorySelect?.('Destacados'); setIsMobileMenuOpen(false); }}
+                   className="w-full text-left px-4 py-3.5 text-slate-700 hover:bg-indigo-50 hover:text-indigo-700 rounded-xl transition-all font-medium flex items-center gap-3"
                 >
+                  <span className="w-1.5 h-1.5 rounded-full bg-slate-300"></span>
                   Inicio
                 </button>
                 <button 
-                  onClick={() => { onGoHome(); onCategorySelect?.('3D'); setIsMobileMenuOpen(false); }}
-                  className="w-full text-left px-4 py-3 text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 rounded-lg transition-colors font-medium"
+                   onClick={() => { onGoHome(); onCategorySelect?.('3D'); setIsMobileMenuOpen(false); }}
+                   className="w-full text-left px-4 py-3.5 text-slate-700 hover:bg-indigo-50 hover:text-indigo-700 rounded-xl transition-all font-medium flex items-center gap-3"
                 >
+                  <span className="w-1.5 h-1.5 rounded-full bg-indigo-300"></span>
                   Impresión 3D
                 </button>
                 <button 
-                  onClick={() => { onGoHome(); onCategorySelect?.('Láser'); setIsMobileMenuOpen(false); }}
-                  className="w-full text-left px-4 py-3 text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 rounded-lg transition-colors font-medium"
+                   onClick={() => { onGoHome(); onCategorySelect?.('Láser'); setIsMobileMenuOpen(false); }}
+                   className="w-full text-left px-4 py-3.5 text-slate-700 hover:bg-indigo-50 hover:text-indigo-700 rounded-xl transition-all font-medium flex items-center gap-3"
                 >
+                  <span className="w-1.5 h-1.5 rounded-full bg-purple-300"></span>
                   Corte Láser
                 </button>
                 <button 
-                  onClick={() => { onGoHome(); onCategorySelect?.('Personalizados'); setIsMobileMenuOpen(false); }}
-                  className="w-full text-left px-4 py-3 text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 rounded-lg transition-colors font-medium"
+                   onClick={() => { onGoHome(); onCategorySelect?.('Personalizados'); setIsMobileMenuOpen(false); }}
+                   className="w-full text-left px-4 py-3.5 text-slate-700 hover:bg-indigo-50 hover:text-indigo-700 rounded-xl transition-all font-medium flex items-center gap-3"
                 >
+                   <span className="w-1.5 h-1.5 rounded-full bg-pink-300"></span>
                   Personalizados
                 </button>
 
-                <div className="border-t border-gray-200 my-4" />
-
                 {currentUser && (
-                  <div className="space-y-2">
-                    <div className="px-4 py-2 bg-indigo-50 rounded-lg">
-                      <p className="text-xs text-slate-500">Conectado como</p>
-                      <p className="font-medium text-slate-900">{currentUser}</p>
-                    </div>
-                    {onLogoutUser && (
-                      <button 
-                        onClick={() => { onLogoutUser(); setIsMobileMenuOpen(false); }}
-                        className="w-full text-left px-4 py-3 bg-red-50 text-red-700 hover:bg-red-100 rounded-lg transition-colors font-medium"
-                      >
-                        Cerrar Sesión
-                      </button>
-                    )}
+                  <div className="mt-6 pt-6 border-t border-gray-100">
+                     <div className="px-4 mb-2">
+                        <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Cuenta</span>
+                     </div>
+                     <div className="px-4 py-2 text-sm text-slate-900 bg-slate-50 rounded-lg mx-2 border border-slate-100 mb-2">
+                        {currentUser}
+                     </div>
+                      {onLogoutUser && (
+                        <button 
+                          onClick={() => { onLogoutUser(); setIsMobileMenuOpen(false); }}
+                          className="w-full text-left px-4 py-3 text-red-600 hover:bg-red-50 rounded-xl transition-all font-medium flex items-center gap-2"
+                        >
+                          Cerrar Sesión
+                        </button>
+                      )}
                   </div>
                 )}
-
-                {onOpenAdmin && isAuthenticated() && (
-                  <>
-                    <div className="border-t border-gray-200 my-4" />
-                    <button 
-                      onClick={() => { onOpenAdmin(); setIsMobileMenuOpen(false); }}
-                      className="w-full text-left px-4 py-3 bg-amber-50 text-amber-700 hover:bg-amber-100 rounded-lg transition-colors font-medium"
-                    >
-                      Panel Admin
-                    </button>
-                  </>
-                )}
-              </div>
-            </div>
+                
+                 {onOpenAdmin && isAuthenticated() && (
+                   <div className="mt-4 pt-4 border-t border-gray-100">
+                     <button 
+                       onClick={() => { onOpenAdmin(); setIsMobileMenuOpen(false); }}
+                       className="w-full text-left px-4 py-3 bg-amber-50 text-amber-800 hover:bg-amber-100 rounded-xl transition-all font-bold flex items-center gap-2"
+                     >
+                       Panel Admin 🔒
+                     </button>
+                   </div>
+                 )}
+             </div>
           </div>
-        </>
+        </div>
       )}
     </nav>
   );
