@@ -489,9 +489,11 @@ const Checkout: React.FC<CheckoutProps> = ({ cart, onClearCart }) => {
                   </label>
 
                 {/* Nota de tiempos de entrega */}
-                <div className="mt-3 rounded-lg border border-gray-200 bg-gray-50 p-3">
-                  <p className="text-sm text-gray-700">
-                    Tiempo estimado de entrega: <span className="font-semibold">2 a 7 días hábiles</span> una vez realizada la compra.
+                {/* Nota de tiempos de entrega */}
+                <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-4 flex items-start gap-3">
+                  <span className="text-xl">⚠️</span>
+                  <p className="text-sm text-amber-900 leading-relaxed">
+                    <strong>Importante:</strong> La mercadería tiene una demora de entrega de <span className="font-bold">2 a 7 días hábiles</span>.
                   </p>
                 </div>
               </div>

@@ -67,15 +67,26 @@ export async function calculateShippingCost(
   }
 
   if (shippingMethod === 'moto') {
-    // 1. Zonas de Envío (Prioridad 1)
+    // 1. REGLA GLOBAL: Si supera el umbral (ej. $40,000), es GRATIS.
+    // Prioridad absoluta según requerimiento del cliente.
+    if (config.moto_free_threshold && Number(config.moto_free_threshold) > 0) {
+      if (subtotal >= Number(config.moto_free_threshold)) {
+        return 0;
+      }
+    }
+
+    // 2. Cálculo por Zonas (Simulación de Distancia / Radio)
+    // Si no es gratis, buscamos si cae en una zona de precio específico (ej. < 20km = $20,000)
     if (destinationPostalCode) {
       const zip = parseInt(destinationPostalCode.replace(/\D/g, ''), 10);
       
       if (!isNaN(zip)) {
-        const { data: zones } = await supabase
+        const { data } = await supabase
           .from('shipping_zones')
           .select('*')
           .eq('active', true);
+        
+        const zones = data as any[];
 
         if (zones) {
           const matchedZone = zones.find((zone: any) => {
@@ -84,31 +95,23 @@ export async function calculateShippingCost(
           });
 
           if (matchedZone) {
-            // Verificar threshold específico de la zona (si no es nulo)
-            // Si es null o 0, asumimos que no hay beneficio de envío gratis específico, A MENOS que sea 0 explícito?
-            // Interpretación: Si free_threshold está definido y > 0, se aplica.
+            // Devolver precio de la zona (ej. $20.000 o $30.000 según "distancia" simulada)
+            // Nota: El free_threshold de zona se ignora si ya falló el global, 
+            // a menos que la zona tenga un beneficio MEJOR (menor umbral).
+            // Por consistencia, podríamos chequearlo también.
             if (matchedZone.free_threshold && Number(matchedZone.free_threshold) > 0) {
                  if (subtotal >= Number(matchedZone.free_threshold)) {
-                    return 0; // Gratis por superar umbral de zona
+                    return 0; 
                  }
             }
-            
-            // Si no supera umbral (o no tiene), devuelve precio de zona
             return Number(matchedZone.price);
           }
         }
       }
     }
 
-    // 2. Umbral Global (Prioridad 2 - Solo si no cayó en una zona específica o no hay CP)
-    // Solo aplica si está configurado mayor a 0
-    if (config.moto_free_threshold && Number(config.moto_free_threshold) > 0) {
-      if (subtotal >= Number(config.moto_free_threshold)) {
-        return 0;
-      }
-    }
-
-    // 3. Fallback: Precio base
+    // 3. Fallback: Sin CP o zona no encontrada
+    // Precio base configurado (ej. para > 20km genérico si no se cargó zona)
     return (config as any).moto_base_fee ? Number((config as any).moto_base_fee) : 0;
   }
 
