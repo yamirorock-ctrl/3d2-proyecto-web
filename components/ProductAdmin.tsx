@@ -58,7 +58,14 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
   const [newImgColor, setNewImgColor] = useState('');
   const [newCategoryText, setNewCategoryText] = useState('');
   const [isCompressing, setIsCompressing] = useState(false);
+
   const [compressionEnabled, setCompressionEnabled] = useState(true);
+
+  // Customization State
+  const [availModels, setAvailModels] = useState<string[]>(() => product?.customizationOptions?.models || []);
+  const [availColors, setAvailColors] = useState<string[]>(() => product?.customizationOptions?.colors || []);
+  const [newModelInput, setNewModelInput] = useState('');
+  const [newColorInput, setNewColorInput] = useState('');
 
   // Category mode + localCats sync
   useEffect(() => {
@@ -271,6 +278,13 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
     if (form.images && form.images.length > 0) {
       form.image = form.images[0].url;
     }
+    
+    // Attach customization options
+    form.customizationOptions = {
+        models: availModels.length > 0 ? availModels : undefined,
+        colors: availColors.length > 0 ? availColors : undefined
+    };
+
     if (typeof form.featured !== 'boolean') form.featured = false;
     if (!form.id) form.id = nextId ?? Date.now();
 
@@ -707,13 +721,109 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
                 </div>
               )}
             </div>
+            </div>
           </div>
-        </div>
 
-        <div className="mt-6 flex justify-end gap-3">
+          {/* Sección de Personalización (Modelos y Colores) */}
+          <div className="sm:col-span-2 border-t pt-4 mt-2">
+             <h4 className="font-semibold text-slate-800 mb-2 flex items-center gap-2">
+                <span className="bg-purple-100 text-purple-700 px-2 py-0.5 rounded text-xs">Personalización</span>
+                Opciones Disponibles
+             </h4>
+             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-purple-50 p-3 rounded-md border border-purple-100">
+                {/* Modelos */}
+                <div>
+                   <label className="block text-xs font-medium text-purple-800 mb-1">Modelos / Variantes</label>
+                   <div className="flex gap-2 mb-2">
+                      <input 
+                        type="text" 
+                        value={newModelInput}
+                        onChange={e => setNewModelInput(e.target.value)}
+                        className="flex-1 rounded-md border-purple-200 text-sm focus:border-purple-400 focus:ring-purple-400"
+                        placeholder="Ej: Base redonda"
+                        onKeyDown={e => {
+                            if (e.key === 'Enter') {
+                                e.preventDefault();
+                                if (newModelInput.trim()) {
+                                    setAvailModels(p => [...p, newModelInput.trim()]);
+                                    setNewModelInput('');
+                                }
+                            }
+                        }}
+                      />
+                      <button 
+                        type="button"
+                        onClick={() => {
+                            if (newModelInput.trim()) {
+                                setAvailModels(p => [...p, newModelInput.trim()]);
+                                setNewModelInput('');
+                            }
+                        }}
+                        className="bg-purple-600 text-white px-3 text-sm rounded-md"
+                      >
+                        +
+                      </button>
+                   </div>
+                   <div className="flex flex-wrap gap-1">
+                      {availModels.map((m, i) => (
+                          <span key={i} className="inline-flex items-center gap-1 bg-white border border-purple-200 text-purple-700 text-xs px-2 py-1 rounded-full">
+                             {m}
+                             <button type="button" onClick={() => setAvailModels(p => p.filter((_, idx) => idx !== i))} className="hover:text-red-500 font-bold">×</button>
+                          </span>
+                      ))}
+                      {availModels.length === 0 && <span className="text-xs text-purple-400 italic">Sin modelos definidos</span>}
+                   </div>
+                </div>
+
+                {/* Colores */}
+                <div>
+                   <label className="block text-xs font-medium text-purple-800 mb-1">Colores Disponibles</label>
+                   <div className="flex gap-2 mb-2">
+                      <input 
+                        type="text" 
+                        value={newColorInput}
+                        onChange={e => setNewColorInput(e.target.value)}
+                        className="flex-1 rounded-md border-purple-200 text-sm focus:border-purple-400 focus:ring-purple-400"
+                        placeholder="Ej: Rojo Oscuro"
+                        onKeyDown={e => {
+                            if (e.key === 'Enter') {
+                                e.preventDefault();
+                                if (newColorInput.trim()) {
+                                    setAvailColors(p => [...p, newColorInput.trim()]);
+                                    setNewColorInput('');
+                                }
+                            }
+                        }}
+                      />
+                      <button 
+                        type="button"
+                        onClick={() => {
+                            if (newColorInput.trim()) {
+                                setAvailColors(p => [...p, newColorInput.trim()]);
+                                setNewColorInput('');
+                            }
+                        }}
+                        className="bg-purple-600 text-white px-3 text-sm rounded-md"
+                      >
+                        +
+                      </button>
+                   </div>
+                   <div className="flex flex-wrap gap-1">
+                      {availColors.map((c, i) => (
+                          <span key={i} className="inline-flex items-center gap-1 bg-white border border-purple-200 text-purple-700 text-xs px-2 py-1 rounded-full">
+                             {c}
+                             <button type="button" onClick={() => setAvailColors(p => p.filter((_, idx) => idx !== i))} className="hover:text-red-500 font-bold">×</button>
+                          </span>
+                      ))}
+                      {availColors.length === 0 && <span className="text-xs text-purple-400 italic">Sin colores definidos</span>}
+                   </div>
+                </div>
+             </div>
+          </div>
+       <div className="mt-6 flex justify-end gap-3">
           <button type="button" onClick={onClose} className="px-4 py-2 rounded-md bg-gray-100">Cancelar</button>
           <button type="submit" className="px-4 py-2 rounded-md bg-teal-600 text-white">Guardar</button>
-        </div>
+       </div>
       </form>
     </div>
   );

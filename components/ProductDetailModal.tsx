@@ -28,7 +28,21 @@ const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product, isOpen
     wholesaleImage
   } = useProductCalculations(product);
 
+
+
   const [selectedSaleType, setSelectedSaleType] = useState<'unidad' | 'pack' | 'mayorista'>('unidad');
+  const [selectedModel, setSelectedModel] = useState<string>('');
+  const [selectedColor, setSelectedColor] = useState<string>('');
+
+  // Auto-select first option if available
+  useEffect(() => {
+    if (product.customizationOptions?.models?.length && !selectedModel) {
+        setSelectedModel(product.customizationOptions.models[0]);
+    }
+    if (product.customizationOptions?.colors?.length && !selectedColor) {
+        setSelectedColor(product.customizationOptions.colors[0]);
+    }
+  }, [product, isOpen]);
 
   useEffect(() => {
       if (availableSaleTypes.length > 0 && !availableSaleTypes.includes(selectedSaleType)) {
@@ -71,6 +85,10 @@ const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product, isOpen
         price: finalPrice, 
         saleType: selectedSaleType,
         image: finalImage,
+        selectedOptions: {
+            model: selectedModel || undefined,
+            color: selectedColor || undefined
+        }
     }, quantityToAdd);
     onClose();
   };
@@ -133,7 +151,54 @@ const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product, isOpen
              )}
            </div>
 
-           {/* Selector de Venta */}
+
+
+            {/* Selectores de Personalización */}
+            {(product.customizationOptions?.models?.length || product.customizationOptions?.colors?.length) ? (
+                <div className="mb-6 space-y-4 border-t pt-4 border-gray-100">
+                    {product.customizationOptions.models && product.customizationOptions.models.length > 0 && (
+                        <div>
+                            <span className="block text-sm font-medium text-slate-700 mb-2">Modelo</span>
+                            <div className="flex flex-wrap gap-2">
+                                {product.customizationOptions.models.map(m => (
+                                    <button
+                                        key={m}
+                                        onClick={() => setSelectedModel(m)}
+                                        className={`px-3 py-1.5 rounded-lg border text-sm transition-all ${
+                                            selectedModel === m 
+                                            ? 'border-indigo-600 bg-indigo-50 text-indigo-700 font-medium ring-1 ring-indigo-600' 
+                                            : 'border-gray-200 text-slate-600 hover:border-gray-300'
+                                        }`}
+                                    >
+                                        {m}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {product.customizationOptions.colors && product.customizationOptions.colors.length > 0 && (
+                        <div>
+                            <span className="block text-sm font-medium text-slate-700 mb-2">Color</span>
+                            <div className="flex flex-wrap gap-2">
+                                {product.customizationOptions.colors.map(c => (
+                                    <button
+                                        key={c}
+                                        onClick={() => setSelectedColor(c)}
+                                        className={`px-3 py-1.5 rounded-lg border text-sm transition-all ${
+                                            selectedColor === c 
+                                            ? 'border-indigo-600 bg-indigo-50 text-indigo-700 font-medium ring-1 ring-indigo-600' 
+                                            : 'border-gray-200 text-slate-600 hover:border-gray-300'
+                                        }`}
+                                    >
+                                        {c}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                </div>
+            ) : null}
            <div className="mt-auto pt-6 border-t border-gray-100">
               <div className="flex flex-wrap gap-2 mb-4">
                  {availableSaleTypes.map(type => (

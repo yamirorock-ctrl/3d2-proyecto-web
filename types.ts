@@ -37,10 +37,20 @@ export interface Product {
   wholesaleDiscount?: number; // Porcentaje de descuento (0-100)
   wholesaleImage?: string; // Imagen del producto crudo
   wholesaleDescription?: string; // Nota legal o descripción crudo
+  
+  // Customization Options
+  customizationOptions?: {
+    models?: string[];
+    colors?: string[];
+  };
 }
 
 export interface CartItem extends Product {
   quantity: number;
+  selectedOptions?: {
+    model?: string;
+    color?: string;
+  };
 }
 
 export type OrderStatus = 'pending' | 'payment_pending' | 'paid' | 'preparing' | 'shipped' | 'delivered' | 'cancelled' | 'to_coordinate';
@@ -53,6 +63,10 @@ export interface OrderItem {
   price: number;
   quantity: number;
   image: string;
+  selected_options?: {
+    model?: string;
+    color?: string;
+  };
 }
 
 export interface Order {

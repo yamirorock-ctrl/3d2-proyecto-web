@@ -66,7 +66,7 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const productById = new Map(products.map(p => [p.id, p] as const));
       const next = prev.filter(item => productById.has(item.id)).map(item => {
         const p = productById.get(item.id)!;
-        const maxQty = typeof p.stock === 'number' ? Math.max(1, p.stock) : item.quantity;
+        const maxQty = typeof (p as any).stock === 'number' ? Math.max(1, (p as any).stock) : item.quantity;
         return { ...item, quantity: Math.min(item.quantity, maxQty) };
       });
       if (next.length !== prev.length || next.some((n, i) => n.quantity !== prev[i]?.quantity)) {
@@ -106,16 +106,23 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   }, [cart]);
 
-  const addToCart = (product: Product, quantity: number = 1) => {
+  const addToCart = (product: Product & { selectedOptions?: { model?: string; color?: string } }, quantity: number = 1) => {
     if (product.stock !== undefined && product.stock === 0) {
       alert('Este producto está agotado');
       return;
     }
 
     setCart(prev => {
-      // Diferenciar por ID y saleType (para no mezclar unidad con mayorista)
+      // Diferenciar por ID, saleType y selectedOptions
       const targetSaleType = product.saleType || 'unidad';
-      const existing = prev.find(item => item.id === product.id && (item.saleType || 'unidad') === targetSaleType);
+      const targetOptions = product.selectedOptions;
+      
+      const existing = prev.find(item => {
+        const sameId = item.id === product.id;
+        const sameSaleType = (item.saleType || 'unidad') === targetSaleType;
+        const sameOptions = JSON.stringify(item.selectedOptions) === JSON.stringify(targetOptions);
+        return sameId && sameSaleType && sameOptions;
+      });
       
       if (existing) {
         const newTotal = existing.quantity + quantity;
@@ -124,15 +131,13 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           return prev;
         }
         return prev.map(item => 
-          (item.id === product.id && (item.saleType || 'unidad') === targetSaleType)
+          (item === existing) // Use reference check since we found the exact object
             ? { ...item, quantity: newTotal } 
             : item
         );
       }
       
-      // Si el producto viene con una cantidad predefinida (ej: pack), usarla como base si no se especifica otra
-      // Pero aquí `quantity` ya viene del argumento.
-      return [...prev, { ...product, quantity: quantity, saleType: targetSaleType }];
+      return [...prev, { ...product, quantity: quantity, saleType: targetSaleType, selectedOptions: targetOptions }];
     });
     setIsCartOpen(true);
   };

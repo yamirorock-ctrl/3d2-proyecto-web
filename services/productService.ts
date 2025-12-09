@@ -31,6 +31,7 @@ export async function getAllProducts(): Promise<Product[]> {
     wholesaleDiscount: p.wholesale_discount,
     wholesaleImage: p.wholesale_image,
     wholesaleDescription: p.wholesale_description,
+    customizationOptions: p.customization_options,
     // Cleanup snake_case keys if desired, though usually harmless to keep
   }));
 
@@ -98,6 +99,10 @@ function sanitizeProductForUpsert(product: Partial<Product>): Partial<Product> {
   if (sanitizedProduct.wholesaleDescription !== undefined) {
     sanitizedProduct.wholesale_description = sanitizedProduct.wholesaleDescription;
     delete sanitizedProduct.wholesaleDescription;
+  }
+  if (sanitizedProduct.customizationOptions !== undefined) {
+    sanitizedProduct.customization_options = sanitizedProduct.customizationOptions;
+    delete sanitizedProduct.customizationOptions;
   }
 
   return sanitizedProduct;

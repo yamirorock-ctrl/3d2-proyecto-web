@@ -181,6 +181,13 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart }) => {
               </span>
             </div>
           )}
+          {(product.customizationOptions?.models?.length || product.customizationOptions?.colors?.length) ? (
+            <div className="absolute top-3 left-3 mt-8">
+               <span className="px-2.5 py-1 bg-purple-100/90 backdrop-blur text-purple-700 text-[10px] font-bold uppercase tracking-wider rounded-lg shadow-sm border border-purple-200">
+                  Personalizable
+               </span>
+            </div>
+          ) : null}
         </div>
 
         {images.length > 1 && (
