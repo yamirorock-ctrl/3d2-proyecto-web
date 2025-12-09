@@ -67,50 +67,49 @@ export async function calculateShippingCost(
   }
 
   if (shippingMethod === 'moto') {
-    // 1. Verificar umbral global de envío gratis (si existe en config)
-    if (config.moto_free_threshold > 0 && subtotal >= config.moto_free_threshold) {
-      return 0;
+    // 1. Zonas de Envío (Prioridad 1)
+    if (destinationPostalCode) {
+      const zip = parseInt(destinationPostalCode.replace(/\D/g, ''), 10);
+      
+      if (!isNaN(zip)) {
+        const { data: zones } = await supabase
+          .from('shipping_zones')
+          .select('*')
+          .eq('active', true);
+
+        if (zones) {
+          const matchedZone = zones.find((zone: any) => {
+            const ranges = zone.zip_ranges || [];
+            return ranges.some((r: any) => zip >= r.min && zip <= r.max);
+          });
+
+          if (matchedZone) {
+            // Verificar threshold específico de la zona (si no es nulo)
+            // Si es null o 0, asumimos que no hay beneficio de envío gratis específico, A MENOS que sea 0 explícito?
+            // Interpretación: Si free_threshold está definido y > 0, se aplica.
+            if (matchedZone.free_threshold && Number(matchedZone.free_threshold) > 0) {
+                 if (subtotal >= Number(matchedZone.free_threshold)) {
+                    return 0; // Gratis por superar umbral de zona
+                 }
+            }
+            
+            // Si no supera umbral (o no tiene), devuelve precio de zona
+            return Number(matchedZone.price);
+          }
+        }
+      }
     }
 
-    // 2. Si no hay CP, devolvemos el costo base "fallback" o 0?
-    // Costo base legacy guardado en config o hardcoded
-    const fallbackPrice = (config as any).moto_base_fee || 0; 
-    
-    if (!destinationPostalCode) {
-      return fallbackPrice;
-    }
-
-    // 3. Buscar zona correspondiente al CP
-    const zip = parseInt(destinationPostalCode.replace(/\D/g, ''), 10);
-    if (isNaN(zip)) return fallbackPrice;
-
-    // Fetch zones from DB
-    const { data: zones } = await supabase
-      .from('shipping_zones')
-      .select('*')
-      .eq('active', true);
-
-    if (!zones) return fallbackPrice;
-
-    // Encontrar la zona que machea
-    const matchedZone = zones.find((zone: any) => {
-      const ranges = zone.zip_ranges || [];
-      return ranges.some((r: any) => zip >= r.min && zip <= r.max);
-    });
-
-    if (matchedZone) {
-      // Verificar free threshold específico de la zona
-      if (matchedZone.free_threshold && subtotal >= matchedZone.free_threshold) {
+    // 2. Umbral Global (Prioridad 2 - Solo si no cayó en una zona específica o no hay CP)
+    // Solo aplica si está configurado mayor a 0
+    if (config.moto_free_threshold && Number(config.moto_free_threshold) > 0) {
+      if (subtotal >= Number(config.moto_free_threshold)) {
         return 0;
       }
-      return Number(matchedZone.price);
     }
-    
-    // Si no machea ninguna zona -> Fuera de rango o precio base?
-    // User requested: "CABA = X, GBA = Y". What if user is in Cordoba? 
-    // Moto shouldn't be allowed? Or fallback to expensive price?
-    // For now: Fallback price.
-    return fallbackPrice;
+
+    // 3. Fallback: Precio base
+    return (config as any).moto_base_fee ? Number((config as any).moto_base_fee) : 0;
   }
 
   if (shippingMethod === 'correo') {
