@@ -73,7 +73,8 @@ const useProductCalculations = (product: Product) => {
     const wholesaleDiscount = product.wholesaleDiscount || 20;
     const wholesaleImage = product.wholesaleImage;
     const wholesaleDescription = product.wholesaleDescription;
-    const packPrice = product.price * unitsPerPack;
+    const packDiscount = product.packDiscount || 0; // Fix: Get discount
+    const packPrice = Math.round(product.price * unitsPerPack * (1 - packDiscount / 100)); // Fix: Apply discount
     const wholesalePrice = Math.round(product.price * wholesaleUnits * (1 - wholesaleDiscount / 100));
 
     const availableSaleTypes = (['unidad', 'pack', 'mayorista'] as const).filter(type => {
@@ -173,12 +174,12 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart }) => {
         
         {/* Badges de Tipo de Venta sobre la imagen */}
         {selectedSaleType === 'pack' && (
-           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-indigo-600/90 text-white px-4 py-2 rounded-xl font-bold text-lg shadow-lg backdrop-blur-sm pointer-events-none z-10 animate-fade-in">
+           <div className="absolute top-12 left-3 bg-indigo-600/90 text-white px-3 py-1 rounded-lg font-bold text-sm shadow-md backdrop-blur-sm pointer-events-none z-10 animate-fade-in">
              PACK x{unitsPerPack}
            </div>
         )}
         {selectedSaleType === 'mayorista' && (
-           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-amber-600/90 text-white px-4 py-2 rounded-xl font-bold text-lg shadow-lg backdrop-blur-sm pointer-events-none z-10 animate-fade-in">
+           <div className="absolute top-12 left-3 bg-amber-600/90 text-white px-3 py-1 rounded-lg font-bold text-sm shadow-md backdrop-blur-sm pointer-events-none z-10 animate-fade-in">
              MAYORISTA x{wholesaleUnits}
            </div>
         )}
