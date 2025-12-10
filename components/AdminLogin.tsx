@@ -28,21 +28,28 @@ const AdminLogin: React.FC = () => {
       try {
         const token = sessionStorage.getItem('admin_entry_token');
         const tsRaw = sessionStorage.getItem('admin_entry_ts');
+        
+        // Si no hay token, simplemente redirigir a home sin log (evita falsos positivos al desloguearse)
+        if (!token || !tsRaw) {
+            navigate('/');
+            return;
+        }
+
         const secret = ((import.meta as any).env?.VITE_ADMIN_SECRET || 'modozen').trim();
         const now = Date.now();
         const ts = tsRaw ? parseInt(tsRaw, 10) : 0;
         let valid = false;
-        if (token && ts) {
-          const minute = Math.floor(ts / 60000);
-          const raw = secret + ':' + minute;
-          const expected = btoa(unescape(encodeURIComponent(raw))).replace(/=+$/,'');
-          // válido si token coincide y no supera 2 minutos
-          if (expected === token && (now - ts) <= 120000) {
-            valid = true;
-          }
+
+        const minute = Math.floor(ts / 60000);
+        const raw = secret + ':' + minute;
+        const expected = btoa(unescape(encodeURIComponent(raw))).replace(/=+$/,'');
+        // válido si token coincide y no supera 2 minutos
+        if (expected === token && (now - ts) <= 120000) {
+          valid = true;
         }
+
         if (!valid) {
-          // Log intento no autorizado si backend activo
+          // Log intento no autorizado SOLO si había token pero era inválido/viejo
           if (isSupabaseConfigured()) {
             logSessionAttempt('UNAUTHORIZED', false).catch(()=>{});
           }
@@ -57,9 +64,6 @@ const AdminLogin: React.FC = () => {
           return;
         }
       } catch {
-        if (isSupabaseConfigured()) {
-          logSessionAttempt('UNAUTHORIZED', false).catch(()=>{});
-        }
         navigate('/');
         return;
       }
