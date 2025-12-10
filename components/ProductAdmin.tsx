@@ -675,7 +675,7 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
                     <div className="text-xs text-slate-500 flex items-center mt-6">
                       {form.price && form.wholesaleDiscount ? (
                         <span>
-                          Precio Unidad Cruda: <b className="text-amber-600">${Math.round(form.price * (1 - (form.wholesaleDiscount/100)))}</b> 
+                          {technology === '3D' ? 'Precio Final x Unidad:' : 'Precio Unidad Cruda:'} <b className="text-amber-600">${Math.round(form.price * (1 - (form.wholesaleDiscount/100)))}</b> 
                           <span className="ml-1 text-slate-400 line-through">${form.price}</span>
                         </span>
                       ) : ''}
