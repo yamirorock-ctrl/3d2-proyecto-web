@@ -3,7 +3,7 @@ import { toast } from 'sonner';
 import { Product, ProductImage } from '../types';
 import SmartImage from './SmartImage';
 import { uploadToSupabase } from '../services/supabaseService';
-import { upsertProduct } from '../services/productService';
+// import { upsertProduct } from '../services/productService'; // Removed to avoid double save
 import { compressImage } from '../utils/imageCompression';
 
 interface Props {
@@ -289,16 +289,14 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
     if (!form.id) form.id = nextId ?? Date.now();
 
     // Guardar SIEMPRE en Supabase (base de datos)
-    upsertProduct(form).then(({ data, error }) => {
-      if (error) {
-          toast.error('Error al guardar en Supabase: ' + error.message);
-      } else {
-          toast.success('Producto guardado correctamente');
-          if (data) {
-            onSave(data); // Enviar el producto actualizado 
-          }
-      }
-    });
+    // Validar ID (si es nuevo, el Context asignará uno definitivo, pero necesitamos uno temporal para la key si fuera local)
+    // Sin embargo, para edición, el ID ya existe.
+    if (!form.id) form.id = nextId ?? Date.now();
+
+    // Solo llamar a onSave. La persistencia en Supabase la maneja el ProductContext (addProduct/editProduct)
+    // para evitar duplicados y desincronización de IDs.
+    onSave(form);
+    toast.success('Producto guardado (o actualizado) correctamente');
   };
 
   return (
