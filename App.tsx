@@ -103,7 +103,7 @@ const MainLayout: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 font-sans selection:bg-indigo-100 selection:text-indigo-900">
+    <div className="min-h-screen bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-indigo-200/20 via-slate-50 to-purple-200/20 font-sans selection:bg-indigo-100 selection:text-indigo-900">
        {cartNotice && (
         <div className="bg-yellow-100 text-yellow-800 text-xs sm:text-sm p-2 text-center animate-fade-in">
           {cartNotice}
