@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { Toaster } from 'sonner';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { initGA, logPageView } from './utils/analytics';
 import Navbar from './components/Navbar';
 import CartDrawer from './components/CartDrawer';
 import ChatAssistant from './components/ChatAssistant';
@@ -17,6 +18,17 @@ const MAINTENANCE_MODE = false;
 
 const MainLayout: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // Initialize GA and track page views
+  useEffect(() => {
+    initGA();
+  }, []);
+
+  useEffect(() => {
+    logPageView();
+  }, [location]);
+
   const { 
     cart, 
     itemCount, 

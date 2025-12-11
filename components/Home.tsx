@@ -1,4 +1,5 @@
 import React from 'react';
+import { Helmet } from 'react-helmet-async';
 import ProductCard from './ProductCard';
 import CustomOrderForm from './CustomOrderForm';
 import { useProducts } from '../context/ProductContext';
@@ -29,6 +30,11 @@ const Home: React.FC = () => {
 
   return (
     <>
+      <Helmet>
+        <title>Inicio | 3D2 - Impresiones 3D y Corte Láser</title>
+        <meta name="description" content="Descubre nuestra colección de impresiones 3D y productos de corte láser. Desde juguetes hasta decoración personalizada." />
+        <link rel="canonical" href="https://www.creart3d2.com/" />
+      </Helmet>
       {/* Hero Section */}
         <div className="relative bg-slate-900 text-white py-24 px-4 sm:px-6 lg:px-8 rounded-3xl mb-12 overflow-hidden shadow-2xl mx-4 lg:mx-8 mt-6">
           <div className="absolute inset-0 z-0">

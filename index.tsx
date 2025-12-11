@@ -1,6 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter, useNavigate } from 'react-router-dom';
+import { HelmetProvider } from 'react-helmet-async';
 import App from './App';
 import './index.css';
 // Log de versión para verificar build en producción
@@ -29,7 +30,9 @@ const AppWithRedirect: React.FC = () => {
 
 const root = ReactDOM.createRoot(rootElement);
 root.render(
-  <BrowserRouter>
-    <AppWithRedirect />
-  </BrowserRouter>
+  <HelmetProvider>
+    <BrowserRouter>
+      <AppWithRedirect />
+    </BrowserRouter>
+  </HelmetProvider>
 );
