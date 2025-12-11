@@ -67,6 +67,8 @@ const OrdersManagement: React.FC = () => {
       delivered: { text: 'Entregado', color: 'bg-green-200 text-green-900' },
       cancelled: { text: 'Cancelado', color: 'bg-red-100 text-red-800' },
       to_coordinate: { text: 'A Coordinar', color: 'bg-purple-100 text-purple-800' },
+      processing: { text: 'Procesando', color: 'bg-blue-100 text-blue-800' },
+      completed: { text: 'Completado', color: 'bg-green-200 text-green-900' },
     };
 
     const badge = badges[status];

@@ -6,11 +6,12 @@ interface AdminProductFormProps {
   onSave: (product: Product) => void;
 }
 
-const AdminProductForm: React.FC<AdminProductFormProps> = ({ initial = {}, onSave }) => {
+const AdminProductForm: React.FC<AdminProductFormProps> = ({ initial = {} as Partial<Product>, onSave }) => {
   const [name, setName] = useState(initial.name || '');
   const [price, setPrice] = useState(initial.price || 0);
   const [category, setCategory] = useState(initial.category || '');
-  const [technology, setTechnology] = useState<Product['technology']>(initial.technology || undefined);
+  // Explicitly cast or handle undefined for technology
+  const [technology, setTechnology] = useState<Product['technology']>(initial.technology); 
   const [description, setDescription] = useState(initial.description || '');
   const [width, setWidth] = useState(initial.dimensions?.width || 0);
   const [height, setHeight] = useState(initial.dimensions?.height || 0);
@@ -31,9 +32,8 @@ const AdminProductForm: React.FC<AdminProductFormProps> = ({ initial = {}, onSav
       setError('Dimensiones obligatorias: ancho, alto y largo deben ser mayores a 0');
       return;
     }
-    // Peso puede ser opcional para 3D si lo provee el slicer; si es Láser, recomendamos definir peso si se conoce
+    
     if (technology === 'Láser' && weight <= 0) {
-      // No bloquear, pero advertir
       console.warn('Peso no definido para Láser; se estimará en checkout');
     }
 
@@ -43,6 +43,7 @@ const AdminProductForm: React.FC<AdminProductFormProps> = ({ initial = {}, onSav
       price,
       category,
       image: initial.image || '',
+      images: initial.images,
       description,
       technology,
       dimensions: { width, height, length },
@@ -104,7 +105,7 @@ const AdminProductForm: React.FC<AdminProductFormProps> = ({ initial = {}, onSav
 
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">Peso (g)</label>
-        <input type="number" min={0} className="w-full border rounded px-3 py-2" value={weight} onChange={e=>setWeight(Number(e.target.value))} placeholder="Opcional (3D: usar el slicer; Láser: estimado si falta)" />
+        <input type="number" min={0} className="w-full border rounded px-3 py-2" value={weight} onChange={e=>setWeight(Number(e.target.value))} placeholder="Opcional" />
       </div>
 
       <div>

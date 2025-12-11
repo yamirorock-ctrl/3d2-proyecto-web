@@ -1,53 +1,55 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { hashPassword, getUserFailedAttempts, recordUserFailedAttempt, isUserLocked, resetUserFailedAttempts, setCurrentUser } from '../utils/auth';
-
-const USERS_KEY = 'users';
-
-function loadUsers() {
-  try {
-    const raw = localStorage.getItem(USERS_KEY);
-    return raw ? JSON.parse(raw) as {username:string, hash:string}[] : [];
-  } catch (e) { return []; }
-}
+import { supabase } from '../services/supabaseService';
+import { useAuth } from '../context/AuthContext';
 
 const UserLogin: React.FC<{ onLogin?: (username:string)=>void }> = ({ onLogin }) => {
   const navigate = useNavigate();
-  const [username, setUsername] = useState('');
+  const { user } = useAuth();
+  
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [remember, setRemember] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
   useEffect(() => {
+    // If already logged in, redirect home
+    if (user) {
+        navigate('/');
+    }
     setMessage(null);
-  }, []);
+  }, [user, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setMessage(null);
-    if (!username || !password) return setMessage('Usuario y contraseña requeridos');
+    if (!email || !password) return setMessage('Email y contraseña requeridos');
 
-    const users = loadUsers();
-    const u = users.find(x => x.username === username);
-    if (!u) return setMessage('Usuario no encontrado');
+    setLoading(true);
 
-    const locked = isUserLocked(username);
-    if (locked.locked) return setMessage('Cuenta bloqueada hasta ' + (locked.until ? new Date(locked.until).toLocaleString() : '...'));
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
 
-    const hash = await hashPassword(password, username);
-    if (hash === u.hash) {
-      // success
-      resetUserFailedAttempts(username);
-      setCurrentUser(username, remember);
-      if (onLogin) onLogin(username);
-      navigate('/');
-    } else {
-      const res = recordUserFailedAttempt(username, 4, 30);
-      if (res.locked) {
-        setMessage('Demasiados intentos. Cuenta bloqueada hasta ' + (res.until ? new Date(res.until).toLocaleString() : '...'));
-      } else {
-        setMessage('Contraseña incorrecta. Intentos restantes: ' + (4 - res.attempts));
+      if (error) {
+        setLoading(false);
+        setMessage(error.message === 'Invalid login credentials' ? 'Credenciales incorrectas' : error.message);
+        return;
       }
+      
+      // Success - AuthContext will pick it up automatically due to onAuthStateChange
+      // We can manually call onLogin if needed, but it was deprecated.
+      // onLogin prop was expecting a username string. We can pass email.
+      if (onLogin && data.user && data.user.email) {
+          onLogin(data.user.email);
+      }
+      
+      navigate('/');
+    } catch (e) {
+      setLoading(false);
+      setMessage('Error inesperado al iniciar sesión');
     }
   };
 
@@ -55,25 +57,27 @@ const UserLogin: React.FC<{ onLogin?: (username:string)=>void }> = ({ onLogin })
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
       <div className="bg-white p-8 rounded-xl shadow-lg w-full max-w-md">
         <h2 className="text-xl font-bold mb-4">Ingresar</h2>
-        {message && <div className="mb-4 text-sm text-red-600">{message}</div>}
+        {message && <div className="mb-4 text-sm text-red-600 bg-red-50 p-3 rounded">{message}</div>}
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm text-slate-700">Usuario</label>
-            <input value={username} onChange={e=>setUsername(e.target.value)} className="mt-1 w-full rounded-md border-gray-200 p-2" />
+            <label className="block text-sm text-slate-700">Email</label>
+            <input type="email" value={email} onChange={e=>setEmail(e.target.value)} className="mt-1 w-full rounded-md border-gray-200 p-2 border" placeholder="tu@email.com" />
           </div>
           <div>
             <label className="block text-sm text-slate-700">Contraseña</label>
-            <input type="password" value={password} onChange={e=>setPassword(e.target.value)} className="mt-1 w-full rounded-md border-gray-200 p-2" />
-          </div>
-          <div className="flex items-center gap-3">
-            <label className="inline-flex items-center gap-2">
-              <input type="checkbox" checked={remember} onChange={e=>setRemember(e.target.checked)} />
-              <span className="text-sm text-slate-600">Recordarme</span>
-            </label>
+            <input type="password" value={password} onChange={e=>setPassword(e.target.value)} className="mt-1 w-full rounded-md border-gray-200 p-2 border" placeholder="••••••••" />
           </div>
           <div className="flex items-center justify-between">
-            <button type="submit" className="px-4 py-2 bg-indigo-600 text-white rounded-md">Entrar</button>
+            <button type="submit" disabled={loading} className="px-4 py-2 bg-indigo-600 text-white rounded-md flex items-center gap-2">
+                {loading && <span className="animate-spin h-3 w-3 border-2 border-white border-t-transparent rounded-full"></span>}
+                Entrar
+            </button>
             <button type="button" onClick={()=>navigate('/')} className="text-sm text-slate-500">Volver</button>
+          </div>
+          <div className="mt-4 text-center">
+             <button type="button" onClick={()=>navigate('/register')} className="text-sm text-indigo-600 hover:text-indigo-800">
+               ¿No tienes cuenta? Regístrate
+             </button>
           </div>
         </form>
       </div>

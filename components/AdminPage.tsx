@@ -5,13 +5,12 @@ import { CustomOrder } from './CustomOrderForm';
 import ProductAdmin from './ProductAdmin';
 import { Trash2, Edit, Plus, ArrowLeft, Package, Users, Mail, Phone, Calendar, CheckCircle, Clock, ShoppingCart, TrendingUp, DollarSign, ShieldAlert, RefreshCw, ListChecks, ShoppingBag, Settings, LogOut, ChevronDown, Database, Upload, Download, Wrench } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { clearAuthenticated, resetUserFailedAttempts, isUserLocked } from '../utils/auth';
+import { useAuth } from '../context/AuthContext';
 import { saveDataUrl, getBlob } from '../services/imageStore';
 import SmartImage from './SmartImage';
 import SalesDashboard from './SalesDashboard';
 import PriceUpdateTool from './PriceUpdateTool';
 import { getAuthUrl } from '../services/mlService';
-import { validateSession, renewSession, deleteSession } from '../services/authService';
 
 interface Props {
   products: Product[];
@@ -23,80 +22,27 @@ interface Props {
 const AdminPage: React.FC<Props> = ({ products, onAdd, onEdit, onDelete }) => {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editing, setEditing] = useState<Product | null>(null);
-  const [users, setUsers] = useState<{username:string}[]>([]);
-  const [userLocks, setUserLocks] = useState<Record<string, {locked:boolean; until?:number}>>({});
-  const [activeTab, setActiveTab] = useState<'products' | 'orders' | 'users' | 'sales' | 'security'>('products');
-  const [attempts, setAttempts] = useState<{t:number; type:string}[]>([]);
+  const [activeTab, setActiveTab] = useState<'products' | 'orders' | 'sales'>('products');
   const [customOrders, setCustomOrders] = useState<CustomOrder[]>([]);
   const [salesOrders, setSalesOrders] = useState<Order[]>([]);
   const [isPriceToolOpen, setIsPriceToolOpen] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const navigate = useNavigate();
 
-  const storedUser = localStorage.getItem('admin_user');
+  const { logout, user } = useAuth();
 
   const handleLogout = async () => {
-    // Eliminar sesión de Supabase si existe
-    const sessionId = localStorage.getItem('admin_session_id');
-    if (sessionId) {
-      await deleteSession(sessionId);
-      localStorage.removeItem('admin_session_id');
-    }
-    clearAuthenticated();
+    await logout();
     navigate('/admin/login');
   };
 
-  // Guard: validar sesión al montar
-  useEffect(() => {
-    const sessionId = localStorage.getItem('admin_session_id');
-    if (sessionId) {
-      validateSession(sessionId).then(({ valid, error }) => {
-        if (!valid) {
-          console.warn('[AdminPage] Sesión inválida o expirada:', error);
-          toast.error('Tu sesión ha expirado o fue cerrada. Inicia sesión nuevamente.');
-          clearAuthenticated();
-          localStorage.removeItem('admin_session_id');
-          navigate('/admin/login');
-        }
-      });
-    }
-  }, [navigate]);
+  // Deprecated user management logic removed as we now use Supabase Dashboard for users.
+  // Kept basic visualization if needed, but for now we focus on Products and Orders.
 
-  // Heartbeat: renovar sesión cada 60 segundos
-  useEffect(() => {
-    const sessionId = localStorage.getItem('admin_session_id');
-    if (!sessionId) return;
-
-    const interval = setInterval(async () => {
-      const { success, error } = await renewSession(sessionId);
-      if (!success) {
-        console.warn('[AdminPage] Error renovando sesión:', error);
-        clearInterval(interval);
-        toast.error('Tu sesión ha expirado. Inicia sesión nuevamente.');
-        clearAuthenticated();
-        localStorage.removeItem('admin_session_id');
-        navigate('/admin/login');
-      } else {
-        console.log('[AdminPage] Sesión renovada');
-      }
-    }, 60000); // 60 segundos
-
-    return () => clearInterval(interval);
-  }, [navigate]);
+  // Supabase Auth handles session management automatically.
+  // No need for manual heartbeats or local checks.
 
   useEffect(() => {
-    // load registered users
-    try {
-      const raw = localStorage.getItem('users');
-      const arr = raw ? JSON.parse(raw) as {username:string, hash:string}[] : [];
-      setUsers(arr.map(u => ({ username: u.username })));
-      const lockMap: Record<string, {locked:boolean; until?:number}> = {};
-      arr.forEach(u => {
-        lockMap[u.username] = isUserLocked(u.username);
-      });
-      setUserLocks(lockMap);
-    } catch (e) {}
-
     // load custom orders
     try {
       const ordersRaw = localStorage.getItem('customOrders');
@@ -124,37 +70,7 @@ const AdminPage: React.FC<Props> = ({ products, onAdd, onEdit, onDelete }) => {
         console.warn('[AdminPage] No se pudieron cargar órdenes desde Supabase:', err);
       }
     })();
-
-    // load security attempts
-    try {
-      const aRaw = localStorage.getItem('adminAccessAttempts');
-      const arr = aRaw ? JSON.parse(aRaw) as {t:number; type:string}[] : [];
-      setAttempts(arr.sort((a,b)=>b.t-a.t));
-    } catch {}
   }, []);
-  const refreshAttempts = () => {
-    try {
-      const aRaw = localStorage.getItem('adminAccessAttempts');
-      const arr = aRaw ? JSON.parse(aRaw) as {t:number; type:string}[] : [];
-      setAttempts(arr.sort((a,b)=>b.t-a.t));
-    } catch {}
-  };
-
-  const clearAttempts = () => {
-    if (!confirm('¿Borrar historial local de intentos no autorizados?')) return;
-    try { localStorage.removeItem('adminAccessAttempts'); setAttempts([]); } catch {}
-  };
-
-  const refreshUsers = () => {
-    try {
-      const raw = localStorage.getItem('users');
-      const arr = raw ? JSON.parse(raw) as {username:string, hash:string}[] : [];
-      setUsers(arr.map(u => ({ username: u.username })));
-      const lockMap: Record<string, {locked:boolean; until?:number}> = {};
-      arr.forEach(u => { lockMap[u.username] = isUserLocked(u.username); });
-      setUserLocks(lockMap);
-    } catch (e) {}
-  };
 
   const refreshSalesOrders = async () => {
     try {
@@ -169,28 +85,9 @@ const AdminPage: React.FC<Props> = ({ products, onAdd, onEdit, onDelete }) => {
     }
   };
 
-  const handleDeleteUser = (username: string) => {
-    if (!confirm(`Eliminar usuario ${username}? Esta acción no se puede revertir.`)) return;
-    try {
-      const raw = localStorage.getItem('users');
-      const arr = raw ? JSON.parse(raw) as {username:string, hash:string}[] : [];
-      const next = arr.filter(u => u.username !== username);
-      localStorage.setItem('users', JSON.stringify(next));
-      // clear any per-user locks
-      resetUserFailedAttempts(username);
-      refreshUsers();
-    } catch (e) {}
-  };
 
-  const handleUnlockUser = (username: string) => {
-    if (!confirm(`¿Desbloquear usuario ${username}?`)) return;
-    try {
-      resetUserFailedAttempts(username);
-      refreshUsers();
-      refreshUsers();
-      toast.success('Usuario desbloqueado.');
-    } catch (e) {}
-  };
+
+
 
   const handleMigrateProducts = () => {
     if (!confirm('Esto migrará todos los productos existentes para limpiar las categorías y asignar la tecnología correctamente. ¿Continuar?')) return;
@@ -457,7 +354,7 @@ const AdminPage: React.FC<Props> = ({ products, onAdd, onEdit, onDelete }) => {
           <button onClick={() => navigate(-1)} className="p-2 hover:bg-gray-100 rounded-full transition-colors"><ArrowLeft size={20} /></button>
           <div className="flex flex-col">
             <h2 className="text-2xl font-bold bg-linear-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">Panel Admin</h2>
-            {storedUser && <span className="text-xs text-slate-400">Logueado como {storedUser}</span>}
+            {user && <span className="text-xs text-slate-400">Logueado como {user.email}</span>}
           </div>
         </div>
 
@@ -574,33 +471,14 @@ const AdminPage: React.FC<Props> = ({ products, onAdd, onEdit, onDelete }) => {
         >
           <ShoppingCart size={20} />
           Ventas ({salesOrders.length})
-          {salesOrders.filter(o => o.status === 'pendiente').length > 0 && (
+          {salesOrders.filter(o => o.status === 'pending').length > 0 && (
             <span className="bg-yellow-500 text-white text-xs px-2 py-0.5 rounded-full">
-              {salesOrders.filter(o => o.status === 'pendiente').length}
+              {salesOrders.filter(o => o.status === 'pending').length}
             </span>
           )}
         </button>
-        <button
-          onClick={() => setActiveTab('users')}
-          className={`px-4 py-3 font-medium flex items-center gap-2 border-b-2 transition-colors ${
-            activeTab === 'users' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500 hover:text-slate-700'
-          }`}
-        >
-          <Users size={20} />
-          Usuarios ({users.length})
-        </button>
-        <button
-          onClick={() => setActiveTab('security')}
-          className={`px-4 py-3 font-medium flex items-center gap-2 border-b-2 transition-colors ${
-            activeTab === 'security' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500 hover:text-slate-700'
-          }`}
-        >
-          <ShieldAlert size={20} />
-          Seguridad
-          {attempts.length > 0 && (
-            <span className="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">{attempts.length}</span>
-          )}
-        </button>
+          {/* Users tab removed as it is now managed via Supabase Dashboard */}
+          {/* Security tab logic simplified or removed as Supabase logs audit events */}
       </div>
 
       {/* Products Tab */}
@@ -730,67 +608,7 @@ const AdminPage: React.FC<Props> = ({ products, onAdd, onEdit, onDelete }) => {
         />
       )}
 
-      {/* Users Tab */}
-      {activeTab === 'users' && (
-        <div>
-          {users.length === 0 ? (
-            <div className="text-center py-12 text-slate-500">
-              <Users size={48} className="mx-auto mb-4 opacity-30" />
-              <p>No hay usuarios registrados</p>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {users.map(u => (
-                <div key={u.username} className="flex items-center justify-between border rounded p-3">
-                  <div>
-                    <div className="font-medium">{u.username}</div>
-                    <div className="text-sm text-slate-500">{userLocks[u.username]?.locked ? `Bloqueado hasta ${userLocks[u.username].until ? new Date(userLocks[u.username].until).toLocaleString() : '...'}` : 'Activo'}</div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <button onClick={() => handleUnlockUser(u.username)} className="px-3 py-1 bg-emerald-50 text-emerald-700 rounded-md">Desbloquear</button>
-                    <button onClick={() => handleDeleteUser(u.username)} className="px-3 py-1 bg-red-50 text-red-700 rounded-md">Eliminar</button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
 
-      {/* Security Tab */}
-      {activeTab === 'security' && (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-lg font-bold flex items-center gap-2"><ShieldAlert size={18}/>Intentos de Acceso No Autorizado</h3>
-            <div className="flex gap-2">
-              <button onClick={refreshAttempts} className="px-3 py-1 rounded-md bg-indigo-50 text-indigo-700 text-sm flex items-center gap-1"><RefreshCw size={14}/>Actualizar</button>
-              <button onClick={clearAttempts} className="px-3 py-1 rounded-md bg-red-50 text-red-700 text-sm">Limpiar</button>
-            </div>
-          </div>
-          {attempts.length === 0 ? (
-            <div className="p-6 text-center border rounded-lg bg-white text-slate-500">
-              <ListChecks size={42} className="mx-auto mb-3 opacity-30" />
-              <p>Sin intentos registrados.</p>
-              <p className="text-xs mt-2 text-slate-400">Se almacenan hasta 50 eventos locales.</p>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {attempts.map((a,i)=>(
-                <div key={i} className="flex items-center justify-between border rounded-md p-3 bg-white">
-                  <div className="flex flex-col">
-                    <span className="text-sm font-medium text-red-600">{a.type === 'invalid_token' ? 'Token inválido/caducado' : a.type}</span>
-                    <span className="text-xs text-slate-500">{new Date(a.t).toLocaleString('es-AR')}</span>
-                  </div>
-                  <span className="text-xs px-2 py-1 rounded bg-red-100 text-red-700">No autorizado</span>
-                </div>
-              ))}
-            </div>
-          )}
-          <div className="text-xs text-slate-400 pt-2">
-            Los intentos también se registran en Supabase bajo el usuario "UNAUTHORIZED" si el backend está activo.
-          </div>
-        </div>
-      )}
 
       {(() => {
         try {

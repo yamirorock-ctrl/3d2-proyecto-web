@@ -53,7 +53,7 @@ export interface CartItem extends Product {
   };
 }
 
-export type OrderStatus = 'pending' | 'payment_pending' | 'paid' | 'preparing' | 'shipped' | 'delivered' | 'cancelled' | 'to_coordinate';
+export type OrderStatus = 'pending' | 'payment_pending' | 'paid' | 'preparing' | 'shipped' | 'delivered' | 'cancelled' | 'to_coordinate' | 'processing' | 'completed';
 
 export type ShippingMethod = 'moto' | 'correo' | 'retiro' | 'to_coordinate';
 
@@ -85,6 +85,7 @@ export interface Order {
   total: number;
   shipping_method: ShippingMethod;
   status: OrderStatus;
+  payment_method?: string;
   payment_id?: string;
   payment_status?: string;
   tracking_number?: string;

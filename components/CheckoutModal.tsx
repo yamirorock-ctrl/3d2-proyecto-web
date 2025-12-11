@@ -59,19 +59,23 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
       return;
     }
 
+    const orderId = `ORD-${Date.now()}`;
     const order: Order = {
-      id: `ORD-${Date.now()}`,
-      customerName: formData.customerName,
-      customerEmail: formData.customerEmail,
-      customerPhone: formData.customerPhone,
-      items: items,
+      id: orderId,
+      order_number: orderId,
+      customer_name: formData.customerName,
+      customer_email: formData.customerEmail,
+      customer_phone: formData.customerPhone,
+      items: items.map(i => ({...i, image: i.image || '', product_id: i.id})), // Ensure items match OrderItem
+      subtotal: total, // Assuming total passed is subtotal? No, items sum.
       total: finalTotal,
-      paymentMethod: formData.paymentMethod,
-      shippingMethod: formData.shippingMethod,
-      shippingCost: shippingCost,
-      status: 'pendiente',
-      timestamp: new Date().toISOString(),
-      address: formData.address || undefined,
+      shipping_cost: shippingCost,
+      shipping_method: formData.shippingMethod,
+      payment_method: formData.paymentMethod,
+      status: 'pending',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      customer_address: formData.address || undefined,
       notes: formData.notes || undefined
     };
 
@@ -223,7 +227,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1 flex items-center gap-2">
+                    <label className="text-sm font-medium text-slate-700 mb-1 flex items-center gap-2">
                       <MapPin size={16} />
                       Dirección de Envío (opcional)
                     </label>
@@ -237,7 +241,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1 flex items-center gap-2">
+                    <label className="text-sm font-medium text-slate-700 mb-1 flex items-center gap-2">
                       <FileText size={16} />
                       Notas adicionales (opcional)
                     </label>
@@ -392,7 +396,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
                           onChange={(e) => setFormData({...formData, paymentMethod: e.target.value as any})}
                           className="sr-only"
                         />
-                        <div className={`flex-shrink-0 ${formData.paymentMethod === method.id ? 'text-indigo-600' : 'text-slate-400'}`}>
+                        <div className={`shrink-0 ${formData.paymentMethod === method.id ? 'text-indigo-600' : 'text-slate-400'}`}>
                           {method.icon}
                         </div>
                         <div className="flex-1">

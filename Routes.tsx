@@ -25,7 +25,7 @@ const Loading = () => (
 );
 
 const AppRoutes: React.FC = () => {
-    const { login } = useAuth(); // Pass login to UserLogin if needed, though UserLogin in App.tsx had onLogin prop.
+    // const { login } = useAuth(); // Auth managed by context listeners
     // UserLogin component definition: <UserLogin onLogin={(u)=>setCurrentUser(u)} />
     // We should update UserLogin to use AuthContext or pass the prop.
     // Ideally components accept props or use context. Updating all components is huge work.
@@ -37,7 +37,7 @@ const AppRoutes: React.FC = () => {
       <Routes>
         <Route index element={<Home />} />
         <Route path="register" element={<Register />} />
-        <Route path="login" element={<UserLogin onLogin={(u: string) => login(u)} />} />
+        <Route path="login" element={<UserLogin />} />
         <Route path="admin/login" element={<AdminLogin />} />
         <Route path="checkout" element={
             // Checkout takes cart and onClearCart.

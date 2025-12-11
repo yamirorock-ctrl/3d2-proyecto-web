@@ -1,8 +1,11 @@
+import { createClient } from '@supabase/supabase-js';
+import type { Product } from '../types';
+
 // Guarda un producto completo en la tabla 'products' de Supabase
 export async function saveProductToSupabase(product: any): Promise<{ success: boolean; error?: string }> {
   const client = getClient();
   try {
-    const { error } = await client.from('products').insert([product]);
+    const { error } = await client.from('products').insert([product] as any);
     if (error) return { success: false, error: error.message };
     return { success: true };
   } catch (e) {
@@ -14,31 +17,32 @@ export async function saveProductToSupabase(product: any): Promise<{ success: bo
 export async function upsertProductToSupabase(product: any): Promise<{ success: boolean; error?: string }> {
   const client = getClient();
   try {
-    const { error } = await client.from('products').upsert([product], { onConflict: 'id' });
+    const { error } = await client.from('products').upsert([product] as any, { onConflict: 'id' });
     if (error) return { success: false, error: error.message };
     return { success: true };
   } catch (e) {
     return { success: false, error: (e as Error).message };
   }
 }
-import { createClient } from '@supabase/supabase-js';
-import type { Product } from '../types';
 
-let supabase:
+let clientInstance:
   | ReturnType<typeof createClient>
   | null = null;
 
 function getClient() {
-  if (supabase) return supabase;
+  if (clientInstance) return clientInstance;
   const url = (import.meta as any).env?.VITE_SUPABASE_URL;
   const key = (import.meta as any).env?.VITE_SUPABASE_ANON_TOKEN;
   if (!url || !key) throw new Error('Supabase no configurado (VITE_SUPABASE_URL / VITE_SUPABASE_ANON_TOKEN)');
-  supabase = createClient(url, key);
-  return supabase;
+  clientInstance = createClient(url, key);
+  return clientInstance;
 }
 
 // Exportar cliente para uso en otros servicios
 export { getClient };
+
+// Initialize immediately so it can be exported directly
+export const supabase = getClient();
 
 export async function uploadToSupabase(file: File, bucket: string, path?: string): Promise<string> {
   const client = getClient();

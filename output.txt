@@ -1,0 +1,12 @@
+components/AdminProductForm.tsx(10,44): error TS2339: Property 'name' does not exist on type '{}'.
+components/AdminProductForm.tsx(11,46): error TS2339: Property 'price' does not exist on type '{}'.
+components/AdminProductForm.tsx(12,52): error TS2339: Property 'category' does not exist on type '{}'.
+components/AdminProductForm.tsx(14,79): error TS2339: Property 'technology' does not exist on type '{}'.
+components/AdminProductForm.tsx(15,58): error TS2339: Property 'description' does not exist on type '{}'.
+components/AdminProductForm.tsx(16,46): error TS2339: Property 'dimensions' does not exist on type '{}'.
+components/AdminProductForm.tsx(17,48): error TS2339: Property 'dimensions' does not exist on type '{}'.
+components/AdminProductForm.tsx(18,48): error TS2339: Property 'dimensions' does not exist on type '{}'.
+components/AdminProductForm.tsx(19,48): error TS2339: Property 'weight' does not exist on type '{}'.
+components/AdminProductForm.tsx(41,19): error TS2339: Property 'id' does not exist on type '{}'.
+components/AdminProductForm.tsx(45,22): error TS2339: Property 'image' does not exist on type '{}'.
+components/AdminProductForm.tsx(46,23): error TS2339: Property 'images' does not exist on type '{}'.

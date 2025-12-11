@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Search, Package } from 'lucide-react';
 import { ShoppingCart, Menu, X } from 'lucide-react';
 import SmartImage from './SmartImage';
-import { isAuthenticated } from '../utils/auth';
+import { useAuth } from '../context/AuthContext';
 
 interface NavbarProps {
   cartCount: number;
@@ -17,7 +17,12 @@ interface NavbarProps {
   onSearch?: (query: string) => void; // búsqueda de productos
 }
 
-const Navbar: React.FC<NavbarProps> = ({ cartCount, onOpenCart, onGoHome, onOpenAdmin, onRegister, currentUser, onLogoutUser, onCategorySelect, onSearch }) => {
+const Navbar: React.FC<NavbarProps> = ({ cartCount, onOpenCart, onGoHome, onOpenAdmin, onRegister, onLogoutUser, onCategorySelect, onSearch }) => {
+  const { user, isAdmin, logout } = useAuth();
+  // Use context user if available, otherwise fallback to prop or null.
+  // Actually, we should rely on context.
+  const displayUser = user ? user.email : null; // or null if we want to rely on props. But migrating to context is better.
+
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [showSearch, setShowSearch] = useState(false);
@@ -126,17 +131,17 @@ const Navbar: React.FC<NavbarProps> = ({ cartCount, onOpenCart, onGoHome, onOpen
                 />
               )}
             </div>
-            {currentUser && (
+            {displayUser && (
               <div className="flex items-center gap-3">
-                <span className="text-sm font-medium text-slate-700">Hola, {currentUser}</span>
-                <button onClick={onLogoutUser} className="text-sm text-slate-500">Cerrar</button>
+                <span className="text-sm font-medium text-slate-700">Hola, {displayUser}</span>
+                <button onClick={() => { logout(); if(onLogoutUser) onLogoutUser(); }} className="text-sm text-slate-500">Cerrar</button>
               </div>
             )}
           </div>
 
           {/* Actions */}
           <div className="flex items-center gap-4">
-            {onOpenAdmin && isAuthenticated() && (
+            {onOpenAdmin && isAdmin && (
               <button onClick={onOpenAdmin} title="Admin" className="hidden md:inline-flex items-center gap-2 px-3 py-2 bg-amber-50 text-amber-700 rounded-lg hover:bg-amber-100">
                 Admin
               </button>
@@ -263,26 +268,24 @@ const Navbar: React.FC<NavbarProps> = ({ cartCount, onOpenCart, onGoHome, onOpen
                   Personalizados
                 </button>
 
-                {currentUser && (
+                {displayUser && (
                   <div className="mt-6 pt-6 border-t border-gray-100">
                      <div className="px-4 mb-2">
                         <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Cuenta</span>
                      </div>
                      <div className="px-4 py-2 text-sm text-slate-900 bg-slate-50 rounded-lg mx-2 border border-slate-100 mb-2">
-                        {currentUser}
+                        {displayUser}
                      </div>
-                      {onLogoutUser && (
-                        <button 
-                          onClick={() => { onLogoutUser(); setIsMobileMenuOpen(false); }}
-                          className="w-full text-left px-4 py-3 text-red-600 hover:bg-red-50 rounded-xl transition-all font-medium flex items-center gap-2"
-                        >
-                          Cerrar Sesión
-                        </button>
-                      )}
+                      <button 
+                         onClick={() => { logout(); if(onLogoutUser) onLogoutUser(); setIsMobileMenuOpen(false); }}
+                         className="w-full text-left px-4 py-3 text-red-600 hover:bg-red-50 rounded-xl transition-all font-medium flex items-center gap-2"
+                       >
+                         Cerrar Sesión
+                       </button>
                   </div>
                 )}
                 
-                 {onOpenAdmin && isAuthenticated() && (
+                 {onOpenAdmin && isAdmin && (
                    <div className="mt-4 pt-4 border-t border-gray-100">
                      <button 
                        onClick={() => { onOpenAdmin(); setIsMobileMenuOpen(false); }}

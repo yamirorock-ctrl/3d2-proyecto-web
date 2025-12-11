@@ -45,7 +45,8 @@ const MainLayout: React.FC = () => {
     cartNotice 
   } = useCart();
   
-  const { currentUser, logout } = useAuth();
+  // useAuth for checking admin or user state if needed at App level
+  const { } = useAuth();
   const { 
     updateStock, 
     refreshProducts, 
@@ -130,8 +131,6 @@ const MainLayout: React.FC = () => {
              setSelectedCategory('Destacados'); // Reset to default view
          }}
          onOpenAdmin={() => navigate('/admin')}
-         currentUser={currentUser}
-         onLogoutUser={logout}
          onCategorySelect={(cat) => { 
              navigate('/'); 
              setSelectedCategory(cat); 
