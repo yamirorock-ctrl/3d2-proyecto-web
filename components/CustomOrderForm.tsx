@@ -28,7 +28,7 @@ const CustomOrderForm: React.FC<Props> = ({ onSubmit }) => {
   
   const [submitted, setSubmitted] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!form.name || !form.email || !form.description) {
@@ -42,6 +42,23 @@ const CustomOrderForm: React.FC<Props> = ({ onSubmit }) => {
       timestamp: new Date(),
       status: 'pendiente'
     };
+
+    // Enviar email
+    const emailData = {
+      customer_name: form.name,
+      customer_email: form.email,
+      customer_phone: form.phone,
+      technology: form.technology,
+      description: form.description,
+      timestamp: new Date().toISOString()
+    };
+    
+    // Ejecutar envío (no bloqueante para UX rápida o esperar)
+    try {
+      await sendCustomOrderEmail(emailData);
+    } catch (err) {
+      console.error('Fallo envío email:', err);
+    }
 
     onSubmit(order);
     setSubmitted(true);
