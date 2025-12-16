@@ -6,13 +6,18 @@ export default async function handler(req, res) {
   res.setHeader("Content-Type", "text/csv; charset=utf-8");
   res.setHeader("Content-Disposition", 'attachment; filename="catalog.csv"');
 
-  // Inicializar Supabase
-  const supabaseUrl = process.env.VITE_SUPABASE_URL;
-  const supabaseKey = process.env.VITE_SUPABASE_ANON_TOKEN;
+  // Inicializar Supabase (check both VITE_ and standard env vars)
+  const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
+  const supabaseKey =
+    process.env.VITE_SUPABASE_ANON_TOKEN || process.env.SUPABASE_ANON_KEY;
 
   if (!supabaseUrl || !supabaseKey) {
-    console.error("Faltan variables de entorno de Supabase");
-    return res.status(500).send("Error de configuración del servidor");
+    console.error(
+      "Faltan variables de entorno de Supabase (VITE_SUPABASE_URL/SUPABASE_URL)"
+    );
+    return res
+      .status(500)
+      .send("Error de configuración del servidor: Faltan credenciales.");
   }
 
   const supabase = createClient(supabaseUrl, supabaseKey);
