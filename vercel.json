@@ -1,6 +1,6 @@
 {
   "rewrites": [
-    { "source": "/catalog.csv", "destination": "/api/catalog" },
+    { "source": "/catalog.csv", "destination": "/api/feed" },
     { "source": "/api/(.*)", "destination": "/api/$1" },
     { "source": "/((?!api/|.*\\..*).*)", "destination": "/index.html" }
   ]
