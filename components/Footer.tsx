@@ -66,7 +66,7 @@ const Footer: React.FC = () => {
                 <a
                   href={(
                     import.meta.env.VITE_FACEBOOK_URL ||
-                    "https://www.facebook.com/profile.php?id=61584675617144"
+                    "https://www.facebook.com/share/1AfvWg8N66/"
                   ).trim()}
                   target="_blank"
                   rel="noopener noreferrer"
