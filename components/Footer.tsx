@@ -28,6 +28,7 @@ const Footer: React.FC = () => {
                   target="_blank"
                   rel="noopener noreferrer"
                   className="hover:text-indigo-600 transition-colors"
+                  aria-label="Instagram"
                 >
                   Instagram
                 </a>
@@ -38,6 +39,7 @@ const Footer: React.FC = () => {
                   target="_blank"
                   rel="noopener noreferrer"
                   className="hover:text-indigo-600 transition-colors"
+                  aria-label="WhatsApp"
                 >
                   Contacto
                 </a>
@@ -59,6 +61,7 @@ const Footer: React.FC = () => {
                   rel="noopener noreferrer"
                   className="group relative p-2.5 bg-white rounded-xl shadow-sm border border-slate-100 hover:border-pink-200 hover:shadow-[0_0_15px_-3px_rgba(236,72,153,0.3)] transition-all duration-300"
                   title="Instagram"
+                  aria-label="Instagram"
                 >
                   <div className="absolute inset-0 bg-pink-50 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                   <Instagram
@@ -77,6 +80,7 @@ const Footer: React.FC = () => {
                   rel="noopener noreferrer"
                   className="group relative p-2.5 bg-white rounded-xl shadow-sm border border-slate-100 hover:border-blue-200 hover:shadow-[0_0_15px_-3px_rgba(59,130,246,0.3)] transition-all duration-300"
                   title="Facebook"
+                  aria-label="Facebook"
                 >
                   <div className="absolute inset-0 bg-blue-50 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                   <Facebook
@@ -94,6 +98,7 @@ const Footer: React.FC = () => {
                   rel="noopener noreferrer"
                   className="group relative p-2.5 bg-white rounded-xl shadow-sm border border-slate-100 hover:border-green-200 hover:shadow-[0_0_15px_-3px_rgba(34,197,94,0.3)] transition-all duration-300"
                   title="WhatsApp"
+                  aria-label="WhatsApp"
                 >
                   <div className="absolute inset-0 bg-green-50 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                   <MessageCircle

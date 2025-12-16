@@ -41,7 +41,14 @@ const ImageCarousel: React.FC<{
   const next = () => setActive((a) => (a + 1) % images.length);
 
   return (
-    <div className="relative h-64 overflow-hidden bg-white p-8 flex items-center justify-center cursor-pointer group/image" onClick={onImageClick}>
+    <div 
+      className="relative h-64 overflow-hidden bg-white p-8 flex items-center justify-center cursor-pointer group/image" 
+      onClick={onImageClick}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onImageClick(); }}
+      aria-label={`Ver detalles de ${productName}`}
+    >
        {/* Zoom hint */}
       <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/5 opacity-0 group-hover/image:opacity-100 transition-opacity pointer-events-none">
           <span className="bg-white/90 backdrop-blur px-3 py-1 rounded-full text-xs font-medium text-slate-700 shadow-sm">Ver detalles</span>
@@ -212,6 +219,9 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart }) => {
               style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}
               onClick={() => setIsModalOpen(true)}
               title={product.name}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setIsModalOpen(true); }}
             >
               {product.name}
             </h3>

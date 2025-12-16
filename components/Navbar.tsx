@@ -98,6 +98,7 @@ const Navbar: React.FC<NavbarProps> = ({ cartCount, onOpenCart, onGoHome, onOpen
                 onClick={()=>setShowSearch(s=>!s)}
                 className="p-2 rounded-md hover:bg-slate-100 transition-colors"
                 title="Buscar"
+                aria-label="Buscar productos"
               >
                 <Search size={18} className="text-slate-600" />
               </button>
