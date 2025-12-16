@@ -79,7 +79,7 @@ const Footer: React.FC = () => {
 
                 {/* WhatsApp */}
                 <a
-                  href={`https://wa.me/${(
+                  href={`https://api.whatsapp.com/send?phone=${(
                     import.meta.env.VITE_WHATSAPP_NUMBER || "5491171285516"
                   ).trim()}`}
                   target="_blank"

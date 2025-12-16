@@ -306,7 +306,7 @@ const OrderTracking: React.FC = () => {
                 <p className="text-sm text-gray-600">
                   Contactanos por WhatsApp al{' '}
                   <a
-                    href={`https://wa.me/${((import.meta as any).env?.VITE_WHATSAPP_NUMBER || '5491171285516').trim()}`}
+                    href={`https://api.whatsapp.com/send?phone=${((import.meta as any).env?.VITE_WHATSAPP_NUMBER || '5491171285516').trim()}`}
                     className="text-indigo-600 hover:underline"
                   >
                     {((import.meta as any).env?.VITE_WHATSAPP_NUMBER || '5491171285516').trim()}

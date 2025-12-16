@@ -124,7 +124,7 @@ const OrderSuccess: React.FC = () => {
                     📍 Retiro en Local - Te enviaremos la dirección por WhatsApp
                   </p>
                   <a
-                    href={`https://wa.me/${((import.meta as any).env?.VITE_WHATSAPP_NUMBER || '5491171285516').trim()}?text=Hola! Acabo de confirmar mi pedido ${order.order_number} con retiro en local. ¿Cuál es la dirección y horarios?`}
+                    href={`https://api.whatsapp.com/send?phone=${((import.meta as any).env?.VITE_WHATSAPP_NUMBER || '5491171285516').trim()}&text=Hola! Acabo de confirmar mi pedido ${order.order_number} con retiro en local. ¿Cuál es la dirección y horarios?`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="block w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg text-center transition-colors"
@@ -164,7 +164,7 @@ const OrderSuccess: React.FC = () => {
               <p className="mt-2">
                 Para consultas: WhatsApp{' '}
                 <a
-                  href={`https://wa.me/${((import.meta as any).env?.VITE_WHATSAPP_NUMBER || '5491171285516').trim()}`}
+                  href={`https://api.whatsapp.com/send?phone=${((import.meta as any).env?.VITE_WHATSAPP_NUMBER || '5491171285516').trim()}`}
                   className="text-indigo-600 hover:underline"
                 >
                   {((import.meta as any).env?.VITE_WHATSAPP_NUMBER || '5491171285516').trim()}
