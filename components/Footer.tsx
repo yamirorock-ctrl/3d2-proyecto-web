@@ -18,12 +18,7 @@ const Footer: React.FC = () => {
             <h4 className="font-bold text-slate-900 mb-4">Enlaces Rápidos</h4>
             <ul className="space-y-2 text-sm text-slate-500">
               <li>
-                <a 
-                  href={`https://wa.me/c/${(import.meta.env.VITE_WHATSAPP_NUMBER || "5491171285516").trim()}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="hover:text-indigo-600 transition-colors"
-                >
+                <a href="#" className="hover:text-indigo-600 transition-colors">
                   Catálogo
                 </a>
               </li>
