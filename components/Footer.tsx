@@ -64,7 +64,10 @@ const Footer: React.FC = () => {
 
                 {/* Facebook */}
                 <a
-                  href="https://facebook.com"
+                  href={(
+                    import.meta.env.VITE_FACEBOOK_URL ||
+                    "https://www.facebook.com/profile.php?id=61584675617144"
+                  ).trim()}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="group relative p-2.5 bg-white rounded-xl shadow-sm border border-slate-100 hover:border-blue-200 hover:shadow-[0_0_15px_-3px_rgba(59,130,246,0.3)] transition-all duration-300"
