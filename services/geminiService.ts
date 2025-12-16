@@ -32,8 +32,8 @@ export const createChatSession = (products: Product[]): Chat | null => {
     5. Utiliza emojis relacionados (🎨, 🧶, 🎁, ✨) para mantener un tono fresco.
     6. INFORMACIÓN DE CONTACTO (Compártela SOLO si te la piden o si es necesario para cerrar una venta/pedido):
        - WhatsApp: ${((import.meta as any).env?.VITE_WHATSAPP_NUMBER || '5491171285516').trim()} (Enlace directo: https://api.whatsapp.com/send?phone=${((import.meta as any).env?.VITE_WHATSAPP_NUMBER || '5491171285516').trim()})
+       - Instagram: https://www.instagram.com/3d2_creart/
        - Facebook: ${((import.meta as any).env?.VITE_FACEBOOK_URL || 'https://www.facebook.com/share/1AfvWg8N66/').trim()}
-       - Email (para personalizados): ${(import.meta as any).env?.EMAIL_USER || 'creart_3d2@outlook.com'} (o usar el formulario de "Diseño Personalizado" en la web).
   `;
 
   return ai.chats.create({
