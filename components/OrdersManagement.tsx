@@ -317,7 +317,7 @@ const OrdersManagement: React.FC = () => {
                   </select>
 
                   <a
-                    href={`https://wa.me/54${order.customer_phone.replace(/\D/g, '')}?text=Hola ${order.customer_name}, te contactamos por tu pedido ${order.order_number}`}
+                    href={`https://api.whatsapp.com/send?phone=54${order.customer_phone.replace(/\D/g, '')}&text=Hola ${order.customer_name}, te contactamos por tu pedido ${order.order_number}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 text-sm"
