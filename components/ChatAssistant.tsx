@@ -144,7 +144,22 @@ const ChatAssistant: React.FC<ChatAssistantProps> = ({ products }) => {
                       : 'bg-white text-slate-800 shadow-sm border border-gray-100 rounded-tl-none'
                   }`}
                 >
-                  {msg.text}
+                  {msg.text.split(/(https?:\/\/[^\s]+)/g).map((part, i) => 
+                    part.match(/https?:\/\/[^\s]+/) ? (
+                      <a 
+                        key={i} 
+                        href={part} 
+                        target="_blank" 
+                        rel="noopener noreferrer" 
+                        className="underline break-all hover:text-indigo-200"
+                        style={{ color: msg.role === 'user' ? 'white' : '#4f46e5' }}
+                      >
+                        {part}
+                      </a>
+                    ) : (
+                      <span key={i}>{part}</span>
+                    )
+                  )}
                 </div>
               </div>
             ))}
