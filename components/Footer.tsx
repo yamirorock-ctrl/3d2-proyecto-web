@@ -33,7 +33,12 @@ const Footer: React.FC = () => {
                 </a>
               </li>
               <li>
-                <a href="#" className="hover:text-indigo-600 transition-colors">
+                <a 
+                  href={`https://api.whatsapp.com/send?phone=${(import.meta.env.VITE_WHATSAPP_NUMBER || "5491171285516").trim()}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-indigo-600 transition-colors"
+                >
                   Contacto
                 </a>
               </li>
