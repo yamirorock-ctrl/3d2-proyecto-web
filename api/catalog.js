@@ -25,7 +25,6 @@ export default async function handler(req, res) {
     const { data: products, error } = await supabase
       .from("products")
       .select("*")
-      .eq("draft", false)
       .order("created_at", { ascending: false });
 
     if (error)
