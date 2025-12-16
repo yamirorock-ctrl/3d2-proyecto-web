@@ -1,39 +1,37 @@
 import { createClient } from "@supabase/supabase-js";
 
 export default async function handler(req, res) {
-  // Configuración de CORS y Headers
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Content-Type", "text/csv; charset=utf-8");
-  res.setHeader("Content-Disposition", 'attachment; filename="catalog.csv"');
-
-  // Inicializar Supabase (check both VITE_ and standard env vars)
-  const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
-  const supabaseKey =
-    process.env.VITE_SUPABASE_ANON_TOKEN || process.env.SUPABASE_ANON_KEY;
-
-  if (!supabaseUrl || !supabaseKey) {
-    console.error(
-      "Faltan variables de entorno de Supabase (VITE_SUPABASE_URL/SUPABASE_URL)"
-    );
-    return res
-      .status(500)
-      .send("Error de configuración del servidor: Faltan credenciales.");
-  }
-
-  const supabase = createClient(supabaseUrl, supabaseKey);
-
   try {
-    // 1. Obtener productos de la base de datos
+    // Configuración de CORS y Headers
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.setHeader("Content-Type", "text/csv; charset=utf-8");
+    res.setHeader("Content-Disposition", 'attachment; filename="catalog.csv"');
+
+    // Inicializar Supabase (check both VITE_ and standard env vars)
+    const supabaseUrl =
+      process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
+    const supabaseKey =
+      process.env.VITE_SUPABASE_ANON_TOKEN || process.env.SUPABASE_ANON_KEY;
+
+    if (!supabaseUrl || !supabaseKey) {
+      throw new Error(
+        `Faltan credenciales de Supabase. URL: ${!!supabaseUrl}, Key: ${!!supabaseKey}`
+      );
+    }
+
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    // 1. Obtener productos
     const { data: products, error } = await supabase
       .from("products")
       .select("*")
-      .eq("draft", false) // Asumiendo que podría haber campo draft
+      .eq("draft", false)
       .order("created_at", { ascending: false });
 
     if (error)
-      throw new Error(`Supabase Error: ${error.message} (${error.code})`);
+      throw new Error(`Supabase Query Error: ${error.message} (${error.code})`);
 
-    // 2. Construir CSV para Facebook Catalog
+    // 2. Construir CSV
     const headers = [
       "id",
       "title",
@@ -55,7 +53,7 @@ export default async function handler(req, res) {
       return `"${CleanText.replace(/"/g, '""')}"`;
     };
 
-    const csvRows = products.map((product) => {
+    const csvRows = (products || []).map((product) => {
       const availability =
         product.stock && product.stock > 0 ? "in stock" : "out of stock";
       let imageUrl = product.image;
@@ -93,11 +91,8 @@ export default async function handler(req, res) {
     res.status(200).send(csvContent);
   } catch (error) {
     console.error("Error generating feed:", error);
-    // Return 200 OK with error for debugging visibility in browser/tool
     res
       .status(200)
-      .send(
-        `Error generating feed (Debug): ${error.message} \n Stack: ${error.stack}`
-      );
+      .send(`Error (Catch-All): ${error.message}\nStack: ${error.stack}`);
   }
 }
