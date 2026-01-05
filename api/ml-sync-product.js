@@ -35,16 +35,23 @@ export default async function handler(req, res) {
     }
 
     // 1. Get User's ML Token
+    // CRITICAL FIX: The ml_tokens table stores the MercadoLibre ID (numeric), not the Supabase UUID on 'user_id' column in the current OAuth flow.
+    // Since this is a single-tenant store (one admin, one ML account), we fetch the most recent token available.
     const { data: tokenData, error: tokenError } = await supabase
       .from("ml_tokens")
       .select("access_token")
-      .eq("user_id", userId)
+      .order("updated_at", { ascending: false })
+      .limit(1)
       .single();
 
     if (tokenError || !tokenData) {
+      console.error("[ML Sync] Token fetch error:", tokenError);
       return res
         .status(401)
-        .json({ error: "No linked MercadoLibre account found for this user." });
+        .json({
+          error:
+            "No linked MercadoLibre account found (check ml_tokens table).",
+        });
     }
 
     const accessToken = tokenData.access_token;
