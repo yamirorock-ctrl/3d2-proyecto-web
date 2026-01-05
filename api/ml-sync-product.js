@@ -157,9 +157,11 @@ export default async function handler(req, res) {
     // 6. Execute with Retry/Refresh Logic
     let mlResponse = await performMLRequest(accessToken);
 
-    // If Unauthorized, try to refresh token
-    if (mlResponse.status === 401) {
-      console.log("[ML Sync] Token expired (401). Attempting refresh...");
+    // If Unauthorized (401) or Forbidden (403 - sometimes ML sends this for policy issues), try to refresh token
+    if (mlResponse.status === 401 || mlResponse.status === 403) {
+      console.log(
+        `[ML Sync] Token issue (${mlResponse.status}). Attempting refresh...`
+      );
 
       const client_id = process.env.VITE_ML_APP_ID || process.env.ML_APP_ID;
       const client_secret =
