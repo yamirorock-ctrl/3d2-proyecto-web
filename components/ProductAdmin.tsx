@@ -3,6 +3,8 @@ import { toast } from 'sonner';
 import { Product, ProductImage } from '../types';
 import SmartImage from './SmartImage';
 import { uploadToSupabase } from '../services/supabaseService';
+import { syncProductToML } from '../services/mlService';
+import { useAuth } from '../context/AuthContext';
 // import { upsertProduct } from '../services/productService'; // Removed to avoid double save
 import { compressImage } from '../utils/imageCompression';
 
@@ -58,6 +60,8 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
   const [newImgColor, setNewImgColor] = useState('');
   const [newCategoryText, setNewCategoryText] = useState('');
   const [isCompressing, setIsCompressing] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const { user } = useAuth();
 
   const [compressionEnabled, setCompressionEnabled] = useState(true);
 
@@ -818,9 +822,45 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
                 </div>
              </div>
           </div>
-       <div className="mt-6 flex justify-end gap-3">
-          <button type="button" onClick={onClose} className="px-4 py-2 rounded-md bg-gray-100">Cancelar</button>
-          <button type="submit" className="px-4 py-2 rounded-md bg-teal-600 text-white">Guardar</button>
+       <div className="mt-6 flex justify-end gap-3 items-center">
+          {product && form.id && (
+             <button 
+                type="button" 
+                onClick={async () => {
+                    if(!user?.id) return toast.error('No estás autenticado para esta acción');
+                    if(!confirm('¿Sincronizar este producto con MercadoLibre? Se creará o actualizará según corresponda.')) return;
+                    setIsSyncing(true);
+                    const res = await syncProductToML(form.id, user.id);
+                    setIsSyncing(false);
+                    if(res.ok) {
+                        toast.success('¡Sincronización enviada con éxito!');
+                        if (res.data.permalink) {
+                            // Opcional: abrir link
+                            console.log('ML Link:', res.data.permalink);
+                        }
+                    } else {
+                        console.error(res.data);
+                        toast.error(`Error ML: ${res.data.error || 'Desconocido'}`);
+                    }
+                }}
+                disabled={isSyncing}
+                className="px-4 py-2 rounded-md bg-yellow-400 text-yellow-900 font-bold mr-auto flex items-center gap-2 hover:bg-yellow-300 transition-colors"
+             >
+                {isSyncing ? (
+                    <>
+                      <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" className="opacity-25"></circle><path fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" className="opacity-75"></path></svg>
+                      Enviando...
+                    </>
+                ) : (
+                    <>
+                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3.5 12C3.5 7.30558 7.30558 3.5 12 3.5C16.6944 3.5 20.5 7.30558 20.5 12C20.5 16.6944 16.6944 20.5 12 20.5C7.30558 20.5 3.5 16.6944 3.5 12Z" stroke="#713f12" strokeWidth="1.5"/><path d="M14.5 9L11 15L9 12" stroke="#713f12" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                       Publicar en MercadoLibre
+                    </>
+                )}
+             </button>
+          )}
+          <button type="button" onClick={onClose} className="px-4 py-2 rounded-md bg-gray-100 hover:bg-gray-200">Cancelar</button>
+          <button type="submit" className="px-4 py-2 rounded-md bg-teal-600 text-white hover:bg-teal-700 shadow-md">Guardar</button>
        </div>
       </form>
     </div>
