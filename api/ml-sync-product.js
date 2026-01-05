@@ -35,11 +35,10 @@ export default async function handler(req, res) {
     }
 
     // 1. Get User's ML Token
-    // CRITICAL FIX: The ml_tokens table stores the MercadoLibre ID (numeric), not the Supabase UUID on 'user_id' column in the current OAuth flow.
-    // Since this is a single-tenant store (one admin, one ML account), we fetch the most recent token available.
+    // We fetch the most recent token available (Single Tenant assumption).
     const { data: tokenData, error: tokenError } = await supabase
       .from("ml_tokens")
-      .select("access_token")
+      .select("access_token, refresh_token, user_id")
       .order("updated_at", { ascending: false })
       .limit(1)
       .single();
@@ -51,7 +50,8 @@ export default async function handler(req, res) {
       });
     }
 
-    const accessToken = tokenData.access_token;
+    let accessToken = tokenData.access_token;
+    const refreshToken = tokenData.refresh_token;
 
     // 2. Get Product Data from Supabase
     const { data: product, error: productError } = await supabase
@@ -118,44 +118,98 @@ export default async function handler(req, res) {
       // ML often requires attributes. We send basic ones (Brand/Model) to avoid rejection in strict categories.
     };
 
-    // 6. Check if Update or Create
-    let mlResponse;
-    const isUpdate = !!product.ml_item_id;
-
-    if (isUpdate) {
-      // UPDATE (PUT)
-      // Note: Some fields like title/category might be locked after sales.
-      // We focus on Price and Stock for updates usually.
-      const updateBody = {
-        price: price,
-        available_quantity: quantity,
-        pictures: itemBody.pictures,
-        // Title/Description updates depend on item status
-      };
-
-      console.log(`[ML Sync] Updating item ${product.ml_item_id}...`);
-      mlResponse = await fetch(
-        `https://api.mercadolibre.com/items/${product.ml_item_id}`,
-        {
-          method: "PUT",
+    // Helper function to perform the ML Request
+    async function performMLRequest(token) {
+      const isUpdate = !!product.ml_item_id;
+      if (isUpdate) {
+        // UPDATE (PUT)
+        const updateBody = {
+          price: price,
+          available_quantity: quantity,
+          pictures: itemBody.pictures,
+        };
+        console.log(`[ML Sync] Updating item ${product.ml_item_id}...`);
+        return fetch(
+          `https://api.mercadolibre.com/items/${product.ml_item_id}`,
+          {
+            method: "PUT",
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(updateBody),
+          }
+        );
+      } else {
+        // CREATE (POST)
+        console.log(`[ML Sync] Creating new item...`);
+        return fetch(`https://api.mercadolibre.com/items`, {
+          method: "POST",
           headers: {
-            Authorization: `Bearer ${accessToken}`,
+            Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
           },
-          body: JSON.stringify(updateBody),
+          body: JSON.stringify(itemBody),
+        });
+      }
+    }
+
+    // 6. Execute with Retry/Refresh Logic
+    let mlResponse = await performMLRequest(accessToken);
+
+    // If Unauthorized, try to refresh token
+    if (mlResponse.status === 401) {
+      console.log("[ML Sync] Token expired (401). Attempting refresh...");
+
+      const client_id = process.env.VITE_ML_APP_ID || process.env.ML_APP_ID;
+      const client_secret =
+        process.env.VITE_ML_APP_SECRET || process.env.ML_APP_SECRET;
+
+      // Call ML Token Refresh
+      const refreshRes = await fetch(
+        "https://api.mercadolibre.com/oauth/token",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: new URLSearchParams({
+            grant_type: "refresh_token",
+            client_id: String(client_id),
+            client_secret: String(client_secret),
+            refresh_token: refreshToken,
+          }),
         }
       );
-    } else {
-      // CREATE (POST)
-      console.log(`[ML Sync] Creating new item...`);
-      mlResponse = await fetch(`https://api.mercadolibre.com/items`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(itemBody),
-      });
+
+      const refreshData = await refreshRes.json();
+
+      if (!refreshRes.ok || !refreshData.access_token) {
+        console.error("[ML Sync] Token refresh failed:", refreshData);
+        return res.status(401).json({
+          error:
+            "MercadoLibre session expired. Please re-connect your account in settings.",
+          details: refreshData,
+        });
+      }
+
+      console.log("[ML Sync] Token refreshed successfully.");
+
+      // Save new tokens to Supabase
+      const { error: saveError } = await supabase
+        .from("ml_tokens")
+        .update({
+          access_token: refreshData.access_token,
+          refresh_token: refreshData.refresh_token, // ML rotates refresh tokens too
+          expires_in: refreshData.expires_in,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("user_id", tokenData.user_id); // using the ID from the selected row
+
+      if (saveError)
+        console.error("[ML Sync] Error saving new tokens:", saveError);
+
+      // Retry Request with new token
+      accessToken = refreshData.access_token;
+      mlResponse = await performMLRequest(accessToken);
     }
 
     const mlData = await mlResponse.json();
@@ -188,7 +242,7 @@ export default async function handler(req, res) {
 
     return res.status(200).json({
       success: true,
-      action: isUpdate ? "updated" : "created",
+      action: !!product.ml_item_id ? "updated" : "created",
       ml_id: mlData.id,
       permalink: mlData.permalink,
       status: mlData.status,
