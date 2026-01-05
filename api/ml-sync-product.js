@@ -79,9 +79,44 @@ export default async function handler(req, res) {
     );
     const quantity = product.stock || 1;
     const description = product.description || product.name;
-    // Basic image handling - take first correct URL
-    // FIX: Column name in DB is 'image', not 'image_url'
-    const pictureUrl = product.image || "https://via.placeholder.com/500";
+    // Image Handling: Support Multiple Images from 'images' column
+    let pictures = [];
+
+    // 1. Try 'images' array (Supabase JSONB or Array)
+    if (product.images && Array.isArray(product.images)) {
+      product.images.forEach((img) => {
+        let url = null;
+        if (typeof img === "string") {
+          // Check if it's a JSON string or direct URL
+          if (img.trim().startsWith("{")) {
+            try {
+              const parsed = JSON.parse(img);
+              url = parsed.url;
+            } catch (e) {
+              url = null;
+            }
+          } else {
+            url = img;
+          }
+        } else if (typeof img === "object" && img?.url) {
+          url = img.url;
+        }
+
+        if (url && url.startsWith("http")) {
+          pictures.push({ source: url });
+        }
+      });
+    }
+
+    // 2. Fallback to 'image' column if pictures is still empty
+    if (pictures.length === 0 && product.image) {
+      pictures.push({ source: product.image });
+    }
+
+    // 3. Last Resort
+    if (pictures.length === 0) {
+      pictures.push({ source: "https://via.placeholder.com/500" });
+    }
 
     // 4. Predict Category (Crucial for ML)
     // We search for the best category based on the title
@@ -109,7 +144,7 @@ export default async function handler(req, res) {
       description: {
         plain_text: description.slice(0, 4000),
       },
-      pictures: [{ source: pictureUrl }],
+      pictures: pictures,
       attributes: [
         { id: "BRAND", value_name: "3D2Store" }, // Marca genérica o marca propia
         { id: "MODEL", value_name: "Personalizado" }, // Modelo genérico
