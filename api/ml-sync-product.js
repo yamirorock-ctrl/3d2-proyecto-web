@@ -66,7 +66,13 @@ export default async function handler(req, res) {
 
     // 3. Prepare Product Data for ML
     const title = product.name;
-    const price = Math.floor(product.price); // ML usually requires integer or specific precision
+    // Price Markup for MercadoLibre (e.g. 15% to cover commissions)
+    const MARKUP_PERCENTAGE = 0.15;
+    const originalPrice = Number(product.price);
+    const price = Math.floor(originalPrice * (1 + MARKUP_PERCENTAGE));
+    console.log(
+      `[ML Sync] Price Markup: Base $${originalPrice} + 15% = $${price}`
+    );
     const quantity = product.stock || 1;
     const description = product.description || product.name;
     // Basic image handling - take first correct URL
