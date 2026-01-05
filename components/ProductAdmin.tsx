@@ -840,7 +840,10 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
                         }
                     } else {
                         console.error(res.data);
-                        toast.error(`Error ML: ${res.data.error || 'Desconocido'}`);
+                        // Mostrar mensaje específico de ML si existe (ej: "Attribute BRAND is required")
+                        const errorMsg = res.data.mlError || res.data.error || 'Error desconocido';
+                        const causeMsg = res.data.causes && res.data.causes.length > 0 ? `: ${res.data.causes[0].message}` : '';
+                        toast.error(`Error ML: ${errorMsg}${causeMsg}`);
                     }
                 }}
                 disabled={isSyncing}

@@ -46,12 +46,9 @@ export default async function handler(req, res) {
 
     if (tokenError || !tokenData) {
       console.error("[ML Sync] Token fetch error:", tokenError);
-      return res
-        .status(401)
-        .json({
-          error:
-            "No linked MercadoLibre account found (check ml_tokens table).",
-        });
+      return res.status(401).json({
+        error: "No linked MercadoLibre account found (check ml_tokens table).",
+      });
     }
 
     const accessToken = tokenData.access_token;
@@ -102,8 +99,12 @@ export default async function handler(req, res) {
         plain_text: description.slice(0, 4000),
       },
       pictures: [{ source: pictureUrl }],
-      // Attributes are complex, we skip mandatory ones for now relying on prediction or defaults?
-      // ML often requires attributes. Let's send basic ones if possible, but keep it simple first.
+      attributes: [
+        { id: "BRAND", value_name: "3D2 Web" }, // Marca genérica o marca propia
+        { id: "MODEL", value_name: "Personalizado" }, // Modelo genérico
+        { id: "ITEM_CONDITION", value_name: "Nuevo" },
+      ],
+      // ML often requires attributes. We send basic ones (Brand/Model) to avoid rejection in strict categories.
     };
 
     // 6. Check if Update or Create
@@ -152,6 +153,8 @@ export default async function handler(req, res) {
       console.error("[ML Sync] ML Error:", mlData);
       return res.status(mlResponse.status).json({
         error: "Error interfacing with MercadoLibre",
+        mlError: mlData.message || mlData.error || "Unknown ML Error",
+        causes: mlData.cause || [],
         details: mlData,
         sentBody: itemBody,
       });
