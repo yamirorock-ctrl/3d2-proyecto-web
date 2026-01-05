@@ -23,7 +23,7 @@ export function getAuthUrl() {
  * @param productId ID of the product in Supabase
  * @param userId ID of the admin user (required to fetch the correct ML Token)
  */
-export async function syncProductToML(productId: number, userId: string) {
+export async function syncProductToML(productId: number, userId: string, markupPercentage: number = 25) {
   const apiUrl = (import.meta as any).env.VITE_API_URL || '/api'; // Fallback to relative /api if not set
   
   // Usually in Vercel dev, it's just /api/ml-sync-product
@@ -36,7 +36,7 @@ export async function syncProductToML(productId: number, userId: string) {
       headers: {
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ productId, userId })
+      body: JSON.stringify({ productId, userId, markupPercentage })
     });
 
     const data = await response.json();
