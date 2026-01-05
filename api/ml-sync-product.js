@@ -70,7 +70,8 @@ export default async function handler(req, res) {
     const quantity = product.stock || 1;
     const description = product.description || product.name;
     // Basic image handling - take first correct URL
-    const pictureUrl = product.image_url || "https://via.placeholder.com/500";
+    // FIX: Column name in DB is 'image', not 'image_url'
+    const pictureUrl = product.image || "https://via.placeholder.com/500";
 
     // 4. Predict Category (Crucial for ML)
     // We search for the best category based on the title
