@@ -56,3 +56,63 @@ export const sendMessageToGemini = async (chat: Chat, message: string): Promise<
     return "Hubo un problema técnico al conectar con el asistente. Por favor intenta más tarde.";
   }
 };
+
+export const suggestMLTitle = async (productName: string, description: string, imageUrl?: string): Promise<string> => {
+  if (!ai) return "Error: API Key no configurada";
+
+  const prompt = `Actúa como un experto en SEO para MercadoLibre Argentina.
+  Genera un TÍTULO DE VENTA competitivo para el siguiente producto.
+  
+  Datos del producto:
+  - Nombre interno: ${productName}
+  - Descripción: ${description}
+  
+  Reglas CRÍTICAS:
+  1. Estructura recomendada: Producto + Características + Marca/Modelo.
+  2. Longitud: MÁXIMO 60 caracteres (estricto).
+  3. NO uses palabras promocionales (oferta, envío gratis, calidad).
+  4. Usa terminología de búsqueda común en Argentina.
+  5. Devuelve SOLO el texto del título final, sin comillas ni explicaciones.`;
+
+  try {
+      const parts: any[] = [{ text: prompt }];
+
+      if (imageUrl && imageUrl.startsWith('http')) {
+        try {
+          // Fetch image for multimodal analysis
+          const resp = await fetch(imageUrl);
+          if (resp.ok) {
+             const blob = await resp.blob();
+             const base64Data = await new Promise<string>((resolve) => {
+                 const reader = new FileReader();
+                 reader.onloadend = () => resolve((reader.result as string).split(',')[1]);
+                 reader.readAsDataURL(blob);
+             });
+             
+             parts.push({
+               inlineData: {
+                 mimeType: blob.type || 'image/jpeg',
+                 data: base64Data
+               }
+             });
+          }
+        } catch (e) {
+          console.warn("No se pudo procesar la imagen para la IA, usando solo texto.", e);
+        }
+      }
+
+      // Use gemini-1.5-flash for vision capabilities
+      const result = await ai.models.generateContent({
+        model: 'gemini-1.5-flash',
+        contents: [{
+            role: 'user',
+            parts: parts
+        }]
+      });
+
+      return (result as any).response.text().trim();
+  } catch (error) {
+    console.error("Error generando título ML:", error);
+    return "";
+  }
+};

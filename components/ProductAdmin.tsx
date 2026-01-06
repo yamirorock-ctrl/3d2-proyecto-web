@@ -4,7 +4,9 @@ import { Product, ProductImage } from '../types';
 import SmartImage from './SmartImage';
 import { uploadToSupabase } from '../services/supabaseService';
 import { syncProductToML } from '../services/mlService';
+import { suggestMLTitle } from '../services/geminiService';
 import { useAuth } from '../context/AuthContext';
+import { Sparkles, Wand2 } from 'lucide-react';
 // import { upsertProduct } from '../services/productService'; // Removed to avoid double save
 import { compressImage } from '../utils/imageCompression';
 
@@ -62,6 +64,7 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
   const [isCompressing, setIsCompressing] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [mlMarkup, setMlMarkup] = useState<string>('25'); // Default 25%
+  const [isGeneratingTitle, setIsGeneratingTitle] = useState(false);
   const { user } = useAuth();
 
   const [compressionEnabled, setCompressionEnabled] = useState(true);
@@ -822,6 +825,64 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
                    </div>
                 </div>
              </div>
+          </div>
+
+
+
+          {/* Sección MercadoLibre */}
+          <div className="sm:col-span-2 border-t pt-4 mt-2">
+            <h4 className="font-semibold text-slate-800 mb-2 flex items-center gap-2">
+                <span className="bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded text-xs">MercadoLibre</span>
+                Optimización para Venta
+            </h4>
+            <div className="bg-yellow-50/50 p-3 rounded-md border border-yellow-100">
+                <label className="block text-xs font-medium text-yellow-800 mb-1">Título para Publicación (SEO)</label>
+                <div className="flex gap-2">
+                    <div className="flex-1">
+                        <input 
+                            type="text" 
+                            maxLength={60}
+                            value={form.ml_title || ''}
+                            onChange={e => handleChange('ml_title', e.target.value)}
+                            className="block w-full rounded-md border-yellow-200 text-sm focus:border-yellow-400 focus:ring-yellow-400"
+                            placeholder={form.name || "Ej: Cuadro Decorativo Gato 3D..."}
+                        />
+                        <div className="flex justify-between mt-1">
+                            <p className="text-[10px] text-slate-500">
+                                Si se deja vacío, se usará el nombre interno.
+                            </p>
+                            <p className={`text-[10px] ${(form.ml_title?.length || 0) > 60 ? 'text-red-500 font-bold' : 'text-slate-400'}`}>
+                                {(form.ml_title?.length || 0)}/60
+                            </p>
+                        </div>
+                    </div>
+                    <button 
+                        type="button"
+                        onClick={async () => {
+                            if (!form.name && !form.description) return toast.error('Ingresa al menos nombre o descripción');
+                            setIsGeneratingTitle(true);
+                            const imgUrl = form.images?.[0]?.url || form.image;
+                            const suggestion = await suggestMLTitle(form.name, form.description, imgUrl);
+                            setIsGeneratingTitle(false);
+                            if (suggestion) {
+                                handleChange('ml_title', suggestion);
+                                toast.success('¡Título generado con IA!');
+                            } else {
+                                toast.error('No se pudo generar el título.');
+                            }
+                        }}
+                        disabled={isGeneratingTitle}
+                        className="px-3 py-1 bg-linear-to-r from-purple-600 to-indigo-600 text-white rounded-md text-xs font-bold shadow-sm hover:from-purple-700 hover:to-indigo-700 disabled:opacity-50 flex items-center gap-2 whitespace-nowrap h-fit self-start mt-0.5"
+                    >
+                        {isGeneratingTitle ? (
+                            <Wand2 size={14} className="animate-spin" />
+                        ) : (
+                            <Sparkles size={14} />
+                        )}
+                        {isGeneratingTitle ? 'Generando...' : 'Sugerir con IA'}
+                    </button>
+                </div>
+            </div>
           </div>
        <div className="mt-6 flex justify-end gap-3 items-center">
           {product && form.id && (

@@ -65,7 +65,7 @@ export default async function handler(req, res) {
     }
 
     // 3. Prepare Product Data for ML
-    const title = product.name;
+    const title = product.ml_title || product.name;
     // Price Markup for MercadoLibre
     // Default 25% if not specified by frontend
     const markupInput =

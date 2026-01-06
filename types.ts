@@ -11,6 +11,7 @@ export interface Product {
   category: string;
   image: string;
   images?: ProductImage[];
+  ml_title?: string; // Título específico para MercadoLibre
   description: string;
   technology?: '3D' | 'Láser';
   featured?: boolean;
