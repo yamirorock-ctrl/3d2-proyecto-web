@@ -3,6 +3,11 @@ import ReactDOM from 'react-dom/client';
 import { BrowserRouter, useNavigate } from 'react-router-dom';
 import { HelmetProvider } from 'react-helmet-async';
 import App from './App';
+import '@fontsource/inter/300.css';
+import '@fontsource/inter/400.css';
+import '@fontsource/inter/500.css';
+import '@fontsource/inter/600.css';
+import '@fontsource/inter/700.css';
 import './index.css';
 // Log de versión para verificar build en producción
 const BUILD_VERSION = (import.meta as any).env?.APP_VERSION || 'v0.0.0';
