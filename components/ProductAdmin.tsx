@@ -908,6 +908,9 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
                             const errorMsg = res.data.mlError || res.data.error || 'Error desconocido';
                             const causeMsg = res.data.causes && res.data.causes.length > 0 ? `: ${res.data.causes[0].message}` : '';
                             toast.error(`Error ML: ${errorMsg}${causeMsg}`);
+                            if (res.data.debug?.url) {
+                                console.log("Debug ML URL:", res.data.debug.url);
+                            }
                         }
                     }}
                     disabled={isSyncing}

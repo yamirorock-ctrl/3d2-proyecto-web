@@ -15,6 +15,8 @@ export function getAuthUrl() {
   url.searchParams.set('response_type', 'code');
   url.searchParams.set('client_id', String(appId));
   url.searchParams.set('redirect_uri', String(redirect));
+  // Request necessary scopes for posting items and refreshing tokens
+  url.searchParams.set('scope', 'offline_access write read');
   return url.toString();
 }
 
