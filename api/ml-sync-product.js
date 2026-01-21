@@ -75,7 +75,7 @@ export default async function handler(req, res) {
     const originalPrice = Number(product.price);
     const price = Math.floor(originalPrice * MARKUP_FACTOR);
     console.log(
-      `[ML Sync] Price Markup: Base $${originalPrice} + ${markupInput}% = $${price}`
+      `[ML Sync] Price Markup: Base $${originalPrice} + ${markupInput}% = $${price}`,
     );
     const quantity = product.stock || 1;
     const description = product.description || product.name;
@@ -121,7 +121,7 @@ export default async function handler(req, res) {
     // 4. Predict Category (Crucial for ML)
     // We search for the best category based on the title
     const predictionUrl = `https://api.mercadolibre.com/sites/MLA/domain_discovery/search?limit=1&q=${encodeURIComponent(
-      title
+      title,
     )}`;
     const predictorRes = await fetch(predictionUrl);
     const predictorData = await predictorRes.json();
@@ -173,7 +173,7 @@ export default async function handler(req, res) {
               "Content-Type": "application/json",
             },
             body: JSON.stringify(updateBody),
-          }
+          },
         );
       } else {
         // CREATE (POST)
@@ -195,7 +195,7 @@ export default async function handler(req, res) {
     // If Unauthorized (401) or Forbidden (403 - sometimes ML sends this for policy issues), try to refresh token
     if (mlResponse.status === 401 || mlResponse.status === 403) {
       console.log(
-        `[ML Sync] Token issue (${mlResponse.status}). Attempting refresh...`
+        `[ML Sync] Token issue (${mlResponse.status}). Attempting refresh...`,
       );
 
       const client_id = process.env.VITE_ML_APP_ID || process.env.ML_APP_ID;
@@ -214,7 +214,7 @@ export default async function handler(req, res) {
             client_secret: String(client_secret),
             refresh_token: refreshToken,
           }),
-        }
+        },
       );
 
       const refreshData = await refreshRes.json();
@@ -258,7 +258,15 @@ export default async function handler(req, res) {
         mlError: mlData.message || mlData.error || "Unknown ML Error",
         causes: mlData.cause || [],
         details: mlData,
-        sentBody: itemBody,
+        sentBody: itemBody?.pictures
+          ? { ...itemBody, pictures: "...hidden..." }
+          : itemBody,
+        debug: {
+          url: mlResponse.url,
+          status: mlResponse.status,
+          type: mlResponse.type,
+          headers: [...mlResponse.headers.entries()],
+        },
       });
     }
 
