@@ -43,7 +43,7 @@ export const createChatSession = (products: Product[]) => {
   try {
     console.log("[Gemini] Iniciando sesión de chat (v1)...");
     const model = genAI.getGenerativeModel({ 
-      model: "gemini-1.5-flash",
+      model: "gemini-2.0-flash",
       systemInstruction: systemInstruction 
     }, { apiVersion: 'v1' });
 
@@ -69,7 +69,7 @@ export const createChatSession = (products: Product[]) => {
     }
 
     try {
-       const modelPro = genAI!.getGenerativeModel({ model: "gemini-pro" }, { apiVersion: 'v1' });
+       const modelPro = genAI!.getGenerativeModel({ model: "gemini-2.5-pro" }, { apiVersion: 'v1' });
        return modelPro.startChat({ history: [] });
     } catch (e2) {
        console.error("[Gemini] Fallback de chat fallido:", e2);
@@ -93,9 +93,9 @@ export const suggestMLTitle = async (productName: string, description: string, i
   if (!genAI) return "Error: API Key no configurada";
 
   try {
-    console.log("[Gemini] Intentando generar título con gemini-1.5-flash (v1)...");
-    // Forzamos la versión v1 de la API para evitar el error 404 de v1beta
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" }, { apiVersion: 'v1' });
+    console.log("[Gemini] Intentando generar título con gemini-2.0-flash (v1)...");
+    // Usamos gemini-2.0-flash que está confirmado en tu lista de modelos
+    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" }, { apiVersion: 'v1' });
 
     const prompt = `Actúa como un experto en SEO para MercadoLibre Argentina.
 Genera un TÍTULO DE VENTA competitivo para el siguiente producto.
@@ -161,10 +161,10 @@ Reglas CRÍTICAS:
       }
     }
     
-    // Intento desesperado con gemini-pro si flash falla
+    // Intento con gemini-2.5-pro si flash falla
     try {
-      console.log("[Gemini] Fallback: Intentando con gemini-pro (v1)...");
-      const modelPro = genAI!.getGenerativeModel({ model: "gemini-pro" }, { apiVersion: 'v1' });
+      console.log("[Gemini] Fallback: Intentando con gemini-2.5-pro (v1)...");
+      const modelPro = genAI!.getGenerativeModel({ model: "gemini-2.5-pro" }, { apiVersion: 'v1' });
       const resultPro = await modelPro.generateContent(`Genera un título de 60 caracteres para un producto llamado: ${productName}`);
       const respPro = await resultPro.response;
       return respPro.text().trim();
