@@ -127,8 +127,15 @@ export default async function handler(req, res) {
     const predictorData = await predictorRes.json();
 
     let categoryId = "MLA3530"; // Default fallback (Others)
+    let categoryName = "Otros";
     if (predictorData && predictorData.length > 0) {
       categoryId = predictorData[0].category_id;
+      categoryName = predictorData[0].domain_id || "Predicha";
+      console.log(
+        `[ML Sync] Predicted Category: ${categoryId} (${categoryName})`,
+      );
+    } else {
+      console.log(`[ML Sync] Using fallback category: ${categoryId}`);
     }
 
     // 5. Build Item JSON
@@ -279,12 +286,36 @@ export default async function handler(req, res) {
     const mlData = await mlResponse.json();
 
     if (!mlResponse.ok) {
-      console.error("[ML Sync] ML Error:", mlData);
+      console.error("[ML Sync] ML Error Status:", mlResponse.status);
+      console.error(
+        "[ML Sync] ML Error Body:",
+        JSON.stringify(mlData, null, 2),
+      );
+
+      const causes = mlData.cause || [];
+      const errorMsg =
+        mlData.message || mlData.error || "Error desconocido en ML";
+
+      // Special check for family_name error (common in Service categories)
+      let suggestion = "Revisa los campos obligatorios del producto.";
+      if (
+        JSON.stringify(causes).includes("family_name") ||
+        errorMsg.includes("family_name")
+      ) {
+        suggestion =
+          "MercadoLibre cree que esto es un 'Servicio'. Intenta cambiar el nombre del producto para que parezca un objeto físico (ej: evita usar la palabra 'Servicio').";
+      }
+
       return res.status(mlResponse.status).json({
         error: "Error en la interfaz con MercadoLibre",
-        mlError: mlData.message || mlData.error || "Error desconocido en ML",
-        causes: mlData.cause || [],
+        mlError: errorMsg,
+        causes: causes,
         details: mlData,
+        suggestion: suggestion,
+        debug: {
+          categoryId,
+          categoryName,
+        },
       });
     }
 
