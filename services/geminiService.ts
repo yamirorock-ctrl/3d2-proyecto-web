@@ -76,8 +76,9 @@ export const suggestMLTitle = async (productName: string, description: string, i
   if (!genAI) return "Error: API Key no configurada";
 
   try {
-    // Usamos gemini-1.5-flash que es el modelo estándar actual
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    console.log("[Gemini] Intentando generar título con gemini-1.5-flash (v1)...");
+    // Forzamos la versión v1 de la API para evitar el error 404 de v1beta
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" }, { apiVersion: 'v1' });
 
     const prompt = `Actúa como un experto en SEO para MercadoLibre Argentina.
 Genera un TÍTULO DE VENTA competitivo para el siguiente producto.
@@ -114,26 +115,28 @@ Reglas CRÍTICAS:
           });
         }
       } catch (e) {
-        console.warn("No se pudo procesar la imagen para la IA, usando solo texto.", e);
+        console.warn("[Gemini] No se pudo procesar la imagen, usando solo texto.", e);
       }
     }
 
-    // Llamada más robusta especificando el objeto contents
     const result = await model.generateContent({
       contents: [{ role: 'user', parts }]
     });
     
     const response = await result.response;
     return response.text().trim();
-  } catch (error) {
-    console.error("Error generando título ML:", error);
-    // Fallback a modelo pro si flash falla por alguna razón de cuota o disponibilidad
+  } catch (error: any) {
+    console.error("[Gemini] Error detallado:", error);
+    
+    // Intento desesperado con gemini-pro si flash falla
     try {
-      const modelPro = genAI.getGenerativeModel({ model: "gemini-pro" });
-      const resultPro = await modelPro.generateContent(`Genera un título de 60 caracteres para: ${productName}`);
+      console.log("[Gemini] Fallback: Intentando con gemini-pro (v1)...");
+      const modelPro = genAI.getGenerativeModel({ model: "gemini-pro" }, { apiVersion: 'v1' });
+      const resultPro = await modelPro.generateContent(`Genera un título de 60 caracteres para un producto llamado: ${productName}`);
       const respPro = await resultPro.response;
       return respPro.text().trim();
     } catch (e2) {
+      console.error("[Gemini] Fallback fallido también:", e2);
       return "";
     }
   }
