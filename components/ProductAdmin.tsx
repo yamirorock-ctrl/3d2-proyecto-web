@@ -899,17 +899,20 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
                         if(res.ok) {
                             toast.success('¡Sincronización enviada con éxito!');
                             if (res.data.permalink) {
-                                // Opcional: abrir link
                                 console.log('ML Link:', res.data.permalink);
                             }
                         } else {
                             console.error(res.data);
-                            // Mostrar mensaje específico de ML si existe (ej: "Attribute BRAND is required")
                             const errorMsg = res.data.mlError || res.data.error || 'Error desconocido';
                             const causeMsg = res.data.causes && res.data.causes.length > 0 ? `: ${res.data.causes[0].message}` : '';
-                            toast.error(`Error ML: ${errorMsg}${causeMsg}`);
-                            if (res.data.debug?.url) {
-                                console.log("Debug ML URL:", res.data.debug.url);
+                            const suggestion = res.data.suggestion ? `\nSugerencia: ${res.data.suggestion}` : '';
+                            
+                            // Si hay restricciones, mostrarlas
+                            if (res.data.restrictions && res.data.restrictions.length > 0) {
+                                const restText = res.data.restrictions.map((r: any) => `- ${r.message}`).join('\n');
+                                toast.error(`Error ML: ${errorMsg}${causeMsg}${suggestion}\nRestricciones:\n${restText}`, { duration: 10000 });
+                            } else {
+                                toast.error(`Error ML: ${errorMsg}${causeMsg}${suggestion}`);
                             }
                         }
                     }}

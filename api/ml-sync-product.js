@@ -157,7 +157,6 @@ export default async function handler(req, res) {
     async function performMLRequest(token) {
       const isUpdate = !!product.ml_item_id;
       if (isUpdate) {
-        // UPDATE (PUT)
         const updateBody = {
           price: price,
           available_quantity: quantity,
@@ -176,8 +175,10 @@ export default async function handler(req, res) {
           },
         );
       } else {
-        // CREATE (POST)
-        console.log(`[ML Sync] Creating new item...`);
+        console.log(
+          `[ML Sync] Creating new item... Payload:`,
+          JSON.stringify({ ...itemBody, pictures: "...hidden..." }),
+        );
         return fetch(`https://api.mercadolibre.com/items`, {
           method: "POST",
           headers: {
@@ -192,61 +193,87 @@ export default async function handler(req, res) {
     // 6. Execute with Retry/Refresh Logic
     let mlResponse = await performMLRequest(accessToken);
 
-    // If Unauthorized (401) or Forbidden (403 - sometimes ML sends this for policy issues), try to refresh token
     if (mlResponse.status === 401 || mlResponse.status === 403) {
-      console.log(
-        `[ML Sync] Token issue (${mlResponse.status}). Attempting refresh...`,
-      );
+      console.log(`[ML Sync] Status ${mlResponse.status} encountered.`);
 
       const client_id = process.env.VITE_ML_APP_ID || process.env.ML_APP_ID;
       const client_secret =
         process.env.VITE_ML_APP_SECRET || process.env.ML_APP_SECRET;
 
-      // Call ML Token Refresh
-      const refreshRes = await fetch(
-        "https://api.mercadolibre.com/oauth/token",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/x-www-form-urlencoded" },
-          body: new URLSearchParams({
-            grant_type: "refresh_token",
-            client_id: String(client_id),
-            client_secret: String(client_secret),
-            refresh_token: refreshToken,
-          }),
-        },
-      );
+      if (mlResponse.status === 401) {
+        console.log(`[ML Sync] Attempting token refresh...`);
+        const refreshRes = await fetch(
+          "https://api.mercadolibre.com/oauth/token",
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body: new URLSearchParams({
+              grant_type: "refresh_token",
+              client_id: String(client_id),
+              client_secret: String(client_secret),
+              refresh_token: refreshToken,
+            }),
+          },
+        );
 
-      const refreshData = await refreshRes.json();
+        const refreshData = await refreshRes.json();
 
-      if (!refreshRes.ok || !refreshData.access_token) {
-        console.error("[ML Sync] Token refresh failed:", refreshData);
-        return res.status(401).json({
-          error:
-            "MercadoLibre session expired. Please re-connect your account in settings.",
-          details: refreshData,
+        if (!refreshRes.ok || !refreshData.access_token) {
+          console.error("[ML Sync] Token refresh failed:", refreshData);
+          return res.status(401).json({
+            error:
+              "La sesión de MercadoLibre expiró. Por favor, vuelve a conectar tu cuenta en configuración.",
+            details: refreshData,
+          });
+        }
+
+        console.log("[ML Sync] Token refreshed successfully.");
+        const { error: saveError } = await supabase
+          .from("ml_tokens")
+          .update({
+            access_token: refreshData.access_token,
+            refresh_token: refreshData.refresh_token,
+            expires_in: refreshData.expires_in,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("user_id", tokenData.user_id);
+
+        if (saveError)
+          console.error("[ML Sync] Error saving new tokens:", saveError);
+
+        accessToken = refreshData.access_token;
+        mlResponse = await performMLRequest(accessToken);
+      } else if (mlResponse.status === 403) {
+        // Diagnostic for 403 Forbidden
+        const mlData = await mlResponse.clone().json();
+        console.error("[ML Sync] 403 Forbidden. ML Response:", mlData);
+
+        // Check User Restrictions
+        let restrictions = null;
+        try {
+          const restRes = await fetch(
+            `https://api.mercadolibre.com/users/${tokenData.user_id}/restrictions`,
+            {
+              headers: { Authorization: `Bearer ${accessToken}` },
+            },
+          );
+          restrictions = await restRes.json();
+          console.log("[ML Sync] User Restrictions:", restrictions);
+        } catch (e) {
+          console.error("[ML Sync] Failed to fetch restrictions:", e);
+        }
+
+        return res.status(403).json({
+          error: "Acceso denegado (403). MercadoLibre rechazó la operación.",
+          mlError: mlData.message || mlData.error || "Operación no permitida",
+          code: mlData.code,
+          causes: mlData.cause || [],
+          restrictions: restrictions,
+          details: mlData,
+          suggestion:
+            "Verifica que tu cuenta de MercadoLibre no tenga deudas o suspensiones.",
         });
       }
-
-      console.log("[ML Sync] Token refreshed successfully.");
-
-      // Save new tokens to Supabase
-      const { error: saveError } = await supabase
-        .from("ml_tokens")
-        .update({
-          access_token: refreshData.access_token,
-          refresh_token: refreshData.refresh_token, // ML rotates refresh tokens too
-          expires_in: refreshData.expires_in,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("user_id", tokenData.user_id); // using the ID from the selected row
-
-      if (saveError)
-        console.error("[ML Sync] Error saving new tokens:", saveError);
-
-      // Retry Request with new token
-      accessToken = refreshData.access_token;
-      mlResponse = await performMLRequest(accessToken);
     }
 
     const mlData = await mlResponse.json();
@@ -254,19 +281,10 @@ export default async function handler(req, res) {
     if (!mlResponse.ok) {
       console.error("[ML Sync] ML Error:", mlData);
       return res.status(mlResponse.status).json({
-        error: "Error interfacing with MercadoLibre",
-        mlError: mlData.message || mlData.error || "Unknown ML Error",
+        error: "Error en la interfaz con MercadoLibre",
+        mlError: mlData.message || mlData.error || "Error desconocido en ML",
         causes: mlData.cause || [],
         details: mlData,
-        sentBody: itemBody?.pictures
-          ? { ...itemBody, pictures: "...hidden..." }
-          : itemBody,
-        debug: {
-          url: mlResponse.url,
-          status: mlResponse.status,
-          type: mlResponse.type,
-          headers: [...mlResponse.headers.entries()],
-        },
       });
     }
 
