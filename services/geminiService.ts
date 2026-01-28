@@ -1,16 +1,15 @@
-import { GoogleGenAI, Chat } from "@google/genai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import { Product } from "../types";
 
 const apiKey = import.meta.env.VITE_GEMINI_API_KEY || '';
-let ai: GoogleGenAI | null = null;
+let genAI: GoogleGenerativeAI | null = null;
 
-// Initialize only if key exists and is not placeholder
 if (apiKey && apiKey !== 'TU_API_KEY_AQUI') {
-  ai = new GoogleGenAI({ apiKey });
+  genAI = new GoogleGenerativeAI(apiKey);
 }
 
-export const createChatSession = (products: Product[]): Chat | null => {
-  if (!ai) return null;
+export const createChatSession = (products: Product[]) => {
+  if (!genAI) return null;
 
   const productContext = products.map(p => 
     `- ${p.name} ($${p.price}): ${p.description} [Categoría: ${p.category}]`
@@ -38,19 +37,24 @@ export const createChatSession = (products: Product[]): Chat | null => {
     IMPORTANTE: NO uses formato Markdown para los enlaces (como [Texto](URL)). Escribe simplemente la URL completa http://... para que el sistema la detecte automáticamente.
   `;
 
-  return ai.chats.create({
-    model: 'gemini-2.5-flash',
-    config: {
-      systemInstruction: systemInstruction,
+  const model = genAI.getGenerativeModel({ 
+    model: "gemini-1.5-flash",
+    systemInstruction: systemInstruction 
+  });
+
+  return model.startChat({
+    history: [],
+    generationConfig: {
       temperature: 0.7,
     },
   });
 };
 
-export const sendMessageToGemini = async (chat: Chat, message: string): Promise<string> => {
+export const sendMessageToGemini = async (chat: any, message: string): Promise<string> => {
   try {
-    const response = await chat.sendMessage({ message });
-    return response.text || "Lo siento, no pude procesar tu respuesta en este momento.";
+    const result = await chat.sendMessage(message);
+    const response = await result.response;
+    return response.text() || "Lo siento, no pude procesar tu respuesta en este momento.";
   } catch (error) {
     console.error("Error communicating with Gemini:", error);
     return "Hubo un problema técnico al conectar con el asistente. Por favor intenta más tarde.";
@@ -58,7 +62,9 @@ export const sendMessageToGemini = async (chat: Chat, message: string): Promise<
 };
 
 export const suggestMLTitle = async (productName: string, description: string, imageUrl?: string): Promise<string> => {
-  if (!ai) return "Error: API Key no configurada";
+  if (!genAI) return "Error: API Key no configurada";
+
+  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
   const prompt = `Actúa como un experto en SEO para MercadoLibre Argentina.
   Genera un TÍTULO DE VENTA competitivo para el siguiente producto.
@@ -75,11 +81,10 @@ export const suggestMLTitle = async (productName: string, description: string, i
   5. Devuelve SOLO el texto del título final, sin comillas ni explicaciones.`;
 
   try {
-      const parts: any[] = [{ text: prompt }];
+      const parts: any[] = [prompt];
 
       if (imageUrl && imageUrl.startsWith('http')) {
         try {
-          // Fetch image for multimodal analysis
           const resp = await fetch(imageUrl);
           if (resp.ok) {
              const blob = await resp.blob();
@@ -101,16 +106,9 @@ export const suggestMLTitle = async (productName: string, description: string, i
         }
       }
 
-      // Use gemini-1.5-flash for vision capabilities
-      const result = await ai.models.generateContent({
-        model: 'gemini-1.5-flash',
-        contents: [{
-            role: 'user',
-            parts: parts
-        }]
-      });
-
-      return (result as any).response.text().trim();
+      const result = await model.generateContent(parts);
+      const response = await result.response;
+      return response.text().trim();
   } catch (error) {
     console.error("Error generando título ML:", error);
     return "";
