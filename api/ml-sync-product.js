@@ -129,11 +129,24 @@ export default async function handler(req, res) {
     let categoryId = "MLA3530"; // Default fallback (Others)
     let categoryName = "Otros";
     if (predictorData && predictorData.length > 0) {
-      categoryId = predictorData[0].category_id;
-      categoryName = predictorData[0].domain_id || "Predicha";
-      console.log(
-        `[ML Sync] Predicted Category: ${categoryId} (${categoryName})`,
-      );
+      // Filter out 'SERVICE' domains if possible, as they require extra contact fields (like family_name)
+      const isService =
+        predictorData[0].domain_id?.includes("SERVICE") ||
+        predictorData[0].domain_id?.includes("SERVICIO");
+
+      if (isService) {
+        console.log(
+          `[ML Sync] Predictor suggested a Service category (${predictorData[0].domain_id}). Falling back to generic product category to avoid 'family_name' errors.`,
+        );
+        categoryId = "MLA3530"; // Others
+        categoryName = "Otros (Físico)";
+      } else {
+        categoryId = predictorData[0].category_id;
+        categoryName = predictorData[0].domain_id || "Predicha";
+        console.log(
+          `[ML Sync] Predicted Category: ${categoryId} (${categoryName})`,
+        );
+      }
     } else {
       console.log(`[ML Sync] Using fallback category: ${categoryId}`);
     }
