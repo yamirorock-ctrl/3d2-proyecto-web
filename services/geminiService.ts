@@ -53,10 +53,23 @@ export const createChatSession = (products: Product[]) => {
         temperature: 0.7,
       },
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("[Gemini] Error al crear sesión de chat (Flash v1):", error);
+    
+    // Diagnóstico proactivo: Listar modelos disponibles (sin bloquear)
+    if (genAI) {
+      fetch(`https://generativelanguage.googleapis.com/v1/models?key=${apiKey}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.models) {
+            console.log("[Gemini] Modelos disponibles para tu API Key (Chat):", data.models.map((m: any) => m.name).join(", "));
+          }
+        })
+        .catch(diagError => console.error("[Gemini] Error durante el diagnóstico de modelos en Chat:", diagError));
+    }
+
     try {
-       const modelPro = genAI.getGenerativeModel({ model: "gemini-pro" }, { apiVersion: 'v1' });
+       const modelPro = genAI!.getGenerativeModel({ model: "gemini-pro" }, { apiVersion: 'v1' });
        return modelPro.startChat({ history: [] });
     } catch (e2) {
        console.error("[Gemini] Fallback de chat fallido:", e2);
