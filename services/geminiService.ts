@@ -129,10 +129,26 @@ Reglas CRÍTICAS:
   } catch (error: any) {
     console.error("[Gemini] Error detallado:", error);
     
+    // Diagnóstico proactivo: Listar modelos disponibles para esta API Key
+    if (genAI) {
+      try {
+        console.log("[Gemini] Intentando listar modelos disponibles para diagnóstico...");
+        const res = await fetch(`https://generativelanguage.googleapis.com/v1/models?key=${apiKey}`);
+        const data = await res.json();
+        if (data.models) {
+          console.log("[Gemini] Modelos disponibles para tu API Key:", data.models.map((m: any) => m.name).join(", "));
+        } else {
+          console.log("[Gemini] No se pudieron listar modelos. Respuesta de API:", data);
+        }
+      } catch (diagError) {
+        console.error("[Gemini] Error durante el diagnóstico de modelos:", diagError);
+      }
+    }
+    
     // Intento desesperado con gemini-pro si flash falla
     try {
       console.log("[Gemini] Fallback: Intentando con gemini-pro (v1)...");
-      const modelPro = genAI.getGenerativeModel({ model: "gemini-pro" }, { apiVersion: 'v1' });
+      const modelPro = genAI!.getGenerativeModel({ model: "gemini-pro" }, { apiVersion: 'v1' });
       const resultPro = await modelPro.generateContent(`Genera un título de 60 caracteres para un producto llamado: ${productName}`);
       const respPro = await resultPro.response;
       return respPro.text().trim();
