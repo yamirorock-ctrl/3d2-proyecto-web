@@ -41,11 +41,11 @@ export const createChatSession = (products: Product[]) => {
   `;
 
   try {
-    console.log("[Gemini] Iniciando sesión de chat (v1)...");
+    console.log("[Gemini] Iniciando sesión de chat (v1/2.0-flash)...");
     const model = genAI.getGenerativeModel({ 
       model: "gemini-2.0-flash",
       systemInstruction: systemInstruction 
-    }, { apiVersion: 'v1' });
+    });
 
     return model.startChat({
       history: [],
@@ -54,9 +54,9 @@ export const createChatSession = (products: Product[]) => {
       },
     });
   } catch (error: any) {
-    console.error("[Gemini] Error al crear sesión de chat (Flash v1):", error);
+    console.error("[Gemini] Error al crear sesión de chat (Flash 2.0):", error);
     
-    // Diagnóstico proactivo: Listar modelos disponibles (sin bloquear)
+    // Proactive diagnostic
     if (genAI) {
       fetch(`https://generativelanguage.googleapis.com/v1/models?key=${apiKey}`)
         .then(res => res.json())
@@ -65,11 +65,11 @@ export const createChatSession = (products: Product[]) => {
             console.log("[Gemini] Modelos disponibles para tu API Key (Chat):", data.models.map((m: any) => m.name).join(", "));
           }
         })
-        .catch(diagError => console.error("[Gemini] Error durante el diagnóstico de modelos en Chat:", diagError));
+        .catch(err => console.error("[Gemini] Error en diagnóstico de chat:", err));
     }
 
     try {
-       const modelPro = genAI!.getGenerativeModel({ model: "gemini-2.5-pro" }, { apiVersion: 'v1' });
+       const modelPro = genAI!.getGenerativeModel({ model: "gemini-2.5-pro" });
        return modelPro.startChat({ history: [] });
     } catch (e2) {
        console.error("[Gemini] Fallback de chat fallido:", e2);
@@ -93,9 +93,8 @@ export const suggestMLTitle = async (productName: string, description: string, i
   if (!genAI) return "Error: API Key no configurada";
 
   try {
-    console.log("[Gemini] Intentando generar título con gemini-2.0-flash (v1)...");
-    // Usamos gemini-2.0-flash que está confirmado en tu lista de modelos
-    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" }, { apiVersion: 'v1' });
+    console.log("[Gemini] Intentando generar título con gemini-2.0-flash...");
+    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
     const prompt = `Actúa como un experto en SEO para MercadoLibre Argentina.
 Genera un TÍTULO DE VENTA competitivo para el siguiente producto.
@@ -111,7 +110,7 @@ Reglas CRÍTICAS:
 4. Usa terminología de búsqueda común en Argentina.
 5. Devuelve SOLO el texto del título final, sin comillas ni explicaciones.`;
 
-    const parts: any[] = [{ text: prompt }];
+    const parts: any[] = [prompt];
 
     if (imageUrl && imageUrl.startsWith('http')) {
       try {
@@ -136,35 +135,25 @@ Reglas CRÍTICAS:
       }
     }
 
-    const result = await model.generateContent({
-      contents: [{ role: 'user', parts }]
-    });
-    
+    const result = await model.generateContent(parts);
     const response = await result.response;
     return response.text().trim();
   } catch (error: any) {
     console.error("[Gemini] Error detallado:", error);
     
-    // Diagnóstico proactivo: Listar modelos disponibles para esta API Key
     if (genAI) {
-      try {
-        console.log("[Gemini] Intentando listar modelos disponibles para diagnóstico...");
-        const res = await fetch(`https://generativelanguage.googleapis.com/v1/models?key=${apiKey}`);
-        const data = await res.json();
-        if (data.models) {
-          console.log("[Gemini] Modelos disponibles para tu API Key:", data.models.map((m: any) => m.name).join(", "));
-        } else {
-          console.log("[Gemini] No se pudieron listar modelos. Respuesta de API:", data);
-        }
-      } catch (diagError) {
-        console.error("[Gemini] Error durante el diagnóstico de modelos:", diagError);
-      }
+      fetch(`https://generativelanguage.googleapis.com/v1/models?key=${apiKey}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.models) {
+             console.log("[Gemini] Modelos disponibles para tu API Key:", data.models.map((m: any) => m.name).join(", "));
+          }
+        });
     }
     
-    // Intento con gemini-2.5-pro si flash falla
     try {
-      console.log("[Gemini] Fallback: Intentando con gemini-2.5-pro (v1)...");
-      const modelPro = genAI!.getGenerativeModel({ model: "gemini-2.5-pro" }, { apiVersion: 'v1' });
+      console.log("[Gemini] Fallback: Intentando con gemini-2.5-pro...");
+      const modelPro = genAI!.getGenerativeModel({ model: "gemini-2.5-pro" });
       const resultPro = await modelPro.generateContent(`Genera un título de 60 caracteres para un producto llamado: ${productName}`);
       const respPro = await resultPro.response;
       return respPro.text().trim();
