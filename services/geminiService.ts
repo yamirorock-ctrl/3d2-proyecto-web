@@ -38,10 +38,11 @@ export const createChatSession = (products: Product[]) => {
   `;
 
   try {
+    console.log("[Gemini] Iniciando sesión de chat (v1)...");
     const model = genAI.getGenerativeModel({ 
       model: "gemini-1.5-flash",
       systemInstruction: systemInstruction 
-    });
+    }, { apiVersion: 'v1' });
 
     return model.startChat({
       history: [],
@@ -50,12 +51,12 @@ export const createChatSession = (products: Product[]) => {
       },
     });
   } catch (error) {
-    console.error("Error al crear sesión de chat (Flash):", error);
+    console.error("[Gemini] Error al crear sesión de chat (Flash v1):", error);
     try {
-       // Fallback a modelo pro si systemInstruction o modelo flash fallan
-       const modelPro = genAI.getGenerativeModel({ model: "gemini-pro" });
+       const modelPro = genAI.getGenerativeModel({ model: "gemini-pro" }, { apiVersion: 'v1' });
        return modelPro.startChat({ history: [] });
     } catch (e2) {
+       console.error("[Gemini] Fallback de chat fallido:", e2);
        return null;
     }
   }
