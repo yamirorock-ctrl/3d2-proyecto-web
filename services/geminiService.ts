@@ -6,6 +6,9 @@ let genAI: GoogleGenerativeAI | null = null;
 
 if (apiKey && apiKey !== 'TU_API_KEY_AQUI') {
   genAI = new GoogleGenerativeAI(apiKey);
+  console.log("[Gemini] API Key detectada y servicio inicializado.");
+} else {
+  console.warn("[Gemini] No se detectó VITE_GEMINI_API_KEY en las variables de entorno.");
 }
 
 export const createChatSession = (products: Product[]) => {
