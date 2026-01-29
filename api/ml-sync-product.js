@@ -252,6 +252,7 @@ export default async function handler(req, res) {
           { id: "BRAND", value_name: "3D2Store" },
           { id: "MODEL", value_name: "Personalizado" },
           { id: "ITEM_CONDITION", value_id: "2230284" },
+          { id: "EMPTY_GTIN_REASON", value_id: "17055158" },
         ];
         delete itemBody.sale_terms;
 
@@ -354,7 +355,8 @@ export default async function handler(req, res) {
 
       const causes = mlData.cause || mlData.error_messages || [];
       const errorMsg =
-        mlData.message || mlData.error || "Error desconocido en ML";
+        (mlData.message || mlData.error || "Error desconocido en ML") +
+        (serverLogs.length > 0 ? " | LOGS: " + serverLogs.join(" -> ") : "");
 
       // Special check for common errors
       let suggestion = "Revisa los campos obligatorios del producto.";
