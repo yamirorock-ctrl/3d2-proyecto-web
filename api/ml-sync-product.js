@@ -225,15 +225,29 @@ export default async function handler(req, res) {
     // 6. Execute with Retry/Refresh Logic
     let mlResponse = await performMLRequest(accessToken);
 
-    // RETRY LOGIC FOR "SERVICE" MISCLASSIFICATION (family_name error)
+    // RETRY LOGIC FOR "SERVICE" MISCLASSIFICATION (family_name/given_name error)
     if (mlResponse.status === 400) {
       const clone = await mlResponse.clone().json();
       const errString = JSON.stringify(clone);
-      if (errString.includes("family_name")) {
+      if (
+        errString.includes("family_name") ||
+        errString.includes("given_name")
+      ) {
         console.log(
-          "[ML Sync] Detected 'family_name' error (Service mismtach). Retrying with safe category MLA3530...",
+          "[ML Sync] Detected Service mismatch. Retrying with MLA3530 (stripped)...",
         );
+
         itemBody.category_id = "MLA3530"; // "Otros" -> Physical product fallback
+
+        // Strip strict attributes for the generic category to avoid new validation errors
+        itemBody.attributes = [
+          { id: "BRAND", value_name: "3D2Store" },
+          { id: "MODEL", value_name: "Personalizado" },
+          { id: "ITEM_CONDITION", value_id: "2230284" }, // "Nuevo"
+        ];
+        delete itemBody.sale_terms; // Remove specific warranty terms that might conflict
+        // delete itemBody.video_ids;
+
         mlResponse = await performMLRequest(accessToken);
       }
     }
