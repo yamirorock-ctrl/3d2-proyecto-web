@@ -166,11 +166,11 @@ export default async function handler(req, res) {
       },
       pictures: pictures,
       attributes: [
-        { id: "BRAND", value_name: "3D2Store" }, // Marca genérica o marca propia
-        { id: "MODEL", value_name: "Personalizado" }, // Modelo genérico
-        { id: "ITEM_CONDITION", value_name: "Nuevo" },
+        { id: "BRAND", value_name: "3D2Store" },
+        { id: "MODEL", value_name: "Personalizado" },
+        { id: "EMPTY_GTIN_REASON", value_name: "No aplica" },
       ],
-      // ML often requires attributes. We send basic ones (Brand/Model) to avoid rejection in strict categories.
+      // ML often requires attributes like BRAND, MODEL, and GTIN-related fields.
     };
 
     // Helper function to perform the ML Request
