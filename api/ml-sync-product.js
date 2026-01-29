@@ -151,16 +151,20 @@ export default async function handler(req, res) {
       console.log(`[ML Sync] Using fallback category: ${categoryId}`);
     }
 
+    // Aseguramos que el precio y stock sean válidos
+    const finalPrice = Math.max(price || 1, 1);
+    const finalQuantity = Math.max(quantity || 1, 1);
+
     // 5. Build Item JSON
     const itemBody = {
       title: title.slice(0, 60), // ML limit 60 chars
       category_id: categoryId,
-      price: price,
+      price: finalPrice,
       currency_id: "ARS",
-      available_quantity: quantity,
+      available_quantity: finalQuantity,
       buying_mode: "buy_it_now",
       condition: "new",
-      listing_type_id: "gold_special", // Classic exposure. 'gold_pro' is Premium. 'gold_special' is Clásica.
+      listing_type_id: "gold_special", // Classic exposure.
       description: {
         plain_text: description.slice(0, 4000),
       },
@@ -169,6 +173,7 @@ export default async function handler(req, res) {
         { id: "BRAND", value_name: "3D2Store" },
         { id: "MODEL", value_name: "Personalizado" },
         { id: "EMPTY_GTIN_REASON", value_id: "17055158" }, // "El producto no tiene código registrado"
+        { id: "ITEM_CONDITION", value_id: "2230284" }, // "Nuevo"
       ],
       // ML often requires attributes like BRAND, MODEL, and GTIN-related fields.
     };
@@ -180,8 +185,8 @@ export default async function handler(req, res) {
       const isUpdate = !!product.ml_item_id;
       if (isUpdate) {
         const updateBody = {
-          price: price,
-          available_quantity: quantity,
+          price: finalPrice,
+          available_quantity: finalQuantity,
           pictures: itemBody.pictures,
         };
         console.log(`[ML Sync] Updating item ${product.ml_item_id}...`);
