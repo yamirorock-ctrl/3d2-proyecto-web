@@ -314,18 +314,17 @@ export default async function handler(req, res) {
       const causesStr = JSON.stringify(causes);
 
       if (
-        causesStr.includes("family_name") ||
-        errorMsg.includes("family_name")
-      ) {
-        suggestion =
-          "MercadoLibre cree que esto es un 'Servicio'. Intenta cambiar el nombre del producto para que parezca un objeto físico (ej: evita usar la palabra 'Servicio').";
-      } else if (
         errorMsg.includes("body.required_fields") ||
         errorMsg.includes("missing_attributes")
       ) {
-        const missingFields = causes.map((c) => c.message || c.id).join(", ");
-        suggestion = `Faltan campos obligatorios exigidos por MercadoLibre: ${missingFields}.`;
+        const missingFields = causes
+          .map((c) => c.message || c.id || JSON.stringify(c))
+          .join(", ");
+        suggestion = `Faltan campos obligatorios en MercadoLibre: ${missingFields}.`;
         console.log(`[ML Sync] Missing fields identified: ${missingFields}`);
+      } else if (causesStr.includes("family_name")) {
+        suggestion =
+          "MercadoLibre cree que esto es un 'Servicio'. Intenta cambiar el nombre del producto para que parezca un objeto físico.";
       } else if (causesStr.includes("title.max_length")) {
         suggestion =
           "El título es demasiado largo. MercadoLibre permite un máximo de 60 caracteres.";
