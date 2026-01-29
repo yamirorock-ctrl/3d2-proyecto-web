@@ -168,13 +168,12 @@ export default async function handler(req, res) {
       attributes: [
         { id: "BRAND", value_name: "3D2Store" },
         { id: "MODEL", value_name: "Personalizado" },
-        {
-          id: "EMPTY_GTIN_REASON",
-          value_name: "El producto no tiene código registrado",
-        },
+        { id: "EMPTY_GTIN_REASON", value_id: "17055158" }, // "El producto no tiene código registrado"
       ],
       // ML often requires attributes like BRAND, MODEL, and GTIN-related fields.
     };
+
+    console.log(`[ML Sync] Full Payload:`, JSON.stringify(itemBody));
 
     // Helper function to perform the ML Request
     async function performMLRequest(token) {
