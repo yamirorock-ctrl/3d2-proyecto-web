@@ -174,6 +174,11 @@ export default async function handler(req, res) {
         { id: "MODEL", value_name: "Personalizado" },
         { id: "EMPTY_GTIN_REASON", value_id: "17055158" }, // "El producto no tiene código registrado"
         { id: "ITEM_CONDITION", value_id: "2230284" }, // "Nuevo"
+        { id: "MANUFACTURER", value_name: "3D2" },
+      ],
+      sale_terms: [
+        { id: "WARRANTY_TYPE", value_id: "2230280" }, // "Garantía del vendedor"
+        { id: "WARRANTY_TIME", value_name: "30 días" },
       ],
       // ML often requires attributes like BRAND, MODEL, and GTIN-related fields.
     };
