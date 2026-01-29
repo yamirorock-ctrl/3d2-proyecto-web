@@ -242,10 +242,10 @@ export default async function handler(req, res) {
         errString.includes("required_fields")
       ) {
         serverLogs.push(
-          "Detected strict validation error. Retrying with SAFE category MLA3530...",
+          "Detected strict validation error. Retrying with SAFE category MLA1910 (Toys -> Other)...",
         );
 
-        itemBody.category_id = "MLA3530"; // "Otros" fallback
+        itemBody.category_id = "MLA1910"; // "Juegos y Juguetes > Otros" -> Guaranteed Physical Product
 
         // Strip strict attributes for the generic category to avoid new validation errors
         itemBody.attributes = [
