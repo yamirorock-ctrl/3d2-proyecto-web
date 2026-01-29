@@ -242,22 +242,30 @@ export default async function handler(req, res) {
         errString.includes("required_fields")
       ) {
         serverLogs.push(
-          "Detected strict validation error. Retrying with SAFE category MLA1910 (Toys -> Other)...",
+          "Detected strict validation error. Retrying with Anti-Ambiguity Strategy (Title prefix + MLA1910 + Full Physical Args)...",
         );
 
-        itemBody.category_id = "MLA1910"; // "Juegos y Juguetes > Otros" -> Guaranteed Physical Product
+        itemBody.category_id = "MLA1910"; // "Juegos y Juguetes > Otros"
+        itemBody.title = ("Juguete " + itemBody.title).slice(0, 60); // Force physical context in title
 
-        // Strip strict attributes for the generic category to avoid new validation errors
+        // Send FULL physical signal
         itemBody.attributes = [
           { id: "BRAND", value_name: "3D2Store" },
           { id: "MODEL", value_name: "Personalizado" },
           { id: "ITEM_CONDITION", value_id: "2230284" },
           { id: "EMPTY_GTIN_REASON", value_id: "17055158" },
+          { id: "MANUFACTURER", value_name: "3D2" },
         ];
-        delete itemBody.sale_terms;
+        // Restore generic warranty
+        itemBody.sale_terms = [
+          { id: "WARRANTY_TYPE", value_id: "2230280" },
+          { id: "WARRANTY_TIME", value_name: "30 días" },
+        ];
 
         mlResponse = await performMLRequest(accessToken);
-        serverLogs.push(`Retry executed. New Status: ${mlResponse.status}`);
+        serverLogs.push(
+          `Retry executed with title '${itemBody.title}'. New Status: ${mlResponse.status}`,
+        );
       }
     }
 
