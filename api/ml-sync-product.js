@@ -225,6 +225,19 @@ export default async function handler(req, res) {
     // 6. Execute with Retry/Refresh Logic
     let mlResponse = await performMLRequest(accessToken);
 
+    // RETRY LOGIC FOR "SERVICE" MISCLASSIFICATION (family_name error)
+    if (mlResponse.status === 400) {
+      const clone = await mlResponse.clone().json();
+      const errString = JSON.stringify(clone);
+      if (errString.includes("family_name")) {
+        console.log(
+          "[ML Sync] Detected 'family_name' error (Service mismtach). Retrying with safe category MLA3530...",
+        );
+        itemBody.category_id = "MLA3530"; // "Otros" -> Physical product fallback
+        mlResponse = await performMLRequest(accessToken);
+      }
+    }
+
     if (mlResponse.status === 401 || mlResponse.status === 403) {
       console.log(`[ML Sync] Status ${mlResponse.status} encountered.`);
 
