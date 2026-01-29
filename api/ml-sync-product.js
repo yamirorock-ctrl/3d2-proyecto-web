@@ -223,32 +223,40 @@ export default async function handler(req, res) {
     }
 
     // 6. Execute with Retry/Refresh Logic
+    let serverLogs = [];
     let mlResponse = await performMLRequest(accessToken);
 
-    // RETRY LOGIC FOR "SERVICE" MISCLASSIFICATION (family_name/given_name error)
+    // RETRY LOGIC FOR "SERVICE" MISCLASSIFICATION (family_name/given_name error) OR GENERIC REQUIREMENT FAIL
     if (mlResponse.status === 400) {
       const clone = await mlResponse.clone().json();
       const errString = JSON.stringify(clone);
+
+      serverLogs.push(
+        `First attempt failed with 400. Error: ${errString.slice(0, 200)}...`,
+      );
+
+      // Broadened check: family_name OR given_name OR just "required_fields" in general if we want to force fallback
       if (
         errString.includes("family_name") ||
-        errString.includes("given_name")
+        errString.includes("given_name") ||
+        errString.includes("required_fields")
       ) {
-        console.log(
-          "[ML Sync] Detected Service mismatch. Retrying with MLA3530 (stripped)...",
+        serverLogs.push(
+          "Detected strict validation error. Retrying with SAFE category MLA3530...",
         );
 
-        itemBody.category_id = "MLA3530"; // "Otros" -> Physical product fallback
+        itemBody.category_id = "MLA3530"; // "Otros" fallback
 
         // Strip strict attributes for the generic category to avoid new validation errors
         itemBody.attributes = [
           { id: "BRAND", value_name: "3D2Store" },
           { id: "MODEL", value_name: "Personalizado" },
-          { id: "ITEM_CONDITION", value_id: "2230284" }, // "Nuevo"
+          { id: "ITEM_CONDITION", value_id: "2230284" },
         ];
-        delete itemBody.sale_terms; // Remove specific warranty terms that might conflict
-        // delete itemBody.video_ids;
+        delete itemBody.sale_terms;
 
         mlResponse = await performMLRequest(accessToken);
+        serverLogs.push(`Retry executed. New Status: ${mlResponse.status}`);
       }
     }
 
@@ -375,6 +383,7 @@ export default async function handler(req, res) {
         causes: causes,
         details: mlData,
         suggestion: suggestion,
+        serverLogs: serverLogs, // <-- Debug info exposed
         debug: {
           categoryId,
           categoryName,
@@ -404,6 +413,7 @@ export default async function handler(req, res) {
       ml_id: mlData.id,
       permalink: mlData.permalink,
       status: mlData.status,
+      serverLogs: serverLogs,
     });
   } catch (err) {
     console.error("[ML Sync] Unhandled exception:", err);
