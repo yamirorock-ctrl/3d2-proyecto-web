@@ -168,7 +168,10 @@ export default async function handler(req, res) {
       attributes: [
         { id: "BRAND", value_name: "3D2Store" },
         { id: "MODEL", value_name: "Personalizado" },
-        { id: "EMPTY_GTIN_REASON", value_name: "No aplica" },
+        {
+          id: "EMPTY_GTIN_REASON",
+          value_name: "El producto no tiene código registrado",
+        },
       ],
       // ML often requires attributes like BRAND, MODEL, and GTIN-related fields.
     };
