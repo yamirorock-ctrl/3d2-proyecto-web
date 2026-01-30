@@ -155,9 +155,10 @@ export default async function handler(req, res) {
     const finalPrice = Math.max(price || 1, 1);
     const finalQuantity = Math.max(quantity || 1, 1);
 
-    // 5. Build Item JSON
+    // 5. Build Item JSON for User Product Model (2026)
+    // NOTE: ML migrated to "User Product" model - uses family_name instead of title
     const itemBody = {
-      title: title.slice(0, 60), // ML limit 60 chars
+      family_name: title.slice(0, 60), // ML generates title automatically from this
       category_id: categoryId,
       price: finalPrice,
       currency_id: "ARS",
@@ -180,7 +181,11 @@ export default async function handler(req, res) {
         { id: "WARRANTY_TYPE", value_id: "2230280" }, // "Garantía del vendedor"
         { id: "WARRANTY_TIME", value_name: "30 días" },
       ],
-      // ML often requires attributes like BRAND, MODEL, and GTIN-related fields.
+      shipping: {
+        mode: "me2", // Mercado Envíos - envío a cargo del vendedor
+        local_pick_up: true,
+        free_shipping: false,
+      },
     };
 
     console.log(`[ML Sync] Full Payload:`, JSON.stringify(itemBody));
@@ -242,11 +247,11 @@ export default async function handler(req, res) {
         errString.includes("required_fields")
       ) {
         serverLogs.push(
-          "Detected strict validation error. Retrying with Anti-Ambiguity Strategy (Title prefix + MLA1910 + Full Physical Args)...",
+          "Detected strict validation error. Retrying with Anti-Ambiguity Strategy (family_name prefix + MLA1910 + Full Physical Args)...",
         );
 
         itemBody.category_id = "MLA1910"; // "Juegos y Juguetes > Otros"
-        itemBody.title = ("Juguete " + itemBody.title).slice(0, 60); // Force physical context in title
+        itemBody.family_name = ("Juguete " + itemBody.family_name).slice(0, 60); // Force physical context
 
         // Send FULL physical signal
         itemBody.attributes = [
@@ -264,7 +269,7 @@ export default async function handler(req, res) {
 
         mlResponse = await performMLRequest(accessToken);
         serverLogs.push(
-          `Retry executed with title '${itemBody.title}'. New Status: ${mlResponse.status}`,
+          `Retry executed with family_name '${itemBody.family_name}'. New Status: ${mlResponse.status}`,
         );
       }
     }
