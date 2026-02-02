@@ -1,0 +1,17 @@
+﻿
+--- Category: MLA3530 ---
+Required attributes:
+- BRAND: Marca (string)
+- MODEL: Modelo (string)
+Conditionally required:
+
+--- Category: MLA1910 ---
+Required attributes:
+- BRAND: Marca (string)
+Conditionally required:
+
+--- Category: MLA437544 ---
+Required attributes:
+- BRAND: Marca (string)
+- MODEL: Modelo (string)
+Conditionally required:

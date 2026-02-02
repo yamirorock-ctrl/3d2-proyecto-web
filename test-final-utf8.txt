@@ -1,0 +1,103 @@
+﻿=== PRUEBA FINAL DE SINCRONIZACI├ôN ML 2026 ===
+
+Categor├¡a predicha: MLA412060
+
+Payload completo:
+{
+  "family_name": "Llavero Personalizado 3D",
+  "category_id": "MLA412060",
+  "price": 3125,
+  "currency_id": "ARS",
+  "available_quantity": 5,
+  "buying_mode": "buy_it_now",
+  "condition": "new",
+  "listing_type_id": "free",
+  "description": {
+    "plain_text": "Llavero impreso en 3D con dise├▒o personalizado"
+  },
+  "pictures": [
+    {
+      "source": "https://http2.mlstatic.com/storage/developers-site-cms-admin/dtmv/73479100-7561-11eb-a5a4-99881d77a28e.png"
+    }
+  ],
+  "attributes": [
+    {
+      "id": "BRAND",
+      "value_name": "3D2Store"
+    },
+    {
+      "id": "MODEL",
+      "value_name": "Personalizado"
+    },
+    {
+      "id": "EMPTY_GTIN_REASON",
+      "value_id": "17055158"
+    },
+    {
+      "id": "ITEM_CONDITION",
+      "value_id": "2230284"
+    },
+    {
+      "id": "MANUFACTURER",
+      "value_name": "3D2"
+    }
+  ],
+  "sale_terms": [
+    {
+      "id": "WARRANTY_TYPE",
+      "value_id": "2230280"
+    },
+    {
+      "id": "WARRANTY_TIME",
+      "value_name": "30 d├¡as"
+    }
+  ],
+  "shipping": {
+    "mode": "me2",
+    "local_pick_up": true,
+    "free_shipping": false
+  }
+}
+
+
+Validando con ML...
+
+Status: 400
+Response:
+{
+  "message": "Validation error",
+  "error": "validation_error",
+  "status": 400,
+  "cause": [
+    {
+      "department": "shipping",
+      "cause_id": 4053,
+      "type": "warning",
+      "code": "shipping.lost_me1_by_user",
+      "references": [
+        "user.shipping_preferences.modes"
+      ],
+      "message": "User has not mode me1"
+    },
+    {
+      "department": "shipping",
+      "cause_id": 4033,
+      "type": "warning",
+      "code": "shipping.free_shipping.cost_exceeded",
+      "references": [
+        "item.prices"
+      ],
+      "message": "Free shipping costs exceeds sale"
+    }
+  ]
+}
+
+ÔÜá´©Å Errores encontrados:
+
+1. shipping.lost_me1_by_user
+   Tipo: warning
+   Mensaje: User has not mode me1
+
+2. shipping.free_shipping.cost_exceeded
+   Tipo: warning
+   Mensaje: Free shipping costs exceeds sale

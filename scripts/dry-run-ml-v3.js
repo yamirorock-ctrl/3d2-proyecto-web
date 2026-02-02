@@ -50,8 +50,8 @@ async function dryRun() {
 
   async function tryPost(token) {
     const itemBody = {
-      title: "Item de Prueba Sync " + Date.now(),
-      category_id: "MLA1430",
+      family_name: "Item de Prueba Sync " + Date.now(),
+      category_id: "MLA1910",
       price: 1500,
       currency_id: "ARS",
       available_quantity: 1,
@@ -117,6 +117,11 @@ async function dryRun() {
     console.log("Retry Data:", JSON.stringify(data, null, 2));
   } else {
     console.log("Data:", JSON.stringify(data, null, 2));
+  }
+
+  if (!response.ok) {
+    fs.writeFileSync("debug_ml_error.json", JSON.stringify(data, null, 2));
+    console.log("Error details saved to debug_ml_error.json");
   }
 }
 

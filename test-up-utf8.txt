@@ -1,0 +1,101 @@
+﻿Testing with NEW User Product Model (2025)...
+
+Payload (User Product Model):
+{
+  "family_name": "Juguete Personalizado 3D2",
+  "category_id": "MLA1910",
+  "price": 1500,
+  "currency_id": "ARS",
+  "available_quantity": 1,
+  "buying_mode": "buy_it_now",
+  "condition": "new",
+  "listing_type_id": "free",
+  "description": {
+    "plain_text": "Producto de prueba para sincronizaci├│n con el nuevo modelo UP."
+  },
+  "pictures": [
+    {
+      "source": "https://http2.mlstatic.com/storage/developers-site-cms-admin/dtmv/73479100-7561-11eb-a5a4-99881d77a28e.png"
+    }
+  ],
+  "attributes": [
+    {
+      "id": "BRAND",
+      "value_name": "3D2Store"
+    },
+    {
+      "id": "MODEL",
+      "value_name": "Personalizado"
+    },
+    {
+      "id": "ITEM_CONDITION",
+      "value_id": "2230284"
+    },
+    {
+      "id": "EMPTY_GTIN_REASON",
+      "value_id": "17055158"
+    },
+    {
+      "id": "MANUFACTURER",
+      "value_name": "3D2"
+    }
+  ],
+  "sale_terms": [
+    {
+      "id": "WARRANTY_TYPE",
+      "value_id": "2230280"
+    },
+    {
+      "id": "WARRANTY_TIME",
+      "value_name": "30 d├¡as"
+    }
+  ],
+  "shipping": {
+    "mode": "me2",
+    "local_pick_up": true,
+    "free_shipping": false
+  }
+}
+
+
+Status: 400
+Response:
+{
+  "message": "Validation error",
+  "error": "validation_error",
+  "status": 400,
+  "cause": [
+    {
+      "department": "shipping",
+      "cause_id": 4033,
+      "type": "warning",
+      "code": "shipping.free_shipping.cost_exceeded",
+      "references": [
+        "item.prices"
+      ],
+      "message": "Free shipping costs exceeds sale"
+    },
+    {
+      "department": "shipping",
+      "cause_id": 4053,
+      "type": "warning",
+      "code": "shipping.lost_me1_by_user",
+      "references": [
+        "user.shipping_preferences.modes"
+      ],
+      "message": "User has not mode me1"
+    }
+  ]
+}
+
+=== DETAILED ERRORS ===
+
+Error 1:
+  Code: shipping.free_shipping.cost_exceeded
+  Message: Free shipping costs exceeds sale
+  References: item.prices
+
+Error 2:
+  Code: shipping.lost_me1_by_user
+  Message: User has not mode me1
+  References: user.shipping_preferences.modes

@@ -22,6 +22,12 @@ export interface Product {
     length: number; // cm
   };
   weight?: number; // gramos
+  
+  // MercadoLibre / Identificación
+  brand?: string;
+  model?: string;
+  gtin?: string; // EAN/UPC
+  mpn?: string; // Part Number
 
   // Propiedades para tipos de venta (pack, mayorista)
   saleType?: 'unidad' | 'pack' | 'mayorista'; // DEPRECATED for product config (used for cart items)

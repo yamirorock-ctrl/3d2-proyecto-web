@@ -25,31 +25,27 @@ const supabase = createClient(
   env.VITE_SUPABASE_ANON_TOKEN,
 );
 
-async function diagnose() {
+async function check() {
   const { data: tokenData } = await supabase
     .from("ml_tokens")
     .select("*")
     .limit(1)
     .single();
-  if (!tokenData) return console.error("No token found");
+  if (!tokenData) return console.log("NO_TOKEN");
 
-  const token = tokenData.access_token;
-  const userId = tokenData.user_id;
+  const meRes = await fetch("https://api.mercadolibre.com/users/me", {
+    headers: { Authorization: `Bearer ${tokenData.access_token}` },
+  });
+  const me = await meRes.json();
 
-  async function fetchML(endpoint) {
-    const res = await fetch(`https://api.mercadolibre.com${endpoint}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    return res.json();
-  }
-
-  console.log("--- ME ---");
-  const me = await fetchML("/users/me");
-  console.log(JSON.stringify(me, null, 2));
-
-  console.log("--- RESTRICTIONS ---");
-  const rest = await fetchML(`/users/${userId}/restrictions`);
-  console.log(JSON.stringify(rest, null, 2));
+  const res = await fetch(
+    `https://api.mercadolibre.com/users/${me.id}/restrictions`,
+    {
+      headers: { Authorization: `Bearer ${tokenData.access_token}` },
+    },
+  );
+  const data = await res.json();
+  console.log("RESTRICTIONS_DATA:", JSON.stringify(data));
 }
 
-diagnose();
+check();

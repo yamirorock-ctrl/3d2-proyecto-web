@@ -1,0 +1,33 @@
+﻿=== DIAGN├ôSTICO COMPLETO DE MERCADOLIBRE ===
+
+1. CREDENCIALES DE LA APLICACI├ôN
+   App ID: 5838942654...
+   App Secret: ***JfBG
+   Ô£ô Credenciales presentes
+
+2. TOKEN DE ACCESO
+   User ID: 414444653
+   Token: APP_USR-5838942...
+   ├Ültima actualizaci├│n: 2026-01-30T02:13:26.553+00:00
+
+3. INFORMACI├ôN DEL USUARIO
+   Ô£ô Usuario: YAMIRO
+   Ô£ô Site: MLA
+   Ô£ô Status: active
+   Ô£ô Seller Reputation: N/A
+
+4. PERMISOS DE PUBLICACI├ôN
+   ÔØî Error en validaci├│n (400)
+   Mensaje: body.required_fields
+   Causas:
+     - body.required_fields
+
+5. RESTRICCIONES DE CUENTA
+   Ôä╣´©Å  No se pudo verificar: Si quieres conocer los recursos de la API que se encuentran disponibles visita el Sitio de Desarrolladores de MercadoLibre (http://developers.mercadolibre.com)
+
+6. CATEGOR├ìAS DE PRUEBA
+   Ô£ô MLA1910: Juegos y Juguetes > Otros
+   Ô£ô MLA3530: Otras categor├¡as > Otros
+   Ô£ô MLA1430: Ropa y Accesorios
+
+=== FIN DEL DIAGN├ôSTICO ===

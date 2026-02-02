@@ -829,7 +829,61 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
 
 
 
-          {/* Sección MercadoLibre */}
+
+          {/* Sección Ficha Técnica */}
+          <div className="sm:col-span-2 border-t pt-4 mt-2">
+            <h4 className="font-semibold text-slate-800 mb-2 flex items-center gap-2">
+                <span className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded text-xs">Ficha Técnica</span>
+                Identificación del Producto
+            </h4>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-blue-50/50 p-3 rounded-md border border-blue-100">
+                <div>
+                   <label className="block text-xs font-medium text-slate-600 mb-1">Marca</label>
+                   <input
+                     type="text"
+                     value={form.brand || ''}
+                     onChange={e => handleChange('brand', e.target.value)}
+                     className="block w-full rounded-md border-gray-200 text-sm"
+                     placeholder="Ej: 3D2Store"
+                   />
+                </div>
+                <div>
+                   <label className="block text-xs font-medium text-slate-600 mb-1">Modelo</label>
+                   <input
+                     type="text"
+                     value={form.model || ''}
+                     onChange={e => handleChange('model', e.target.value)}
+                     className="block w-full rounded-md border-gray-200 text-sm"
+                     placeholder="Ej: Premium v2"
+                   />
+                </div>
+                <div>
+                   <label className="block text-xs font-medium text-slate-600 mb-1">
+                     Código Universal (GTIN/EAN)
+                     <span className="ml-1 text-[10px] text-slate-400 font-normal">(Opcional para artesanías)</span>
+                   </label>
+                   <input
+                     type="text"
+                     value={form.gtin || ''}
+                     onChange={e => handleChange('gtin', e.target.value)}
+                     className="block w-full rounded-md border-gray-200 text-sm"
+                     placeholder="Déjalo vacío si lo fabricas tú mismo"
+                   />
+                </div>
+                 <div>
+                   <label className="block text-xs font-medium text-slate-600 mb-1">SKU / MPN (Opcional)</label>
+                   <input
+                     type="text"
+                     value={form.mpn || ''}
+                     onChange={e => handleChange('mpn', e.target.value)}
+                     className="block w-full rounded-md border-gray-200 text-sm"
+                     placeholder="Código interno o de fabricante"
+                   />
+                </div>
+             </div>
+          </div>
+
+          {/* Sección MercadoLibre */ }
           <div className="sm:col-span-2 border-t pt-4 mt-2">
             <h4 className="font-semibold text-slate-800 mb-2 flex items-center gap-2">
                 <span className="bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded text-xs">MercadoLibre</span>

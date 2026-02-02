@@ -171,11 +171,13 @@ export default async function handler(req, res) {
       },
       pictures: pictures,
       attributes: [
-        { id: "BRAND", value_name: "3D2Store" },
-        { id: "MODEL", value_name: "Personalizado" },
-        { id: "EMPTY_GTIN_REASON", value_id: "17055158" }, // "El producto no tiene código registrado"
+        { id: "BRAND", value_name: product.brand || "3D2Store" },
+        { id: "MODEL", value_name: product.model || "Personalizado" },
         { id: "ITEM_CONDITION", value_id: "2230284" }, // "Nuevo"
-        { id: "MANUFACTURER", value_name: "3D2" },
+        ...(product.gtin
+          ? [{ id: "GTIN", value_name: product.gtin }]
+          : [{ id: "EMPTY_GTIN_REASON", value_id: "17055158" }]),
+        ...(product.mpn ? [{ id: "SKU", value_name: product.mpn }] : []),
       ],
       sale_terms: [
         { id: "WARRANTY_TYPE", value_id: "2230280" }, // "Garantía del vendedor"
@@ -244,7 +246,11 @@ export default async function handler(req, res) {
       if (
         errString.includes("family_name") ||
         errString.includes("given_name") ||
-        errString.includes("required_fields")
+        errString.includes("required_fields") ||
+        errString.includes("item.category_id.invalid") ||
+        errString.includes("validation_error") ||
+        errString.includes("missing_catalog_required") ||
+        errString.includes("PA_UNAUTHORIZED")
       ) {
         serverLogs.push(
           "Detected strict validation error. Retrying with Anti-Ambiguity Strategy (family_name prefix + MLA1910 + Full Physical Args)...",
