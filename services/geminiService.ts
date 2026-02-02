@@ -41,9 +41,9 @@ export const createChatSession = (products: Product[]) => {
   `;
 
   try {
-    console.log("[Gemini] Iniciando sesión de chat (v1/2.0-flash)...");
+    console.log("[Gemini] Iniciando sesión de chat (v1.5-flash)...");
     const model = genAI.getGenerativeModel({ 
-      model: "gemini-2.0-flash",
+      model: "gemini-1.5-flash",
       systemInstruction: systemInstruction 
     });
 
@@ -93,8 +93,8 @@ export const suggestMLTitle = async (productName: string, description: string, i
   if (!genAI) return "Error: API Key no configurada";
 
   try {
-    console.log("[Gemini] Intentando generar título con gemini-2.0-flash...");
-    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+    console.log("[Gemini] Intentando generar título con gemini-1.5-flash...");
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
     const prompt = `Actúa como un experto en SEO para MercadoLibre Argentina.
 Genera un TÍTULO DE VENTA competitivo para el siguiente producto.
@@ -152,8 +152,8 @@ Reglas CRÍTICAS:
     }
     
     try {
-      console.log("[Gemini] Fallback: Intentando con gemini-2.5-pro...");
-      const modelPro = genAI!.getGenerativeModel({ model: "gemini-2.5-pro" });
+      console.log("[Gemini] Fallback: Intentando con gemini-1.5-pro...");
+      const modelPro = genAI!.getGenerativeModel({ model: "gemini-1.5-pro" });
       const resultPro = await modelPro.generateContent(`Genera un título de 60 caracteres para un producto llamado: ${productName}`);
       const respPro = await resultPro.response;
       return respPro.text().trim();
