@@ -997,21 +997,47 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
                  
                  {form.ml_item_id && (
                      <button
-                         type="button"
-                         onClick={async () => {
-                             if (!confirm('¿Estás seguro de desvincular este producto de MercadoLibre en la base de datos?\n\nEsto NO elimina la publicación en MercadoLibre, solo permite intentar subirla de nuevo como si fuera nueva.')) return;
-                             try {
-                                 // Simple direct update to Supabase via existing logic or fetch if needed
-                                 const { upsertProductToSupabase } = await import('../services/supabaseService');
-                                 const updated = { ...form, ml_item_id: null, ml_status: null, ml_permalink: null };
-                                 await upsertProductToSupabase(updated);
-                                 setForm(updated);
-                                 toast.success('Vinculación con ML eliminada correctamenta.');
-                             } catch (e) {
-                                 console.error(e);
-                                 toast.error('Error al desvincular.');
-                             }
-                         }}
+                            type="button"
+                            onClick={async () => {
+                                if (!confirm('¿Estás seguro de desvincular este producto de MercadoLibre en la base de datos?\n\nEsto NO elimina la publicación en MercadoLibre, solo permite intentar subirla de nuevo como si fuera nueva.')) return;
+                                try {
+                                    // Use sanitized upsert from productService to avoid 400 errors with camelCase keys
+                                    const { upsertProduct } = await import('../services/productService');
+                                    
+                                    // We create a partial update object, not the full form, to be safer and faster
+                                    const updatePayload = { 
+                                        id: form.id, 
+                                        ml_item_id: null, 
+                                        ml_status: null, 
+                                        ml_permalink: null,
+                                        last_ml_sync: null
+                                    };
+                                    
+                                    // Since upsertProduct expects a Product-like structure, we can pass just the IDs and fields to update.
+                                    // Note: upsertProduct will merge this with existing data in DB via upsert logic but we need to be careful not to erase other fields if we only match ID.
+                                    // Actually, Supabase upsert replaces the row if it matches ID unless we use patch. 
+                                    // Wait, standard upsert replaces/merges? Postgrest upsert matches on PK and updates the columns provided if we pass a partial? 
+                                    // Yes, Supabase/Postgrest treats upsert as "insert or update". modifying only passed columns? No, usually it requires full row or defaults. 
+                                    // BUT, for a partial update on an existing ID, 'update' is better than 'upsert'.
+                                    // Let's use update directly via supabase client for this specific atomic operation to be 100% sure we don't mess up other fields.
+                                    
+                                    // However, to reuse the "sanitization/logic", upsertProduct is handy. 
+                                    // Let's stick to the user's request: "wipe" ml fields.
+                                    
+                                    // Better approach: Use the SAME 'updated' object logic as before but pass it to upsertProduct 
+                                    // so it gets sanitized.
+                                    const updated = { ...form, ml_item_id: null, ml_status: null, ml_permalink: null, last_ml_sync: null };
+                                    
+                                    const { error } = await upsertProduct(updated);
+                                    if (error) throw new Error(error.message);
+                                    
+                                    setForm(prev => ({ ...prev, ml_item_id: undefined, ml_status: undefined, ml_permalink: undefined }));
+                                    toast.success('Vinculación con ML eliminada correctamente. Ahora puedes volver a publicar.');
+                                } catch (e) {
+                                    console.error(e);
+                                    toast.error('Error al desvincular: ' + (e as any).message);
+                                }
+                            }}
                          className="px-3 py-2 rounded-md bg-red-100 text-red-700 font-bold flex items-center gap-1 hover:bg-red-200 transition-colors"
                          title="Desvincular para reintentar carga desde cero"
                      >

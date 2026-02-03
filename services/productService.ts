@@ -63,47 +63,35 @@ function sanitizeProductForUpsert(product: Partial<Product>): Partial<Product> {
 
   // Mapping manual CamelCase -> SnakeCase para nuevos campos
   // Supabase js client a veces maneja esto, pero si falla, lo forzamos.
-  if (sanitizedProduct.unitEnabled !== undefined) {
-    sanitizedProduct.unit_enabled = sanitizedProduct.unitEnabled;
-    delete sanitizedProduct.unitEnabled;
-  }
-  if (sanitizedProduct.packEnabled !== undefined) {
-    sanitizedProduct.pack_enabled = sanitizedProduct.packEnabled;
-    delete sanitizedProduct.packEnabled;
-  }
-  if (sanitizedProduct.unitsPerPack !== undefined) {
-    sanitizedProduct.units_per_pack = sanitizedProduct.unitsPerPack;
-    delete sanitizedProduct.unitsPerPack;
-  }
-  if (sanitizedProduct.packDiscount !== undefined) {
-    sanitizedProduct.pack_discount = sanitizedProduct.packDiscount;
-    delete sanitizedProduct.packDiscount;
-  }
-  if (sanitizedProduct.mayoristaEnabled !== undefined) {
-    sanitizedProduct.mayorista_enabled = sanitizedProduct.mayoristaEnabled;
-    delete sanitizedProduct.mayoristaEnabled;
-  }
+  
+  // Helper to map and delete
+  const mapAndDelete = (camel: string, snake: string) => {
+    if (sanitizedProduct[camel] !== undefined) {
+      sanitizedProduct[snake] = sanitizedProduct[camel];
+    }
+    delete sanitizedProduct[camel];
+  };
+
+  mapAndDelete('unitEnabled', 'unit_enabled');
+  mapAndDelete('packEnabled', 'pack_enabled');
+  mapAndDelete('unitsPerPack', 'units_per_pack');
+  mapAndDelete('packDiscount', 'pack_discount');
+  mapAndDelete('mayoristaEnabled', 'mayorista_enabled');
+  
+  // wholesaleUnits maps to wholesale_min_units (and legacy wholesale_units)
   if (sanitizedProduct.wholesaleUnits !== undefined) {
-    sanitizedProduct.wholesale_min_units = sanitizedProduct.wholesaleUnits; // Mapear a columna correcta
-    sanitizedProduct.wholesale_units = sanitizedProduct.wholesaleUnits; // Legacy alias if needed
-    delete sanitizedProduct.wholesaleUnits;
+    sanitizedProduct.wholesale_min_units = sanitizedProduct.wholesaleUnits;
+    sanitizedProduct.wholesale_units = sanitizedProduct.wholesaleUnits;
   }
-  if (sanitizedProduct.wholesaleDiscount !== undefined) {
-    sanitizedProduct.wholesale_discount = sanitizedProduct.wholesaleDiscount;
-    delete sanitizedProduct.wholesaleDiscount;
-  }
-  if (sanitizedProduct.wholesaleImage !== undefined) {
-    sanitizedProduct.wholesale_image = sanitizedProduct.wholesaleImage;
-    delete sanitizedProduct.wholesaleImage;
-  }
-  if (sanitizedProduct.wholesaleDescription !== undefined) {
-    sanitizedProduct.wholesale_description = sanitizedProduct.wholesaleDescription;
-    delete sanitizedProduct.wholesaleDescription;
-  }
-  if (sanitizedProduct.customizationOptions !== undefined) {
-    sanitizedProduct.customization_options = sanitizedProduct.customizationOptions;
-    delete sanitizedProduct.customizationOptions;
-  }
+  delete sanitizedProduct.wholesaleUnits;
+
+  mapAndDelete('wholesaleDiscount', 'wholesale_discount');
+  mapAndDelete('wholesaleImage', 'wholesale_image');
+  mapAndDelete('wholesaleDescription', 'wholesale_description');
+  mapAndDelete('customizationOptions', 'customization_options');
+  
+  // Handle saleType if present (deprecated but might be passed)
+  mapAndDelete('saleType', 'sale_type');
 
   return sanitizedProduct;
 }
