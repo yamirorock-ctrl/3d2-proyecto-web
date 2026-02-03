@@ -507,7 +507,7 @@ const AdminPage: React.FC<Props> = ({ products, onAdd, onEdit, onDelete }) => {
                   {` • $${p.price}`}
                 </div>
                 {p.description && (
-                  <div className="text-xs sm:text-sm text-slate-400 mt-2 line-clamp-3 whitespace-pre-wrap break-words">
+                  <div className="text-xs sm:text-sm text-slate-400 mt-2 line-clamp-3 whitespace-pre-wrap">
                     {p.description}
                   </div>
                 )}
