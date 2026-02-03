@@ -20,6 +20,24 @@ export function getAuthUrl() {
   return url.toString();
 }
 
+export async function predictCategory(title: string) {
+  try {
+    const response = await fetch(`https://api.mercadolibre.com/sites/MLA/domain_discovery/search?q=${encodeURIComponent(title)}`);
+    const data = await response.json();
+    if (Array.isArray(data) && data.length > 0) {
+      return {
+        categoryId: data[0].category_id,
+        categoryName: data[0].category_name,
+        domainId: data[0].domain_id
+      };
+    }
+    return null;
+  } catch (error) {
+    console.error('Error predicting category:', error);
+    return null;
+  }
+}
+
 /**
  * Triggers the serverless function to sync a product to MercadoLibre.
  * @param productId ID of the product in Supabase

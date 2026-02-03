@@ -242,6 +242,8 @@ export default async function handler(req, res) {
         `First attempt failed with 400. Error: ${errString.slice(0, 200)}...`,
       );
 
+      const isSpecificPrediction = categoryId !== "MLA3530";
+
       // Broadened check: family_name OR given_name OR just "required_fields" in general if we want to force fallback
       if (
         errString.includes("family_name") ||
@@ -252,31 +254,50 @@ export default async function handler(req, res) {
         errString.includes("missing_catalog_required") ||
         errString.includes("PA_UNAUTHORIZED")
       ) {
-        serverLogs.push(
-          "Detected strict validation error. Retrying with Anti-Ambiguity Strategy (family_name prefix + MLA1910 + Full Physical Args)...",
-        );
+        // ONLY Retry with "Juguete" fallback if we didn't have a strong prediction OR if the error specifically complains about the category we chose being invalid for the title/attributes.
+        // If we predicted "Mates" and it failed, switching to "Juguete" is bad.
+        // We only switch to Juguete if the original attempt was essentially a "General" attempt that failed.
 
-        itemBody.category_id = "MLA1910"; // "Juegos y Juguetes > Otros"
-        itemBody.family_name = ("Juguete " + itemBody.family_name).slice(0, 60); // Force physical context
+        if (
+          isSpecificPrediction &&
+          !errString.includes("item.category_id.invalid")
+        ) {
+          serverLogs.push(
+            "Prediction was specific (" +
+              categoryId +
+              ") but failed attributes. NOT falling back to Juguete tactic to avoid miscategorization.",
+          );
+          // We do NOT retry here, allowing the true error (missing attributes) to bubble up to the user so they can fix it.
+        } else {
+          serverLogs.push(
+            "Detected strict validation error. Retrying with Anti-Ambiguity Strategy (family_name prefix + MLA1910 + Full Physical Args)...",
+          );
 
-        // Send FULL physical signal
-        itemBody.attributes = [
-          { id: "BRAND", value_name: "3D2Store" },
-          { id: "MODEL", value_name: "Personalizado" },
-          { id: "ITEM_CONDITION", value_id: "2230284" },
-          { id: "EMPTY_GTIN_REASON", value_id: "17055158" },
-          { id: "MANUFACTURER", value_name: "3D2" },
-        ];
-        // Restore generic warranty
-        itemBody.sale_terms = [
-          { id: "WARRANTY_TYPE", value_id: "2230280" },
-          { id: "WARRANTY_TIME", value_name: "30 días" },
-        ];
+          itemBody.category_id = "MLA1910"; // "Juegos y Juguetes > Otros"
+          itemBody.family_name = ("Juguete " + itemBody.family_name).slice(
+            0,
+            60,
+          ); // Force physical context
 
-        mlResponse = await performMLRequest(accessToken);
-        serverLogs.push(
-          `Retry executed with family_name '${itemBody.family_name}'. New Status: ${mlResponse.status}`,
-        );
+          // Send FULL physical signal
+          itemBody.attributes = [
+            { id: "BRAND", value_name: "3D2Store" },
+            { id: "MODEL", value_name: "Personalizado" },
+            { id: "ITEM_CONDITION", value_id: "2230284" }, // "Nuevo"
+            { id: "EMPTY_GTIN_REASON", value_id: "17055158" },
+            { id: "MANUFACTURER", value_name: "3D2" },
+          ];
+          // Restore generic warranty
+          itemBody.sale_terms = [
+            { id: "WARRANTY_TYPE", value_id: "2230280" },
+            { id: "WARRANTY_TIME", value_name: "30 días" },
+          ];
+
+          mlResponse = await performMLRequest(accessToken);
+          serverLogs.push(
+            `Retry executed with family_name '${itemBody.family_name}'. New Status: ${mlResponse.status}`,
+          );
+        }
       }
     }
 
