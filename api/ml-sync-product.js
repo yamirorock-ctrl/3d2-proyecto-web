@@ -264,6 +264,10 @@ export default async function handler(req, res) {
         // If we predicted "Mates" and it failed, switching to "Juguete" is bad.
         // We only switch to Juguete if the original attempt was essentially a "General" attempt that failed.
 
+        // FAIL-SAFE: If we had a specific prediction (like Baby Door Hangers), DO NOT fall back to Toys.
+        // That only leads to "Incorrect Category" rejections.
+        // We only retry if we were estimating "MLA3530" (Others) or if the error strictly says "Category Invalid".
+
         if (
           isSpecificPrediction &&
           !errString.includes("item.category_id.invalid")
@@ -271,12 +275,13 @@ export default async function handler(req, res) {
           serverLogs.push(
             "Prediction was specific (" +
               categoryId +
-              ") but failed attributes. NOT falling back to Juguete tactic to avoid miscategorization.",
+              ") and ML rejected it. STOPPING here to avoid miscategorization punishment.",
           );
-          // We do NOT retry here, allowing the true error (missing attributes) to bubble up to the user so they can fix it.
+          // Allow the original error (missing attributes) to be returned to the user
         } else {
+          // Only use this strategy if we were blind (MLA3530) or ML explicitly told us the category ID was bad
           serverLogs.push(
-            "Detected strict validation error. Retrying with Anti-Ambiguity Strategy (family_name prefix + MLA1910 + Full Physical Args)...",
+            "Generic/Service error detected on generic category. Retrying with Anti-Ambiguity Strategy (family_name prefix + MLA1910 + Full Physical Args)...",
           );
 
           itemBody.category_id = "MLA1910"; // "Juegos y Juguetes > Otros"
