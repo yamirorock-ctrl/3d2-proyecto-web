@@ -119,9 +119,15 @@ export default async function handler(req, res) {
     }
 
     // 4. Predict Category (Crucial for ML)
-    // We search for the best category based on the title
+    // We search for the best category based on the title AND the internal category to provide context
+    // This helps avoid misclassifications (e.g. "Cartel Nombre" -> "Bebés" instead of "Juguetes")
+    const predictionQuery = `${title} ${product.category || ""}`
+      .trim()
+      .slice(0, 100);
+    console.log(`[ML Sync] Predicting category for: "${predictionQuery}"`);
+
     const predictionUrl = `https://api.mercadolibre.com/sites/MLA/domain_discovery/search?limit=1&q=${encodeURIComponent(
-      title,
+      predictionQuery,
     )}`;
     const predictorRes = await fetch(predictionUrl);
     const predictorData = await predictorRes.json();
