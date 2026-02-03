@@ -441,6 +441,7 @@ export default async function handler(req, res) {
       .update({
         ml_item_id: mlData.id,
         ml_status: mlData.status,
+        ml_permalink: mlData.permalink,
         last_ml_sync: new Date().toISOString(),
       })
       .eq("id", productId);
