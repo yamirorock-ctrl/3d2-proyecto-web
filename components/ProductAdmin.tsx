@@ -405,14 +405,23 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
               <div className="text-xs text-slate-400">O sube una imagen desde tu equipo (se guardará en Supabase):</div>
               
               <div className="flex gap-2 items-center">
-                <input 
-                  type="file" 
-                  accept="image/*" 
-                  multiple
-                  onChange={e=>{ const files = e.target.files; if(files && files.length) handleFiles(files); }} 
-                  className="block w-full text-sm text-slate-600"
-                  disabled={isCompressing}
-                />
+                <label className="block w-full">
+                  <span className="sr-only">Elegir archivos</span>
+                  <input 
+                    type="file" 
+                    accept="image/*" 
+                    multiple
+                    onChange={e=>{ const files = e.target.files; if(files && files.length) handleFiles(files); }} 
+                    className="block w-full text-sm text-slate-500
+                      file:mr-4 file:py-2 file:px-4
+                      file:rounded-md file:border-0
+                      file:text-sm file:font-semibold
+                      file:bg-indigo-50 file:text-indigo-700
+                      hover:file:bg-indigo-100
+                      cursor-pointer"
+                    disabled={isCompressing}
+                  />
+                </label>
                 <label className="flex items-center gap-2 text-xs text-slate-600 whitespace-nowrap">
                   <input 
                     type="checkbox" 
