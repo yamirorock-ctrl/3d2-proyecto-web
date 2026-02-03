@@ -485,33 +485,41 @@ const AdminPage: React.FC<Props> = ({ products, onAdd, onEdit, onDelete }) => {
       {activeTab === 'products' && (
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {products.map(p => (
-          <div key={p.id} className="border rounded-lg p-4 flex items-center justify-between gap-4">
-            <div className="flex items-center gap-4">
-              <SmartImage src={p.images?.[0]?.url ?? p.image} storageKey={p.images?.[0]?.storageKey} alt={p.name} className="h-20 w-20 object-cover rounded-md" />
-              <div>
-                <div className="flex items-center gap-2 mb-1">
-                  <div className="font-bold">{p.name}</div>
+          <div key={p.id} className="border rounded-lg p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white shadow-sm hover:shadow-md transition-shadow">
+            <div className="flex flex-row items-start gap-4 w-full">
+              <SmartImage src={p.images?.[0]?.url ?? p.image} storageKey={p.images?.[0]?.storageKey} alt={p.name} className="h-20 w-20 sm:h-24 sm:w-24 object-cover rounded-md shrink-0 bg-slate-100" />
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-1 flex-wrap">
+                  <div className="font-bold text-slate-800 text-base">{p.name}</div>
                   {p.stock !== undefined && (
-                    <span className={`px-2 py-0.5 text-xs font-medium rounded ${
+                    <span className={`px-2 py-0.5 text-xs font-medium rounded whitespace-nowrap ${
                       p.stock === 0 ? 'bg-red-100 text-red-700' :
-                      p.stock < 5 ? 'bg-yellow-100 text-yellow-700' :
-                      'bg-green-100 text-green-700'
+                      p.stock < 5 ? 'bg-orange-100 text-orange-700' :
+                      'bg-emerald-100 text-emerald-700'
                     }`}>
                       {p.stock === 0 ? 'Sin stock' : `Stock: ${p.stock}`}
                     </span>
                   )}
                 </div>
-                <div className="text-sm text-slate-500">
+                <div className="text-xs sm:text-sm text-slate-500 font-medium">
                   {p.category}
                   {p.technology ? ` • ${p.technology}` : ''}
                   {` • $${p.price}`}
                 </div>
-                <div className="text-sm text-slate-400 max-w-sm mt-2">{p.description}</div>
+                {p.description && (
+                  <div className="text-xs sm:text-sm text-slate-400 mt-2 line-clamp-3 whitespace-pre-wrap break-words">
+                    {p.description}
+                  </div>
+                )}
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <button onClick={() => setEditing(p)} className="px-3 py-1 rounded-md bg-indigo-50 text-indigo-700 flex items-center gap-2"><Edit size={14}/>Editar</button>
-              <button onClick={() => onDelete(p.id)} className="px-3 py-1 rounded-md bg-red-50 text-red-700 flex items-center gap-2"><Trash2 size={14}/>Eliminar</button>
+            <div className="flex items-center gap-2 w-full sm:w-auto mt-2 sm:mt-0">
+              <button onClick={() => setEditing(p)} className="flex-1 sm:flex-none px-4 py-2 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 flex items-center justify-center gap-2 font-medium text-sm transition-colors border border-indigo-200">
+                <Edit size={16}/> <span className="sm:hidden lg:inline">Editar</span>
+              </button>
+              <button onClick={() => onDelete(p.id)} className="flex-1 sm:flex-none px-4 py-2 rounded-lg bg-red-50 hover:bg-red-100 text-red-700 flex items-center justify-center gap-2 font-medium text-sm transition-colors border border-red-200">
+                <Trash2 size={16}/> <span className="sm:hidden lg:inline">Eliminar</span>
+              </button>
             </div>
           </div>
         ))}
