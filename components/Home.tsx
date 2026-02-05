@@ -1,14 +1,29 @@
 import React from 'react';
 import { Helmet } from 'react-helmet-async';
+import { useParams, useNavigate } from 'react-router-dom';
 import ProductCard from './ProductCard';
 import CustomOrderForm from './CustomOrderForm';
+import ProductDetailModal from './ProductDetailModal';
 import { useProducts } from '../context/ProductContext';
 import { useCart } from '../context/CartContext';
 import { Product } from '../types';
 
 const Home: React.FC = () => {
-  const { filteredProducts, selectedCategory, setSelectedCategory, availableCategories, loading } = useProducts();
+  const { filteredProducts, selectedCategory, setSelectedCategory, availableCategories, loading, products } = useProducts();
   const { addToCart } = useCart();
+  const { productId } = useParams();
+  const navigate = useNavigate();
+
+  // Find product from URL if exists
+  const urlProduct = React.useMemo(() => {
+    if (!productId) return null;
+    return products.find(p => p.id === productId || p.id === Number(productId)); // Handle string/number ID
+  }, [productId, products]);
+
+  // Handle modal close
+  const handleCloseModal = () => {
+      navigate('/', { replace: true });
+  };
 
   const handleCustomOrder = (order: any) => {
     // This logic was in App.tsx (setCustomOrders), we might need to move it to a context or just log/save to local storage here if simple.
@@ -126,6 +141,15 @@ const Home: React.FC = () => {
             )}
           </div>
         </div>
+      {/* Modal Automático desde URL */}
+      {urlProduct && (
+        <ProductDetailModal 
+          product={urlProduct} 
+          isOpen={true} 
+          onClose={handleCloseModal} 
+          onAddToCart={addToCart}
+        />
+      )}
     </>
   );
 };

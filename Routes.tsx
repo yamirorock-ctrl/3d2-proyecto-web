@@ -37,6 +37,7 @@ const AppRoutes: React.FC = () => {
     <Suspense fallback={<Loading />}>
       <Routes>
         <Route index element={<Home />} />
+        <Route path="product/:productId" element={<Home />} />
         <Route path="register" element={<Register />} />
         <Route path="login" element={<UserLogin />} />
         <Route path="politica-devolucion" element={<ReturnPolicy />} />
