@@ -90,15 +90,36 @@ export const createChatSession = (products: Product[]) => {
   }
 };
 
+// Helper para esperar
+const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
 export const sendMessageToGemini = async (chat: any, message: string): Promise<string> => {
-  try {
-    const result = await chat.sendMessage(message);
-    const response = await result.response;
-    return response.text() || "Lo siento, no pude procesar tu respuesta en este momento.";
-  } catch (error) {
-    console.error("Error communicating with Gemini:", error);
-    return "Hubo un problema técnico al conectar con el asistente. Por favor intenta más tarde.";
+  let attempts = 0;
+  const maxAttempts = 3;
+
+  while (attempts < maxAttempts) {
+    try {
+      const result = await chat.sendMessage(message);
+      const response = await result.response;
+      return response.text() || "Lo siento, no pude procesar tu respuesta en este momento.";
+    } catch (error: any) {
+      console.error(`Error communicating with Gemini (Attemp ${attempts + 1}/${maxAttempts}):`, error);
+      
+      // Si es un error 503 (Overloaded) o 500, reintentamos
+      if (error.message?.includes('503') || error.message?.includes('Overloaded') || error.status === 503) {
+        attempts++;
+        if (attempts < maxAttempts) {
+            const delay = 1000 * Math.pow(2, attempts); // 2s, 4s, 8s
+            console.log(`[Gemini] Modelo sobrecargado. Reintentando en ${delay}ms...`);
+            await wait(delay);
+            continue;
+        }
+      }
+      
+      return "Hubo un problema técnico al conectar con el asistente (Modelo Sobrecargado). Por favor intenta más tarde.";
+    }
   }
+  return "El asistente está temporalmente no disponible.";
 };
 
 export const suggestMLTitle = async (productName: string, description: string, imageUrl?: string): Promise<string> => {
