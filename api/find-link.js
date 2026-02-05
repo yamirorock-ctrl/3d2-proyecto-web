@@ -1,0 +1,102 @@
+import { createClient } from "@supabase/supabase-js";
+
+// Inicializar cliente Supabase
+const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+const SUPABASE_ANON_KEY = process.env.VITE_SUPABASE_ANON_TOKEN;
+
+const supabase =
+  SUPABASE_URL && SUPABASE_ANON_KEY
+    ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+    : null;
+
+export default async function handler(req, res) {
+  // CORS para permitir llamadas desde Make (o cualquier lado)
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+
+  if (req.method === "OPTIONS") {
+    return res.status(200).end();
+  }
+
+  try {
+    const queryText = req.query.q || req.body.text || "";
+
+    // Si no hay texto, devolvemos la home
+    if (!queryText || !supabase) {
+      return res.status(200).json({
+        found: false,
+        url: "https://www.creart3d2.com/",
+        reason: "no_text_or_config",
+      });
+    }
+
+    // Normalizar texto de entrada (minúsculas, sin acentos)
+    const normalizedText = queryText
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "");
+
+    // Obtener catálogo (solo ID y Name para ser rápidos)
+    // Traemos todo el catálogo porque suele ser pequeño (<1000 items).
+    // Si crece mucho, habría que usar Search en DB.
+    const { data: products, error } = await supabase
+      .from("products")
+      .select("id, name");
+
+    if (error || !products) {
+      console.error("Error fetching products:", error);
+      return res.status(200).json({
+        found: false,
+        url: "https://www.creart3d2.com/",
+        reason: "db_error",
+      });
+    }
+
+    // Búsqueda "Fuzzy" Inversa:
+    // Buscamos cuál NOMBRE de producto está contenido en el CAPTION.
+    // Priorizamos el nombre más largo para evitar falsos positivos (ej: "Mate" vs "Mate Harry Potter")
+
+    // Ordenar productos por longitud de nombre descendente
+    const sortedProducts = products.sort(
+      (a, b) => b.name.length - a.name.length,
+    );
+
+    let foundProduct = null;
+
+    for (const product of sortedProducts) {
+      const normalizedName = product.name
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "");
+
+      // Chequeo simple de inclusión
+      if (normalizedText.includes(normalizedName)) {
+        foundProduct = product;
+        break; // Encontré el match más largo, me detengo
+      }
+    }
+
+    if (foundProduct) {
+      // Construir URL (Asumiendo estructura /product/:id)
+      // Ajustar si la estructura real usa slugs
+      const productUrl = `https://www.creart3d2.com/product/${foundProduct.id}`;
+
+      return res.status(200).json({
+        found: true,
+        product: foundProduct.name,
+        url: productUrl,
+        match_type: "exact_name_in_text",
+      });
+    }
+
+    // Fallback: Si no encuentro match exacto, devuelvo la home
+    return res.status(200).json({
+      found: false,
+      url: "https://www.creart3d2.com/",
+      reason: "no_match_found",
+    });
+  } catch (e) {
+    console.error("API Error:", e);
+    return res.status(500).json({ error: e.message });
+  }
+}
