@@ -1,5 +1,6 @@
 {
   "rewrites": [
+    { "source": "/google87bccf3b065bcaa1.html", "destination": "/google87bccf3b065bcaa1.html" },
     { "source": "/catalog.csv", "destination": "/api/feed" },
     { "source": "/api/(.*)", "destination": "/api/$1" },
     { "source": "/((?!api/|.*\\..*).*)", "destination": "/index.html" }
