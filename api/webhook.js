@@ -414,12 +414,58 @@ export default async function handler(req, res) {
         `[Webhook] Orden ${orderId} actualizada a estado: ${orderStatus}`,
       );
 
-      // Si el pago fue aprobado, notificar por WhatsApp
+      // Si el pago fue aprobado, notificar por WhatsApp y DESCONTAR STOCK
       if (orderStatus === "paid") {
+        console.log(
+          `[Webhook] Pago aprobado para Orden ${orderId}. Iniciando descuento de stock...`,
+        );
+
+        // 1. Obtener items de la orden
+        const { data: orderData, error: orderError } = await supabase
+          .from("orders")
+          .select("items, shipping_method")
+          .eq("id", orderId)
+          .single();
+
+        if (!orderError && orderData && orderData.items) {
+          // 2. Descontar stock para cada item
+          for (const item of orderData.items) {
+            if (item.id && item.quantity) {
+              // Buscar stock actual
+              const { data: product } = await supabase
+                .from("products")
+                .select("stock, name")
+                .eq("id", item.id)
+                .single();
+
+              if (product) {
+                const newStock = Math.max(
+                  0,
+                  (product.stock || 0) - item.quantity,
+                );
+                await supabase
+                  .from("products")
+                  .update({ stock: newStock })
+                  .eq("id", item.id);
+
+                console.log(
+                  `[Webhook] Stock descontado: ${product.name} (${product.stock} -> ${newStock})`,
+                );
+              }
+            }
+          }
+        } else {
+          console.error(
+            "[Webhook] Error obteniendo items para descuento de stock:",
+            orderError,
+          );
+        }
+
         const businessPhone =
           process.env.VITE_WHATSAPP_NUMBER || process.env.WHATSAPP_NUMBER;
         const personalPhone =
           process.env.VITE_PERSONAL_NUMBER || process.env.PERSONAL_NUMBER;
+        // ... (resto del código de notificación)
         const baseUrl = process.env.VERCEL_URL
           ? `https://${process.env.VERCEL_URL}`
           : "http://localhost:3000";
