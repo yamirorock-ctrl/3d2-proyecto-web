@@ -14,9 +14,12 @@ if (apiKey && apiKey !== 'TU_API_KEY_AQUI') {
 export const createChatSession = (products: Product[]) => {
   if (!genAI) return null;
 
-  const productContext = products.map(p => 
-    `- ${p.name} ($${p.price}): ${p.description} [Categoría: ${p.category}]`
-  ).join('\n');
+  const productContext = products.map(p => {
+    // Intentamos obtener la imagen de forma robusta
+    const img = (p as any).image_url || (Array.isArray((p as any).images) ? (p as any).images[0] : (p as any).image) || '';
+    // INSTRUCCIÓN CRUCIAL: Pasamos el ID y la URL real para que el bot los use en el JSON
+    return `- ID: ${p.id} | Nombre: ${p.name} | Precio: $${p.price} | Cat: ${p.category} | Desc: ${p.description.slice(0, 100)}... | Img: ${img}`;
+  }).join('\n');
 
   const systemInstruction = `
     Eres un asistente de ventas virtual experto y creativo para la marca "3D2".
