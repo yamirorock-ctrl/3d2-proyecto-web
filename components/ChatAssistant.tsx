@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { MessageSquare, Send, X, Sparkles, Loader2, Minimize2, ShoppingBag, Eye } from 'lucide-react';
+import { MessageSquare, Send, X, Sparkles, Loader2, Minimize2, ShoppingBag, Eye, Printer } from 'lucide-react';
 import { Message, Product } from '../types';
 import { createChatSession, sendMessageToGemini } from '../services/geminiService';
 import { ChatSession } from '@google/generative-ai';
@@ -28,7 +28,7 @@ const ChatAssistant: React.FC<ChatAssistantProps> = ({ products }) => {
     {
       id: 'welcome',
       role: 'model',
-      text: '¡Hola! 👋 Soy el asistente virtual de 3D2. ¿En qué puedo ayudarte hoy?',
+      text: '¡Hola! 👇 Soy Printy 🖨️, el asistente virtual de 3D2. ¿En qué puedo ayudarte hoy?',
       timestamp: new Date()
     }
   ]);
@@ -107,10 +107,6 @@ const ChatAssistant: React.FC<ChatAssistantProps> = ({ products }) => {
   };
 
   const handleProductClick = (productId: string) => {
-    // Navigate to product modal
-    // We navigate to /product/:id but keep background. 
-    // Usually Home component handles this check, or we can just push history.
-    // Assuming Route /product/:id logic exists in Routes.tsx
     navigate(`/product/${productId}`);
   };
 
@@ -121,14 +117,14 @@ const ChatAssistant: React.FC<ChatAssistantProps> = ({ products }) => {
         className="fixed bottom-6 right-6 z-50 p-4 bg-indigo-600 text-white rounded-full shadow-xl hover:bg-indigo-700 hover:scale-110 transition-all flex items-center gap-2 group animate-in fade-in zoom-in duration-300"
       >
         <div className="relative">
-            <Sparkles size={24} className="group-hover:rotate-12 transition-transform" />
+            <Printer size={24} className="group-hover:rotate-12 transition-transform" />
             <span className="absolute -top-1 -right-1 flex h-3 w-3">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-sky-400 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-3 w-3 bg-sky-500"></span>
             </span>
         </div>
         <span className="font-medium max-w-0 overflow-hidden group-hover:max-w-xs transition-all duration-300 whitespace-nowrap">
-          Asistente IA
+          Chat con Printy
         </span>
       </button>
     );
@@ -144,16 +140,21 @@ const ChatAssistant: React.FC<ChatAssistantProps> = ({ products }) => {
     >
       {/* Header */}
       <div 
-        className="bg-indigo-600 p-4 flex justify-between items-center text-white cursor-pointer rounded-t-2xl"
+        className="bg-indigo-600 p-4 flex justify-between items-center text-white cursor-pointer rounded-t-2xl group"
         onClick={() => isMinimized ? setIsMinimized(false) : null}
       >
         <div className="flex items-center gap-2">
-          <div className="bg-white/20 p-1.5 rounded-lg backdrop-blur-sm">
-            <Sparkles size={18} />
+          <div className={`bg-white/20 p-1.5 rounded-lg backdrop-blur-sm transition-all duration-300 ${isLoading ? 'animate-pulse scale-110 bg-white/30' : 'group-hover:scale-110 group-hover:rotate-6'}`}>
+            <Printer size={18} className={isLoading ? 'animate-bounce' : ''} />
           </div>
           <div>
-            <h3 className="font-bold text-sm">Asistente 3D2</h3>
-            {!isMinimized && <p className="text-xs text-indigo-100 flex items-center gap-1"><span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse"></span> Online (Gemini 3.0)</p>}
+            <h3 className="font-bold text-sm">Printy (Asistente 3D2)</h3>
+            {!isMinimized && (
+                <p className="text-xs text-indigo-100 flex items-center gap-1">
+                    <span className={`w-1.5 h-1.5 bg-green-400 rounded-full ${isLoading ? 'animate-ping' : 'animate-pulse'}`}></span> 
+                    {isLoading ? 'Imprimiendo respuesta...' : 'Online (Gemini 3.0)'}
+                </p>
+            )}
           </div>
         </div>
         <div className="flex gap-2">
