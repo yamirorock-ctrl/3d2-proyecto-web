@@ -1,6 +1,7 @@
 /**
  * Webhook de MercadoPago para Vercel Serverless Functions
  * Recibe notificaciones de pagos y actualiza el estado en Supabase
+ * FUSIONADO: También gestiona notificaciones de ventas de MercadoLibre Marketplace
  */
 
 import { createClient } from "@supabase/supabase-js";
@@ -610,116 +611,6 @@ export default async function handler(req, res) {
           .status(200)
           .json({ received: true, error: "merchant_order exception" });
       }
-    }
-
-    // MERGED: MercadoLibre Marketplace Orders Handling (orders_v2)
-    // Se detecta por topic en query o body
-    const incomingTopic = req.query?.topic || req.body?.topic;
-
-    if (incomingTopic === "orders_v2" || incomingTopic === "orders") {
-      const resource = req.query?.resource || req.body?.resource;
-      console.log(
-        `[Webhook][ML] Recibido evento de venta ML: ${incomingTopic} -> ${resource}`,
-      );
-
-      // 1. Obtener Token de ML
-      const { data: tokenData, error: tokenError } = await supabase
-        .from("ml_tokens")
-        .select("access_token, user_id")
-        .order("updated_at", { ascending: false })
-        .limit(1)
-        .single();
-
-      if (tokenError || !tokenData) {
-        console.error("[Webhook][ML] No token found");
-        return res.status(200).json({ error: "No ML token" });
-      }
-
-      // 2. Consultar la Orden a la API de ML
-      const mlResponse = await fetch(
-        `https://api.mercadolibre.com${resource}`,
-        {
-          headers: { Authorization: `Bearer ${tokenData.access_token}` },
-        },
-      );
-
-      if (!mlResponse.ok) {
-        console.error(`[Webhook][ML] Fetch error: ${mlResponse.status}`);
-        return res.status(200).json({ error: "ML API Error" });
-      }
-
-      const order = await mlResponse.json();
-      const orderId = order.id;
-      const totalAmount = order.total_amount;
-      const buyerName =
-        (order.buyer?.first_name || "") + " " + (order.buyer?.last_name || "");
-
-      // 3. Procesar Items y Descontar Stock
-      const orderItems = order.order_items || [];
-      let itemsProcessed = [];
-
-      for (const item of orderItems) {
-        const mlItemId = item.item.id;
-        const quantity = item.quantity;
-        const title = item.item.title;
-
-        // Buscar producto en DB local por ml_item_id
-        const { data: products } = await supabase
-          .from("products")
-          .select("*")
-          .eq("ml_item_id", mlItemId);
-
-        const product = products && products.length > 0 ? products[0] : null;
-
-        if (product) {
-          // Descontar Stock
-          const newStock = Math.max(0, (product.stock || 0) - quantity);
-          await supabase
-            .from("products")
-            .update({ stock: newStock })
-            .eq("id", product.id);
-
-          itemsProcessed.push(`${quantity}x ${product.name}`);
-          console.log(
-            `[Webhook][ML] Stock descontado: ${product.name} (${product.stock} -> ${newStock})`,
-          );
-        } else {
-          itemsProcessed.push(`${quantity}x ${title} (No vinculado)`);
-          console.log(`[Webhook][ML] Producto no vinculado: ${mlItemId}`);
-        }
-      }
-
-      // 4. Enviar WhatsApp vía Make
-      const message = `💰 *¡Nueva Venta ML!*
-🆔 Orden: ${orderId}
-👤 Comprador: ${buyerName}
-💵 Total: $${totalAmount}
-📦 *Productos:*
-${itemsProcessed.join("\n")}
-_Stock actualizado_ ✅`;
-
-      const MAKE_WEBHOOK_URL =
-        "https://hook.us2.make.com/3du519txd4fyw541s7gtcfnto432gmeg";
-
-      if (MAKE_WEBHOOK_URL) {
-        fetch(MAKE_WEBHOOK_URL, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            event: "ml_sale",
-            order_id: orderId,
-            customer_name: buyerName,
-            total: totalAmount,
-            items: itemsProcessed.join(", "),
-            detailed_message: message, // Para futuro uso
-            timestamp: new Date().toISOString(),
-          }),
-        }).catch((e) => console.error("[Webhook][ML] Make trigger failed:", e));
-      }
-
-      return res
-        .status(200)
-        .json({ success: true, from: "mercadolibre_marketplace" });
     }
 
     // Otros tipos de notificaciones (merchant_order, etc.)
