@@ -56,36 +56,43 @@ export default async function handler(req, res) {
     // Buscamos cuál NOMBRE de producto está contenido en el CAPTION.
     // Priorizamos el nombre más largo para evitar falsos positivos (ej: "Mate" vs "Mate Harry Potter")
 
-    // Ordenar productos por longitud de nombre descendente
-    const sortedProducts = products.sort(
-      (a, b) => b.name.length - a.name.length,
-    );
+    let bestMatch = null;
+    let maxScore = 0;
 
-    let foundProduct = null;
+    const searchTokens = normalizedText
+      .split(/\s+/)
+      .filter((t) => t.length > 2); // Ignorar palabras de < 3 letras
 
-    for (const product of sortedProducts) {
+    for (const product of products) {
       const normalizedName = product.name
         .toLowerCase()
         .normalize("NFD")
         .replace(/[\u0300-\u036f]/g, "");
 
-      // Chequeo simple de inclusión
-      if (normalizedText.includes(normalizedName)) {
-        foundProduct = product;
-        break; // Encontré el match más largo, me detengo
+      let score = 0;
+      // Por cada palabra clave buscada, sumamos puntos si aparece en el nombre del producto
+      searchTokens.forEach((token) => {
+        if (normalizedName.includes(token)) score++;
+      });
+
+      // Si el nombre del producto está LITERALMENTE en el texto (caption largo), le damos score infinito
+      if (normalizedText.includes(normalizedName)) score += 100;
+
+      if (score > maxScore) {
+        maxScore = score;
+        bestMatch = product;
       }
     }
 
-    if (foundProduct) {
-      // Construir URL (Asumiendo estructura /product/:id)
-      // Ajustar si la estructura real usa slugs
-      const productUrl = `https://www.creart3d2.com/product/${foundProduct.id}`;
-
+    if (bestMatch && maxScore > 0) {
+      // Construir URL
+      const productUrl = `https://www.creart3d2.com/product/${bestMatch.id}`;
       return res.status(200).json({
         found: true,
-        product: foundProduct.name,
+        product: bestMatch.name,
         url: productUrl,
-        match_type: "exact_name_in_text",
+        match_type: maxScore >= 100 ? "exact_name_in_text" : "keyword_match",
+        score: maxScore,
       });
     }
 
