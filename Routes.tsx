@@ -11,6 +11,7 @@ const OrderFailure = React.lazy(() => import('./components/OrderFailure'));
 const OrderTracking = React.lazy(() => import('./components/OrderTracking'));
 const MLCallback = React.lazy(() => import('./components/MLCallback'));
 const Register = React.lazy(() => import('./components/Register'));
+const ReturnPolicy = React.lazy(() => import('./components/ReturnPolicy'));
 const UserLogin = React.lazy(() => import('./components/UserLogin'));
 const AdminLogin = React.lazy(() => import('./components/AdminLogin'));
 const ResetAdmin = React.lazy(() => import('./components/ResetAdmin'));
@@ -38,6 +39,7 @@ const AppRoutes: React.FC = () => {
         <Route index element={<Home />} />
         <Route path="register" element={<Register />} />
         <Route path="login" element={<UserLogin />} />
+        <Route path="politica-devolucion" element={<ReturnPolicy />} />
         <Route path="admin/login" element={<AdminLogin />} />
         <Route path="checkout" element={
             // Checkout takes cart and onClearCart.
