@@ -1,142 +1,266 @@
+/* eslint-disable */
 import { createClient } from "@supabase/supabase-js";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.VITE_SUPABASE_ANON_TOKEN;
+const GEMINI_API_KEY =
+  process.env.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
 
-// Initialize Supabase
+// Initialize clients
 const supabase =
   SUPABASE_URL && SUPABASE_ANON_KEY
     ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
     : null;
+const genAI = GEMINI_API_KEY ? new GoogleGenerativeAI(GEMINI_API_KEY) : null;
+
+// Config
+const MAKE_WEBHOOK_URL =
+  "https://hook.us2.make.com/3du519txd4fyw541s7gtcfnto432gmeg";
+
+// Bot Personality
+const SYSTEM_PROMPT = `
+Eres 'Antigravity Bot', el asistente virtual de ventas de la marca "3D2" (Impresión 3D y Corte Láser).
+Tu objetivo es responder preguntas de posibles compradores en MercadoLibre.
+
+TUS REGLAS DE ORO:
+1. Responde de forma CORTA (máximo 2 oraciones), AMABLE y PROFESIONAL.
+2. Si preguntan por STOCK, consulta los datos que te proveo.
+   - Si Stock > 0: "¡Hola! Sí, tenemos stock disponible. ¡Esperamos tu compra! 🚀"
+   - Si Stock = 0: "¡Hola! En este momento no nos queda stock para entrega inmediata."
+3. Si preguntan PRECIO DE ENVÍO: "Podés calcular el costo exacto ingresando tu código postal debajo del precio."
+4. NIÉGATE a dar datos de contacto (teléfono, email, redes, dirección exacta). Es PROHIBIDO en MercadoLibre. Di: "Por políticas del sitio no podemos dar datos de contacto por este medio."
+5. Si preguntan por PERSONALIZADOS: "¡Hola! Sí, hacemos trabajos a medida. Somos 3D2."
+6. Usa emojis moderados.
+
+CONTEXTO ACTUAL:
+Producto: {TITLE}
+Precio: {CURRENCY} {PRICE}
+Stock Real (Sistema): {STOCK}
+`;
 
 export default async function handler(req, res) {
   try {
-    // 1. Handling Notification Inputs
     const topic = req.query?.topic || req.body?.topic;
-    const resource = req.query?.resource || req.body?.resource; // e.g., "/orders/123456"
+    const resource = req.query?.resource || req.body?.resource;
 
-    // Quick ping response for ML
-    if (req.method === "GET") {
-      return res.status(200).send("OK");
-    }
+    if (req.method === "GET") return res.status(200).send("OK");
 
     console.log(`[ML Webhook] Received: ${topic} -> ${resource}`);
 
-    if (!supabase) {
-      console.error("[ML Webhook] Supabase not configured");
-      return res.status(500).json({ error: "Server misconfigured" });
-    }
+    if (!supabase) throw new Error("Supabase not configured");
 
-    // 2. We only care about ORDERS for now (Stock deduction + Notification)
-    if (topic !== "orders_v2" && topic !== "orders") {
-      // Ignore other topics like questions or items updates to save resources
+    // Filter Topics
+    if (!["orders_v2", "orders", "questions"].includes(topic)) {
       return res.status(200).json({ ignored: true, topic });
     }
 
-    // 3. Fetch valid ML Token to query the Order details
+    // Get Token
     const { data: tokenData, error: tokenError } = await supabase
       .from("ml_tokens")
-      .select("access_token, user_id")
+      .select("access_token")
       .order("updated_at", { ascending: false })
       .limit(1)
       .single();
 
     if (tokenError || !tokenData) {
-      console.error("[ML Webhook] No ML Token found to fetch order details.");
-      return res.status(200).json({ error: "No token" }); // Return 200 to stop ML retries
+      console.error("[ML Webhook] No ML Token found.");
+      return res.status(200).json({ error: "No token" });
     }
 
-    // 4. Fetch Order Details from MercadoLibre
-    const mlResponse = await fetch(`https://api.mercadolibre.com${resource}`, {
-      headers: { Authorization: `Bearer ${tokenData.access_token}` },
-    });
+    const accessToken = tokenData.access_token;
 
-    if (!mlResponse.ok) {
-      console.error(`[ML Webhook] Failed to fetch order: ${mlResponse.status}`);
-      return res.status(200).json({ error: "ML API Error" });
+    // Route Logic
+    if (topic === "questions") {
+      return await handleQuestion(resource, accessToken, res);
+    } else {
+      return await handleOrder(resource, accessToken, res);
     }
-
-    const order = await mlResponse.json();
-    const orderId = order.id;
-    const totalAmount = order.total_amount;
-    const buyerName = order.buyer?.first_name + " " + order.buyer?.last_name;
-
-    // 5. Process Items
-    const orderItems = order.order_items || [];
-    let itemsProcessed = [];
-
-    for (const item of orderItems) {
-      const mlItemId = item.item.id;
-      const quantity = item.quantity;
-      const title = item.item.title;
-
-      // Find product in our DB
-      const { data: products } = await supabase
-        .from("products")
-        .select("*")
-        .eq("ml_item_id", mlItemId);
-
-      const product = products && products.length > 0 ? products[0] : null;
-
-      if (product) {
-        // Decrement Stock
-        const newStock = Math.max(0, (product.stock || 0) - quantity);
-        await supabase
-          .from("products")
-          .update({ stock: newStock })
-          .eq("id", product.id);
-
-        itemsProcessed.push(`${quantity}x ${product.name}`);
-        console.log(
-          `[ML Webhook] Stock updated for ${product.name}: ${product.stock} -> ${newStock}`,
-        );
-      } else {
-        itemsProcessed.push(`${quantity}x ${title} (No vinculado)`);
-        console.log(`[ML Webhook] Product not linked locally: ${mlItemId}`);
-      }
-    }
-
-    // 6. Send WhatsApp Notification
-    const message = `💰 *¡Nueva Venta ML!*
-    
-🆔 Orden: ${orderId}
-👤 Comprador: ${buyerName}
-💵 Total: $${totalAmount}
-
-📦 *Productos:*
-${itemsProcessed.join("\n")}
-
-_Stock actualizado automáticamente_ ✅`;
-
-    // 6. Send notification to Make (WhatsApp)
-    // MAKE WEBHOOK URL (Reutilizamos el mismo de la web)
-    const MAKE_WEBHOOK_URL =
-      "https://hook.us2.make.com/3du519txd4fyw541s7gtcfnto432gmeg";
-
-    try {
-      if (MAKE_WEBHOOK_URL) {
-        await fetch(MAKE_WEBHOOK_URL, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            event: "ml_sale", // Identificador para saber que viene de ML
-            order_id: orderId,
-            customer_name: buyerName,
-            total: totalAmount,
-            items: itemsProcessed.join(", "),
-            detailed_message: message, // Enviamos el mensaje armado por si en el futuro usamos un bot que lea texto
-            timestamp: new Date().toISOString(),
-          }),
-        });
-        console.log("[ML Webhook] Sent signal to Make.");
-      }
-    } catch (err) {
-      console.error("[ML Webhook] Failed to send to Make:", err);
-    }
-
-    return res.status(200).json({ success: true, order: orderId });
   } catch (e) {
     console.error("[ML Webhook] Error:", e);
     return res.status(500).json({ error: e.message });
+  }
+}
+
+// ------------------------------------------------------------------
+// HANDLERS
+// ------------------------------------------------------------------
+
+async function handleQuestion(resource, accessToken, res) {
+  if (!genAI) {
+    console.warn("[ML Webhook] Gemini Not Configured. Skipping Question.");
+    return res.status(200).json({ error: "No AI" });
+  }
+
+  try {
+    // 1. Fetch Question
+    const qRes = await fetch(`https://api.mercadolibre.com${resource}`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    if (!qRes.ok) throw new Error("Failed to fetch question");
+    const question = await qRes.json();
+
+    if (question.status !== "UNANSWERED") {
+      return res.status(200).json({ status: "Already answered" });
+    }
+
+    // 2. Fetch Item Details
+    const iRes = await fetch(
+      `https://api.mercadolibre.com/items/${question.item_id}`,
+      {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      },
+    );
+    const item = await iRes.json();
+
+    // 3. Fetch Local Stock (Source of Truth)
+    const { data: products } = await supabase
+      .from("products")
+      .select("stock, name")
+      .eq("ml_item_id", question.item_id);
+
+    const localProduct = products?.[0];
+    const realStock = localProduct
+      ? localProduct.stock
+      : item.available_quantity;
+
+    // 4. Generate Answer with Gemini
+    const model = genAI.getGenerativeModel({
+      model: "gemini-1.5-flash",
+      systemInstruction: SYSTEM_PROMPT.replace("{TITLE}", item.title)
+        .replace("{PRICE}", item.price)
+        .replace("{CURRENCY}", item.currency_id)
+        .replace("{STOCK}", realStock),
+    });
+
+    console.log(
+      `[ML Webhook] Asking Gemini about: "${question.text}" (Stock: ${realStock})`,
+    );
+
+    const result = await model.generateContent(
+      `Pregunta del usuario: "${question.text}"`,
+    );
+    const answerText = result.response.text().trim();
+
+    if (!answerText) throw new Error("Empty AI response");
+
+    console.log(`[ML Webhook] Answer generated: "${answerText}"`);
+
+    // 5. Post Answer to ML
+    const ansRes = await fetch(`https://api.mercadolibre.com/answers`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        question_id: question.id,
+        text: answerText,
+      }),
+    });
+
+    if (!ansRes.ok) {
+      const errBody = await ansRes.text();
+      console.error(`[ML Webhook] Failed to post answer: ${errBody}`);
+      throw new Error("ML API Error on Answer");
+    }
+
+    // 6. Notify Make (Log)
+    await sendToMake({
+      event: "ml_question_answered",
+      question: question.text,
+      answer: answerText,
+      item: item.title,
+      timestamp: new Date().toISOString(),
+    });
+
+    return res.status(200).json({ success: true, answer: answerText });
+  } catch (aiError) {
+    console.error("[ML Webhook] AI/Answer Error:", aiError);
+    // Don't fail the webhook, just return error json to stop loop
+    return res.status(200).json({ error: aiError.message });
+  }
+}
+
+async function handleOrder(resource, accessToken, res) {
+  // 1. Fetch Order
+  const oRes = await fetch(`https://api.mercadolibre.com${resource}`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  if (!oRes.ok) throw new Error("Failed to fetch order"); // Retry allowed
+  const order = await oRes.json();
+
+  const orderId = order.id;
+  const totalAmount = order.total_amount;
+  const buyerName =
+    (order.buyer?.first_name || "") + " " + (order.buyer?.last_name || "");
+
+  // 2. Process Items
+  const orderItems = order.order_items || [];
+  let itemsProcessed = [];
+
+  for (const item of orderItems) {
+    const mlItemId = item.item.id;
+    const quantity = item.quantity;
+    const title = item.item.title;
+
+    // Decrement Local Stock
+    const { data: products } = await supabase
+      .from("products")
+      .select("*")
+      .eq("ml_item_id", mlItemId);
+
+    const product = products?.[0];
+
+    if (product) {
+      const newStock = Math.max(0, (product.stock || 0) - quantity);
+      await supabase
+        .from("products")
+        .update({ stock: newStock })
+        .eq("id", product.id);
+
+      itemsProcessed.push(`${quantity}x ${product.name}`);
+      console.log(
+        `[ML Webhook] Stock updated for ${product.name}: ${newStock}`,
+      );
+    } else {
+      itemsProcessed.push(`${quantity}x ${title} (No vinculado)`);
+      console.log(`[ML Webhook] Product not linked: ${mlItemId}`);
+    }
+  }
+
+  // 3. Notify Make / WhatsApp
+  const message = `💰 *¡Nueva Venta ML!*
+🆔 Orden: ${orderId}
+👤 Comprador: ${buyerName}
+💵 Total: $${totalAmount}
+📦 *Productos:*
+${itemsProcessed.join("\n")}
+_Stock actualizado automáticamente_ ✅`;
+
+  await sendToMake({
+    event: "ml_sale",
+    order_id: orderId,
+    customer_name: buyerName,
+    total: totalAmount,
+    items: itemsProcessed.join(", "),
+    detailed_message: message,
+    timestamp: new Date().toISOString(),
+  });
+
+  return res.status(200).json({ success: true, order: orderId });
+}
+
+async function sendToMake(payload) {
+  if (!MAKE_WEBHOOK_URL) return;
+  try {
+    await fetch(MAKE_WEBHOOK_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    console.log(`[ML Webhook] Sent ${payload.event} to Make.`);
+  } catch (e) {
+    console.error("[ML Webhook] Failed to send to Make:", e);
   }
 }
