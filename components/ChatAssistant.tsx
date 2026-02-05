@@ -116,22 +116,24 @@ const ChatAssistant: React.FC<ChatAssistantProps> = ({ products }) => {
         onClick={() => setIsOpen(true)}
         className="fixed bottom-6 right-6 z-50 p-4 bg-indigo-600 text-white rounded-full shadow-xl hover:bg-indigo-700 hover:scale-110 transition-all flex items-center gap-2 group animate-in fade-in zoom-in duration-300"
       >
-        <div className="relative">
+        <div className="relative w-12 h-12">
             {/* Avatar Image with Fallback */}
             <img 
-              src="/printy.png" 
+              src="/printy.png?v=3" 
               alt="Printy" 
-              className="w-10 h-10 object-contain drop-shadow-sm group-hover:rotate-12 transition-transform"
+              className="w-full h-full object-cover rounded-full shadow-sm group-hover:rotate-12 transition-transform border border-indigo-300"
               onError={(e) => {
                 e.currentTarget.style.display = 'none';
                 e.currentTarget.nextElementSibling?.classList.remove('hidden');
               }}
             />
-            <Printer size={24} className="hidden group-hover:rotate-12 transition-transform" />
+            <div className="hidden absolute inset-0 flex items-center justify-center">
+                 <Printer size={24} className="group-hover:rotate-12 transition-transform" />
+            </div>
             
-            <span className="absolute -top-1 -right-1 flex h-3 w-3">
+            <span className="absolute -top-0.5 -right-0.5 flex h-3 w-3 z-10">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-sky-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-3 w-3 bg-sky-500"></span>
+              <span className="relative inline-flex rounded-full h-3 w-3 bg-sky-500 border border-white"></span>
             </span>
         </div>
         <span className="font-medium max-w-0 overflow-hidden group-hover:max-w-xs transition-all duration-300 whitespace-nowrap">
@@ -155,17 +157,19 @@ const ChatAssistant: React.FC<ChatAssistantProps> = ({ products }) => {
         onClick={() => isMinimized ? setIsMinimized(false) : null}
       >
         <div className="flex items-center gap-2">
-          <div className={`p-1 rounded-lg transition-all duration-300 ${isLoading ? 'animate-pulse scale-110 bg-white/30' : 'group-hover:scale-110 group-hover:rotate-6'}`}>
+          <div className={`rounded-full overflow-hidden transition-all duration-300 w-9 h-9 border border-white/20 bg-white ${isLoading ? 'animate-pulse ring-2 ring-white/40' : 'group-hover:scale-110 group-hover:rotate-6'}`}>
             <img 
-              src="/printy.png" 
+              src="/printy.png?v=3" 
               alt="Printy" 
-              className={`w-8 h-8 object-contain ${isLoading ? 'animate-bounce' : ''}`}
+              className={`w-full h-full object-cover ${isLoading ? 'animate-bounce' : ''}`}
               onError={(e) => {
                 e.currentTarget.style.display = 'none';
-                e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                e.currentTarget.parentElement?.querySelector('.printer-fallback-header')?.classList.remove('hidden');
               }}
             />
-            <Printer size={18} className={`hidden ${isLoading ? 'animate-bounce' : ''}`} />
+             <div className="printer-fallback-header hidden w-full h-full flex items-center justify-center bg-white/20 text-indigo-600">
+                <Printer size={18} />
+             </div>
           </div>
           <div>
             <h3 className="font-bold text-sm">Printy (Asistente 3D2)</h3>
