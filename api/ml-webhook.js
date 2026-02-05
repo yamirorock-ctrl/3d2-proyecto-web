@@ -126,7 +126,7 @@ async function handleQuestion(resource, accessToken, res) {
 
     // 4. Generate Answer with Gemini
     const model = genAI.getGenerativeModel({
-      model: "gemini-3-flash-preview",
+      model: "gemini-1.5-flash",
       systemInstruction: SYSTEM_PROMPT.replace("{TITLE}", item.title)
         .replace("{PRICE}", item.price)
         .replace("{CURRENCY}", item.currency_id)
