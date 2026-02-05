@@ -37,6 +37,13 @@ export const createChatSession = (products: Product[]) => {
        - Instagram: https://www.instagram.com/3d2_creart/
        - Facebook: ${((import.meta as any).env?.VITE_FACEBOOK_URL || 'https://www.facebook.com/share/1AfvWg8N66/').trim()}
     
+    7. REGLA VISUAL IMPORTANTE: Si mencionas o recomiendas un producto específico del catálogo, DEBES incluir al final de tu respuesta (o después de mencionar el producto) un bloque oculto con sus datos para mostrarlo en pantalla. El formato es:
+       [PRODUCT:{"id":"ID_DEL_PRODUCTO","name":"NOMBRE_EXACTO","price":PRECIO,"image":"URL_IMAGEN"}]
+       
+       Ejemplo: "Te recomiendo el Mate Stitch. [PRODUCT:{"id":"123","name":"Mate Stitch","price":15000,"image":"http..."}]"
+       
+       Usa esto siempre que la intención del usuario sea ver o comprar un producto. Puedes poner múltiples bloques [PRODUCT:...] si recomiendas varios.
+    
     IMPORTANTE: NO uses formato Markdown para los enlaces (como [Texto](URL)). Escribe simplemente la URL completa http://... para que el sistema la detecte automáticamente.
   `;
 

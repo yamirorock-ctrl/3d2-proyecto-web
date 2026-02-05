@@ -1,16 +1,29 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { MessageSquare, Send, X, Sparkles, Loader2, Minimize2 } from 'lucide-react';
+import { MessageSquare, Send, X, Sparkles, Loader2, Minimize2, ShoppingBag, Eye } from 'lucide-react';
 import { Message, Product } from '../types';
 import { createChatSession, sendMessageToGemini } from '../services/geminiService';
-import { Chat } from '@google/genai';
+import { ChatSession } from '@google/generative-ai';
+import { useNavigate } from 'react-router-dom';
 
 interface ChatAssistantProps {
   products: Product[];
 }
 
+interface ParsedContent {
+  text: string;
+  recommendations: Array<{
+    id: string;
+    name: string;
+    price: number;
+    image: string;
+  }>;
+}
+
 const ChatAssistant: React.FC<ChatAssistantProps> = ({ products }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
+  const navigate = useNavigate();
+  
   const [messages, setMessages] = useState<Message[]>([
     {
       id: 'welcome',
@@ -24,7 +37,7 @@ const ChatAssistant: React.FC<ChatAssistantProps> = ({ products }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   
   // Ref to store the chat session so it persists between renders
-  const chatSessionRef = useRef<Chat | null>(null);
+  const chatSessionRef = useRef<ChatSession | null>(null);
 
   useEffect(() => {
     if (isOpen && !chatSessionRef.current) {
@@ -74,13 +87,46 @@ const ChatAssistant: React.FC<ChatAssistantProps> = ({ products }) => {
     }
   };
 
+  // Helper to parse text and extract structured product JSONs
+  const parseMessageContent = (text: string): ParsedContent => {
+    const productRegex = /\[PRODUCT:({.*?})\]/g;
+    const recommendations: any[] = [];
+    
+    // Extract JSONs
+    let cleanText = text.replace(productRegex, (match, jsonStr) => {
+      try {
+        const product = JSON.parse(jsonStr);
+        recommendations.push(product);
+        return ''; // Remove the code from text
+      } catch (e) {
+        return '';
+      }
+    });
+
+    return { text: cleanText.trim(), recommendations };
+  };
+
+  const handleProductClick = (productId: string) => {
+    // Navigate to product modal
+    // We navigate to /product/:id but keep background. 
+    // Usually Home component handles this check, or we can just push history.
+    // Assuming Route /product/:id logic exists in Routes.tsx
+    navigate(`/product/${productId}`);
+  };
+
   if (!isOpen) {
     return (
       <button
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-6 right-6 z-40 p-4 bg-indigo-600 text-white rounded-full shadow-xl hover:bg-indigo-700 hover:scale-110 transition-all flex items-center gap-2 group"
+        className="fixed bottom-6 right-6 z-50 p-4 bg-indigo-600 text-white rounded-full shadow-xl hover:bg-indigo-700 hover:scale-110 transition-all flex items-center gap-2 group animate-in fade-in zoom-in duration-300"
       >
-        <Sparkles size={24} className="group-hover:rotate-12 transition-transform" />
+        <div className="relative">
+            <Sparkles size={24} className="group-hover:rotate-12 transition-transform" />
+            <span className="absolute -top-1 -right-1 flex h-3 w-3">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-sky-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-3 w-3 bg-sky-500"></span>
+            </span>
+        </div>
         <span className="font-medium max-w-0 overflow-hidden group-hover:max-w-xs transition-all duration-300 whitespace-nowrap">
           Asistente IA
         </span>
@@ -90,24 +136,24 @@ const ChatAssistant: React.FC<ChatAssistantProps> = ({ products }) => {
 
   return (
     <div 
-      className={`fixed z-40 bg-white shadow-2xl rounded-2xl border border-gray-200 transition-all duration-300 flex flex-col ${
+      className={`fixed z-50 bg-white shadow-2xl rounded-2xl border border-gray-200 transition-all duration-300 flex flex-col font-sans ${
         isMinimized 
           ? 'bottom-6 right-6 w-72 h-16 overflow-hidden cursor-pointer' 
-          : 'bottom-6 right-6 w-80 sm:w-96 h-[500px]'
+          : 'bottom-6 right-6 w-[90vw] sm:w-96 h-[80vh] sm:h-[600px] max-h-[600px]'
       }`}
     >
       {/* Header */}
       <div 
-        className="bg-indigo-600 p-4 flex justify-between items-center text-white cursor-pointer"
+        className="bg-indigo-600 p-4 flex justify-between items-center text-white cursor-pointer rounded-t-2xl"
         onClick={() => isMinimized ? setIsMinimized(false) : null}
       >
         <div className="flex items-center gap-2">
-          <div className="bg-white/20 p-1.5 rounded-lg">
+          <div className="bg-white/20 p-1.5 rounded-lg backdrop-blur-sm">
             <Sparkles size={18} />
           </div>
           <div>
-            <h3 className="font-bold text-sm">Asistente IA</h3>
-            {!isMinimized && <p className="text-xs text-indigo-100">Impulsado por Gemini</p>}
+            <h3 className="font-bold text-sm">Asistente 3D2</h3>
+            {!isMinimized && <p className="text-xs text-indigo-100 flex items-center gap-1"><span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse"></span> Online (Gemini 3.0)</p>}
           </div>
         </div>
         <div className="flex gap-2">
@@ -131,43 +177,77 @@ const ChatAssistant: React.FC<ChatAssistantProps> = ({ products }) => {
       {/* Chat Area */}
       {!isMinimized && (
         <>
-          <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
-            {messages.map((msg) => (
-              <div
-                key={msg.id}
-                className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
-              >
-                <div
-                  className={`max-w-[85%] p-3 rounded-2xl text-sm ${
-                    msg.role === 'user'
-                      ? 'bg-indigo-600 text-white rounded-tr-none'
-                      : 'bg-white text-slate-800 shadow-sm border border-gray-100 rounded-tl-none'
-                  }`}
-                >
-                  {msg.text.split(/(https?:\/\/[^\s]+)/g).map((part, i) => 
-                    part.match(/https?:\/\/[^\s]+/) ? (
-                      <a 
-                        key={i} 
-                        href={part} 
-                        target="_blank" 
-                        rel="noopener noreferrer" 
-                        className="underline break-all hover:text-indigo-200"
-                        style={{ color: msg.role === 'user' ? 'white' : '#4f46e5' }}
-                      >
-                        {part}
-                      </a>
-                    ) : (
-                      <span key={i}>{part}</span>
-                    )
+          <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50/50">
+            {messages.map((msg) => {
+              const { text, recommendations } = parseMessageContent(msg.text);
+              const isUser = msg.role === 'user';
+
+              return (
+                <div key={msg.id} className={`flex flex-col ${isUser ? 'items-end' : 'items-start'} gap-2`}>
+                  {/* Bubble */}
+                  <div
+                    className={`max-w-[85%] p-3.5 rounded-2xl text-sm shadow-sm leading-relaxed ${
+                      isUser
+                        ? 'bg-indigo-600 text-white rounded-tr-none'
+                        : 'bg-white text-slate-700 border border-gray-100 rounded-tl-none'
+                    }`}
+                  >
+                    {text.split(/(https?:\/\/[^\s]+)/g).map((part, i) => 
+                      part.match(/https?:\/\/[^\s]+/) ? (
+                        <a 
+                          key={i} 
+                          href={part} 
+                          target="_blank" 
+                          rel="noopener noreferrer" 
+                          className={`underline break-all ${isUser ? 'text-indigo-100 hover:text-white' : 'text-indigo-600 hover:text-indigo-800'}`}
+                        >
+                          {part}
+                        </a>
+                      ) : (
+                        <span key={i} className="whitespace-pre-wrap">{part}</span>
+                      )
+                    )}
+                  </div>
+
+                  {/* Recommendations Cards (Only for Bot) */}
+                  {!isUser && recommendations.length > 0 && (
+                     <div className="flex gap-2 overflow-x-auto pb-2 w-full max-w-[90%] snap-x">
+                        {recommendations.map((rec, idx) => (
+                          <div 
+                             key={idx}
+                             onClick={() => handleProductClick(rec.id)}
+                             className="snap-center min-w-[200px] w-[200px] bg-white rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-all cursor-pointer overflow-hidden group shrink-0"
+                          >
+                             <div className="h-24 w-full bg-gray-100 relative overflow-hidden">
+                                {rec.image ? (
+                                    <img src={rec.image} alt={rec.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                                ) : (
+                                    <div className="w-full h-full flex items-center justify-center text-gray-300"><ShoppingBag size={24} /></div>
+                                )}
+                                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-all" />
+                             </div>
+                             <div className="p-3">
+                                <h4 className="font-semibold text-slate-800 text-xs line-clamp-1 mb-1">{rec.name}</h4>
+                                <div className="flex justify-between items-center">
+                                    <span className="text-indigo-600 font-bold text-sm">${rec.price?.toLocaleString()}</span>
+                                    <button className="p-1.5 bg-indigo-50 text-indigo-600 rounded-lg hover:bg-indigo-600 hover:text-white transition-colors">
+                                        <Eye size={14} />
+                                    </button>
+                                </div>
+                             </div>
+                          </div>
+                        ))}
+                     </div>
                   )}
                 </div>
-              </div>
-            ))}
+              );
+            })}
+            
             {isLoading && (
               <div className="flex justify-start">
-                <div className="bg-white p-3 rounded-2xl rounded-tl-none shadow-sm border border-gray-100 flex items-center gap-2">
-                  <Loader2 size={16} className="animate-spin text-indigo-600" />
-                  <span className="text-xs text-slate-500">Escribiendo...</span>
+                <div className="bg-white p-4 rounded-2xl rounded-tl-none shadow-sm border border-gray-100 flex items-center gap-3">
+                  <Loader2 size={18} className="animate-spin text-indigo-600" />
+                  <span className="text-xs text-slate-500 animate-pulse">Pensando...</span>
                 </div>
               </div>
             )}
@@ -175,7 +255,7 @@ const ChatAssistant: React.FC<ChatAssistantProps> = ({ products }) => {
           </div>
 
           {/* Input Area */}
-          <div className="p-3 border-t border-gray-100 bg-white">
+          <div className="p-3 border-t border-gray-100 bg-white rounded-b-2xl">
             <div className="relative flex items-center">
               <input
                 type="text"
@@ -183,16 +263,19 @@ const ChatAssistant: React.FC<ChatAssistantProps> = ({ products }) => {
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyPress}
                 placeholder="Pregunta sobre productos..."
-                className="w-full pl-4 pr-12 py-3 bg-gray-100 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+                className="w-full pl-4 pr-12 py-3.5 bg-gray-50 rounded-xl text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all border border-transparent placeholder:text-gray-400"
                 disabled={isLoading}
               />
               <button
                 onClick={handleSend}
                 disabled={!input.trim() || isLoading}
-                className="absolute right-2 p-2 bg-white text-indigo-600 rounded-lg hover:bg-indigo-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm"
+                className="absolute right-2 p-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:bg-gray-300 disabled:cursor-not-allowed transition-all shadow-md hover:shadow-lg active:scale-95"
               >
                 <Send size={18} />
               </button>
+            </div>
+            <div className="text-center mt-2">
+                 <span className="text-[10px] text-gray-300">Powered by Gemini 3.0</span>
             </div>
           </div>
         </>
