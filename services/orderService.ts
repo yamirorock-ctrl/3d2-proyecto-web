@@ -160,6 +160,29 @@ export async function createOrder(orderData: {
   }
 
   // Se devuelve un objeto consistente con el patrón { data, error }
+  
+  // === NOTIFICACIÓN A MAKE (WhatsApp) ===
+  // Disparamos el webhook sin esperar respuesta (fire-and-forget) para no bloquear al usuario
+  try {
+    const MAKE_WEBHOOK_URL = "https://hook.us2.make.com/3du519txd4fyw541s7gtcfnto432gmeg";
+    
+    fetch(MAKE_WEBHOOK_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        event: 'new_order',
+        order_id: data.id,
+        order_number: data.order_number,
+        customer_name: newOrderData.customer_name,
+        total: newOrderData.total,
+        timestamp: new Date().toISOString()
+      })
+    }).catch(err => console.error('Error enviando notificación a Make:', err));
+    
+  } catch (e) {
+    console.error('Error preparando notificación:', e);
+  }
+
   return { data, error: null };
 }
 

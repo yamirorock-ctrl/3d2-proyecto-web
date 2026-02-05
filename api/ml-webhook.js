@@ -108,19 +108,30 @@ ${itemsProcessed.join("\n")}
 
 _Stock actualizado automáticamente_ ✅`;
 
-    // Internal call to notify-whatsapp (or direct fetch if preferred to keep it simple)
-    const whatsappNum = process.env.VITE_WHATSAPP_NUMBER || "5491171285516";
-    const apiKey =
-      process.env.CALLMEBOT_API_KEY || process.env.VITE_CALLMEBOT_API_KEY;
+    // 6. Send notification to Make (WhatsApp)
+    // MAKE WEBHOOK URL (Reutilizamos el mismo de la web)
+    const MAKE_WEBHOOK_URL =
+      "https://hook.us2.make.com/3du519txd4fyw541s7gtcfnto432gmeg";
 
-    if (apiKey) {
-      const encodedMsg = encodeURIComponent(message);
-      await fetch(
-        `https://api.callmebot.com/whatsapp.php?phone=${whatsappNum}&text=${encodedMsg}&apikey=${apiKey}`,
-      );
-      console.log("[ML Webhook] WhatsApp sent.");
-    } else {
-      console.log("[ML Webhook] WhatsApp skipped (No API Key).");
+    try {
+      if (MAKE_WEBHOOK_URL) {
+        await fetch(MAKE_WEBHOOK_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            event: "ml_sale", // Identificador para saber que viene de ML
+            order_id: orderId,
+            customer_name: buyerName,
+            total: totalAmount,
+            items: itemsProcessed.join(", "),
+            detailed_message: message, // Enviamos el mensaje armado por si en el futuro usamos un bot que lea texto
+            timestamp: new Date().toISOString(),
+          }),
+        });
+        console.log("[ML Webhook] Sent signal to Make.");
+      }
+    } catch (err) {
+      console.error("[ML Webhook] Failed to send to Make:", err);
     }
 
     return res.status(200).json({ success: true, order: orderId });
