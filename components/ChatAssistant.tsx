@@ -114,30 +114,31 @@ const ChatAssistant: React.FC<ChatAssistantProps> = ({ products }) => {
     return (
       <button
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-6 right-6 z-50 p-4 bg-indigo-600 text-white rounded-full shadow-xl hover:bg-indigo-700 hover:scale-110 transition-all flex items-center gap-2 group animate-in fade-in zoom-in duration-300"
+        className="fixed bottom-6 right-6 z-50 flex items-center justify-end group animate-in fade-in zoom-in duration-300"
       >
-        <div className="relative w-12 h-12">
+        <span className="bg-indigo-600 text-white font-medium px-4 py-2 rounded-l-full shadow-lg translate-x-4 opacity-0 group-hover:translate-x-0 group-hover:opacity-100 transition-all duration-300 -z-10 text-sm whitespace-nowrap">
+          Chat con Printy
+        </span>
+        
+        <div className="relative w-16 h-16 bg-indigo-600 rounded-full shadow-xl cursor-pointer hover:scale-110 transition-transform duration-300 border-4 border-white flex items-center justify-center">
             {!imgErrorButton ? (
               <img 
                 src="/printy.png?v=3" 
                 alt="Printy" 
-                className="w-full h-full object-cover rounded-full shadow-sm group-hover:rotate-12 transition-transform border border-indigo-400"
+                className="w-full h-full object-cover rounded-full"
                 onError={() => setImgErrorButton(true)}
               />
             ) : (
               <div className="absolute inset-0 flex items-center justify-center bg-indigo-500 rounded-full">
-                 <Printer size={24} className="group-hover:rotate-12 transition-transform" />
+                 <Printer size={30} className="text-white" />
               </div>
             )}
             
-            <span className="absolute -top-0.5 -right-0.5 flex h-3 w-3 z-10">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-sky-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-3 w-3 bg-sky-500 border border-white"></span>
+            <span className="absolute top-0 right-0 flex h-4 w-4 z-20">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-4 w-4 bg-green-500 border-2 border-white"></span>
             </span>
         </div>
-        <span className="font-medium max-w-0 overflow-hidden group-hover:max-w-xs transition-all duration-300 whitespace-nowrap">
-          Chat con Printy
-        </span>
       </button>
     );
   }
