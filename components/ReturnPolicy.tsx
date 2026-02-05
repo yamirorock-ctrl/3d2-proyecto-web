@@ -39,6 +39,7 @@ const ReturnPolicy: React.FC = () => {
                             <ul className="list-disc pl-5 mt-2 space-y-1">
                                 <li>Dispone de <strong>10 días corridos</strong> desde la recepción del producto para solicitar el cambio o devolución.</li>
                                 <li>El producto debe estar sin uso, en perfectas condiciones y en su embalaje original.</li>
+                                <li><strong>Condición de valor:</strong> Los cambios se realizan únicamente por productos de <strong>igual o mayor valor</strong> abonando la diferencia. No se realizan devoluciones parciales de dinero por cambios de menor valor.</li>
                                 <li>El costo de envío por cambio de modelo/color corre por cuenta del comprador.</li>
                             </ul>
                         </section>
