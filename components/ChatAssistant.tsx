@@ -35,9 +35,11 @@ const ChatAssistant: React.FC<ChatAssistantProps> = ({ products }) => {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  
-  // Ref to store the chat session so it persists between renders
   const chatSessionRef = useRef<ChatSession | null>(null);
+
+  // Estados para manejar errores de imagen (fallback)
+  const [imgErrorButton, setImgErrorButton] = useState(false);
+  const [imgErrorHeader, setImgErrorHeader] = useState(false);
 
   useEffect(() => {
     if (isOpen && !chatSessionRef.current) {
@@ -87,17 +89,15 @@ const ChatAssistant: React.FC<ChatAssistantProps> = ({ products }) => {
     }
   };
 
-  // Helper to parse text and extract structured product JSONs
   const parseMessageContent = (text: string): ParsedContent => {
     const productRegex = /\[PRODUCT:({.*?})\]/g;
     const recommendations: any[] = [];
     
-    // Extract JSONs
     let cleanText = text.replace(productRegex, (match, jsonStr) => {
       try {
         const product = JSON.parse(jsonStr);
         recommendations.push(product);
-        return ''; // Remove the code from text
+        return '';
       } catch (e) {
         return '';
       }
@@ -117,19 +117,18 @@ const ChatAssistant: React.FC<ChatAssistantProps> = ({ products }) => {
         className="fixed bottom-6 right-6 z-50 p-4 bg-indigo-600 text-white rounded-full shadow-xl hover:bg-indigo-700 hover:scale-110 transition-all flex items-center gap-2 group animate-in fade-in zoom-in duration-300"
       >
         <div className="relative w-12 h-12">
-            {/* Avatar Image with Fallback */}
-            <img 
-              src="/printy.png?v=3" 
-              alt="Printy" 
-              className="w-full h-full object-cover rounded-full shadow-sm group-hover:rotate-12 transition-transform border border-indigo-300"
-              onError={(e) => {
-                e.currentTarget.style.display = 'none';
-                e.currentTarget.nextElementSibling?.classList.remove('hidden');
-              }}
-            />
-            <div className="hidden absolute inset-0 flex items-center justify-center">
+            {!imgErrorButton ? (
+              <img 
+                src="/printy.png?v=3" 
+                alt="Printy" 
+                className="w-full h-full object-cover rounded-full shadow-sm group-hover:rotate-12 transition-transform border border-indigo-400"
+                onError={() => setImgErrorButton(true)}
+              />
+            ) : (
+              <div className="absolute inset-0 flex items-center justify-center bg-indigo-500 rounded-full">
                  <Printer size={24} className="group-hover:rotate-12 transition-transform" />
-            </div>
+              </div>
+            )}
             
             <span className="absolute -top-0.5 -right-0.5 flex h-3 w-3 z-10">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-sky-400 opacity-75"></span>
@@ -158,18 +157,18 @@ const ChatAssistant: React.FC<ChatAssistantProps> = ({ products }) => {
       >
         <div className="flex items-center gap-2">
           <div className={`rounded-full overflow-hidden transition-all duration-300 w-9 h-9 border border-white/20 bg-white ${isLoading ? 'animate-pulse ring-2 ring-white/40' : 'group-hover:scale-110 group-hover:rotate-6'}`}>
-            <img 
-              src="/printy.png?v=3" 
-              alt="Printy" 
-              className={`w-full h-full object-cover ${isLoading ? 'animate-bounce' : ''}`}
-              onError={(e) => {
-                e.currentTarget.style.display = 'none';
-                e.currentTarget.parentElement?.querySelector('.printer-fallback-header')?.classList.remove('hidden');
-              }}
-            />
-             <div className="printer-fallback-header hidden w-full h-full flex items-center justify-center bg-white/20 text-indigo-600">
-                <Printer size={18} />
-             </div>
+            {!imgErrorHeader ? (
+              <img 
+                src="/printy.png?v=3" 
+                alt="Printy" 
+                className={`w-full h-full object-cover ${isLoading ? 'animate-bounce' : ''}`}
+                onError={() => setImgErrorHeader(true)}
+              />
+            ) : (
+               <div className="w-full h-full flex items-center justify-center bg-white/20 text-indigo-600">
+                  <Printer size={18} />
+               </div>
+            )}
           </div>
           <div>
             <h3 className="font-bold text-sm">Printy (Asistente 3D2)</h3>
