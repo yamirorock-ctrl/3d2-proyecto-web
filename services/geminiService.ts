@@ -15,8 +15,10 @@ export const createChatSession = (products: Product[]) => {
   if (!genAI) return null;
 
   const productContext = products.map(p => {
-    // Intentamos obtener la imagen de forma robusta
-    const img = (p as any).image_url || (Array.isArray((p as any).images) ? (p as any).images[0] : (p as any).image) || '';
+    // Intentamos obtener la imagen de forma robusta.
+    // Si 'images' contiene objetos {url: string}, debemos acceder a .url.
+    // Si 'image' es un string directo, lo usamos.
+    const img = p.image || (Array.isArray(p.images) && p.images.length > 0 ? p.images[0].url : '') || '';
     // INSTRUCCIÓN CRUCIAL: Pasamos el ID y la URL real para que el bot los use en el JSON
     return `- ID: ${p.id} | Nombre: ${p.name} | Precio: $${p.price} | Cat: ${p.category} | Desc: ${p.description.slice(0, 100)}... | Img: ${img}`;
   }).join('\n');
