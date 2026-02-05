@@ -117,7 +117,18 @@ const ChatAssistant: React.FC<ChatAssistantProps> = ({ products }) => {
         className="fixed bottom-6 right-6 z-50 p-4 bg-indigo-600 text-white rounded-full shadow-xl hover:bg-indigo-700 hover:scale-110 transition-all flex items-center gap-2 group animate-in fade-in zoom-in duration-300"
       >
         <div className="relative">
-            <Printer size={24} className="group-hover:rotate-12 transition-transform" />
+            {/* Avatar Image with Fallback */}
+            <img 
+              src="/printy.png" 
+              alt="Printy" 
+              className="w-10 h-10 object-contain drop-shadow-sm group-hover:rotate-12 transition-transform"
+              onError={(e) => {
+                e.currentTarget.style.display = 'none';
+                e.currentTarget.nextElementSibling?.classList.remove('hidden');
+              }}
+            />
+            <Printer size={24} className="hidden group-hover:rotate-12 transition-transform" />
+            
             <span className="absolute -top-1 -right-1 flex h-3 w-3">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-sky-400 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-3 w-3 bg-sky-500"></span>
@@ -144,8 +155,17 @@ const ChatAssistant: React.FC<ChatAssistantProps> = ({ products }) => {
         onClick={() => isMinimized ? setIsMinimized(false) : null}
       >
         <div className="flex items-center gap-2">
-          <div className={`bg-white/20 p-1.5 rounded-lg backdrop-blur-sm transition-all duration-300 ${isLoading ? 'animate-pulse scale-110 bg-white/30' : 'group-hover:scale-110 group-hover:rotate-6'}`}>
-            <Printer size={18} className={isLoading ? 'animate-bounce' : ''} />
+          <div className={`p-1 rounded-lg transition-all duration-300 ${isLoading ? 'animate-pulse scale-110 bg-white/30' : 'group-hover:scale-110 group-hover:rotate-6'}`}>
+            <img 
+              src="/printy.png" 
+              alt="Printy" 
+              className={`w-8 h-8 object-contain ${isLoading ? 'animate-bounce' : ''}`}
+              onError={(e) => {
+                e.currentTarget.style.display = 'none';
+                e.currentTarget.nextElementSibling?.classList.remove('hidden');
+              }}
+            />
+            <Printer size={18} className={`hidden ${isLoading ? 'animate-bounce' : ''}`} />
           </div>
           <div>
             <h3 className="font-bold text-sm">Printy (Asistente 3D2)</h3>
