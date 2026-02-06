@@ -120,17 +120,17 @@ const ChatAssistant: React.FC<ChatAssistantProps> = ({ products }) => {
           Chat con Printy
         </span>
         
-        <div className="relative w-16 h-16 bg-indigo-600 rounded-full shadow-xl cursor-pointer hover:scale-110 transition-transform duration-300 border-4 border-white flex items-center justify-center">
+        <div className="relative w-16 h-16 bg-white rounded-full shadow-xl cursor-pointer hover:scale-110 transition-transform duration-300 border-4 border-indigo-600 flex items-center justify-center">
             {!imgErrorButton ? (
               <img 
                 src="/printy.png?v=3" 
                 alt="Printy" 
-                className="w-full h-full object-cover rounded-full"
+                className="w-full h-full object-cover rounded-full p-0.5"
                 onError={() => setImgErrorButton(true)}
               />
             ) : (
-              <div className="absolute inset-0 flex items-center justify-center bg-indigo-500 rounded-full">
-                 <Printer size={30} className="text-white" />
+              <div className="absolute inset-0 flex items-center justify-center bg-indigo-50 rounded-full">
+                 <Printer size={30} className="text-indigo-600" />
               </div>
             )}
             
