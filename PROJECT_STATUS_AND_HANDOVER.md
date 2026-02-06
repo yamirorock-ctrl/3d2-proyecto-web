@@ -48,49 +48,65 @@
 - **Pinterest:** Cuenta verificada (Meta tag instalada). Tablero conectado.
 - **Legal:** Creada página de `Politica de Devolución` (`/politica-devolucion`) para cumplir con Google.
 
-### 5. 🤖 IA & UX (Printy & Chat)
+### 1. 🤖 IA & UX (Printy & Chat) - ✅ FINALIZADO
 
-- **Avatar Personalizado:** Implementado **"Printy"** (Robot 3D Pixar-style) en el botón flotante y cabecera del chat.
-  - Diseño estilo "burbuja flotante" (64px, borde blanco, sin fondo).
-  - Manejo de errores: Si la imagen falla, vuelve al icono de impresora.
-- **Tarjetas Visuales:**
-  - Gemini ahora recibe URLs reales de imágenes e IDs de Supabase.
-  - El chatbot muestra **Tarjetas de Producto** con foto, precio y botón que navega correctamente al detalle.
-- **Identidad:** Migrado de "Asistente genérico" a "Printy, el experto de 3D2".
+- **Avatar "Printy":** Implementado personaje de marca con diseño de alto contraste (fondo blanco, borde índigo) y animaciones.
+- **Personalidad:** El Chatbot Web y el Webhook de MercadoLibre ahora comparten la personalidad "Printy" (Alegre, emojis, servicial).
+
+### 2. ⚡ MercadoLibre Webhook (Respuestas Automáticas) - ✅ FINALIZADO
+
+- **Reparación:** Habilitado el scope `questions` (que estaba oculto en la UI) y validado flujo completo.
+- **Motor IA:** Actualizado a **Gemini 3.0 Flash Preview** (Modelo 2026, más rápido y capaz).
+- **Rendimiento:** Implementada carga paralela (`Promise.all`) de Item + Stock para evitar timeouts en Vercel.
+- **Resiliencia:** El bot responde instantáneamente.
+
+### 3. 🛡️ Infraestructura & Mantenimiento - ✅ FINALIZADO
+
+- **Refresh Token Automático:** Creado script `api/cron-refresh-ml.js` y configurado **Cron Job** en `vercel.json` (Ejecución horaria).
+  - _Resultado:_ El token de MercadoLibre se renueva solo, evitando que el bot deje de responder cada 6hs.
+
+### 4. 🛍️ Google Merchant Center
+
+- **Estado:** ✅ Feed configurado y productos en revisión.
 
 ---
 
-## 🛠️ ARQUITECTURA TÉCNICA (PARA LA IA)
+## 🛠️ ARQUITECTURA TÉCNICA (CAMBIOS RECIENTES)
 
 ### Archivos Clave Modificados:
 
-- **`api/find-link.js`:** Algoritmo de búsqueda fuzzy para el bot de Make.
-- **`components/Home.tsx`:** Lógica añadida para leer `useParams` y abrir `ProductDetailModal` si hay `productId`.
-- **`Routes.tsx`:** Añadida ruta `product/:productId` apuntando a `Home`.
-- **`index.html`:** Añadidas metaetiquetas de verificación (Google y Pinterest).
-- **`api/ml-webhook.js`:** Webhook REAL de MercadoLibre (separado de `webhook.js` que es solo pagos).
-
-### Flujo de Datos:
-
-`Instagram Captions` -> `Make (HTTP Request)` -> `Web API (find-link)` -> `JSON { url: "..." }` -> `Make` -> `Pinterest/Google API`.
+- **`components/ChatAssistant.tsx`:** Lógica de avatar, estilos y manejo de errores.
+- **`api/ml-webhook.js`:** Lógica central de respuestas ML (Optimización paralela + Prompt Printy).
+- **`api/cron-refresh-ml.js`:** Nuevo endpoint para mantenimiento de tokens.
+- **`vercel.json`:** Configuración de Cron Jobs.
 
 ---
 
-## ⚠️ TAREAS PENDIENTES (LO QUE FALTA)
+## ⚠️ TAREAS PENDIENTES (PRÓXIMA SESIÓN)
 
-1.  **📹 Verificación de Google Business:**
-    - **EN PROCESO (5 Días):** El usuario ya realizó los pasos. Google está verificando la cuenta (tarda aprox 5 días).
-    - _Hasta entonces, las publicaciones a Google Maps quedarán en pausa o pendientes._
+### 1. 🤖 Automatización Make.com (Instagram -> Pinterest)
 
-2.  **✅ Revisión de Productos:**
-    - Esperar 24-48hs a que Google Merchant apruebe los 38 productos (pasar de azul a verde).
+Hemos detectado errores de configuración que deben corregirse mañana:
 
-3.  **🔍 Monitorización:**
-    - Revisar que Make no de errores en el módulo de Google (se le puso "Ignore Error" temporalmente).
+- **Loop Infinito:** El módulo de Instagram lee posts antiguos. _Solución:_ Configurar "Choose where to start: From now on / Manual".
+- **Fotos Duplicadas:** Al subir carruseles, se sube 7 veces la misma foto. _Solución:_ Corregir mapeo del **Iterador** (usar variable de iterador, no del array padre).
+- **Error de Largo:** Descripciones >800 caracteres rompen Pinterest. _Solución:_ Usar fórmula `substring(text;0;500)`.
+
+### 2. 📹 Verificación Google Business
+
+(Pendiente externa: esperar a que Google valide el video).
+
+### 3. ✅ Revisión de Productos:
+
+- Esperar 24-48hs a que Google Merchant apruebe los 38 productos (pasar de azul a verde).
+
+### 4. 🔍 Monitorización:
+
+- Revisar que Make no de errores en el módulo de Google (se le puso "Ignore Error" temporalmente).
 
 ---
 
-### 4. ⚖️ Discusión de Arquitectura (Flujo Híbrido)
+### 5. ⚖️ Discusión de Arquitectura (Flujo Híbrido)
 
 - **Tema:** Definir si la "Fuente de Verdad" es la Web o Instagram.
 - **Propuesta:** Tener ambos (Botón en Web + Automático en IG).
