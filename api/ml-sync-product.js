@@ -184,9 +184,6 @@ export default async function handler(req, res) {
           ? [{ id: "GTIN", value_name: product.gtin }]
           : [{ id: "EMPTY_GTIN_REASON", value_id: "17055158" }]),
         ...(product.mpn ? [{ id: "SKU", value_name: product.mpn }] : []),
-        // Add common mandatory attributes for decoration categories
-        { id: "DESIGN_NAME", value_name: product.model || "Personalizado" },
-        { id: "PATTERN_NAME", value_name: product.model || "Liso" }, // Sometimes required
       ],
       sale_terms: [
         { id: "WARRANTY_TYPE", value_id: "2230280" }, // "Garantía del vendedor"
