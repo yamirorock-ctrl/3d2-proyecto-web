@@ -26,14 +26,13 @@ const supabase = createClient(
   env.VITE_SUPABASE_ANON_TOKEN,
 );
 
-const PRODUCT_ID = 46; // ID DEL MATE
+const PRODUCT_ID = 47; // ID DEL MATE BOCA
 const CLIENT_ID = env.VITE_ML_APP_ID || env.ML_APP_ID;
 const CLIENT_SECRET = env.VITE_ML_APP_SECRET || env.ML_APP_SECRET;
 
 async function manualSync() {
   console.log(`🚀 Iniciando Sync Manual para Producto ID: ${PRODUCT_ID}`);
 
-  // 1. Obtener Token
   console.log("-> Obteniendo credenciales...");
   const { data: tokenData, error: tokenError } = await supabase
     .from("ml_tokens")
@@ -101,9 +100,9 @@ async function manualSync() {
     pictures: pictures,
     attributes: [
       { id: "BRAND", value_name: product.brand || "3D2Store" },
-      { id: "MODEL", value_name: product.model || "River Plate" },
+      { id: "MODEL", value_name: product.model || "Boca Juniors" },
       { id: "ITEM_CONDITION", value_id: "2230284" }, // Nuevo
-      { id: "COLOR", value_name: "Blanco" },
+      { id: "COLOR", value_name: "Azul" },
       { id: "MATE_GOURD_TYPE", value_name: "Bocón" },
       { id: "MATE_GOURD_MATERIALS", value_name: "Plástico PLA" },
       // NOTA: ELIMINADOS DESIGN_NAME Y PATTERN_NAME A PROPÓSITO
