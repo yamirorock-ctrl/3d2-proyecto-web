@@ -1,13 +1,18 @@
 import { createClient } from "@supabase/supabase-js";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
 // Inicializar cliente Supabase
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.VITE_SUPABASE_ANON_TOKEN;
+const GEMINI_API_KEY =
+  process.env.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
 
 const supabase =
   SUPABASE_URL && SUPABASE_ANON_KEY
     ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
     : null;
+
+const genAI = GEMINI_API_KEY ? new GoogleGenerativeAI(GEMINI_API_KEY) : null;
 
 export default async function handler(req, res) {
   // CORS para permitir llamadas desde Make (o cualquier lado)
@@ -87,13 +92,29 @@ export default async function handler(req, res) {
     if (bestMatch && maxScore > 0) {
       // Construir URL
       const productUrl = `https://www.creart3d2.com/product/${bestMatch.id}`;
-      return res.status(200).json({
+
+      const responseJson = {
         found: true,
         product: bestMatch.name,
         url: productUrl,
         match_type: maxScore >= 100 ? "exact_name_in_text" : "keyword_match",
         score: maxScore,
-      });
+      };
+
+      // ✨ AI Summarization Logic
+      if (
+        (req.body.optimize_for === "pinterest" ||
+          req.body.platform === "pinterest") &&
+        genAI
+      ) {
+        responseJson.pinterest_description = await generatePinterestDescription(
+          bestMatch.name,
+          queryText,
+          genAI,
+        );
+      }
+
+      return res.status(200).json(responseJson);
     }
 
     // Fallback: Si no encuentro match exacto, devuelvo la home
@@ -105,5 +126,34 @@ export default async function handler(req, res) {
   } catch (e) {
     console.error("API Error:", e);
     return res.status(500).json({ error: e.message });
+  }
+}
+
+async function generatePinterestDescription(productName, originalText, genAI) {
+  try {
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const prompt = `
+      Actúa como un experto en Marketing Digital y SEO para Pinterest.
+      
+      TAREA:
+      Resumir y optimizar el siguiente texto (que viene de Instagram) para que sirva como descripción de un PIN de Pinterest.
+      
+      REGLAS:
+      1. El producto principal es: "${productName}". Asegúrate de mencionarlo.
+      2. MÁXIMO 450 CARACTERES (Pinterest corta a los 500).
+      3. Mantén un tono inspirador y atractivo.
+      4. Incluye 3-5 hashtags relevantes al final.
+      5. Elimina menciones a "Link en bio" o llamadas a la acción que no sirvan en Pinterest.
+      
+      TEXTO ORIGINAL:
+      "${originalText.slice(0, 2000)}"
+    `;
+
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    return response.text().trim();
+  } catch (error) {
+    console.error("Gemini Error:", error);
+    return originalText.slice(0, 450) + "..."; // Fallback simple
   }
 }
