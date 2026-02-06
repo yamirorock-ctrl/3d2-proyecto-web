@@ -5,6 +5,16 @@
 
 ---
 
+## 🚨 REGLAS DE ORO (LEER ANTES DE TOCAR NADA) 🚨
+
+1.  **PRODUCCIÓN ALWAYS:** Esta web **trabaja en PRODUCCIÓN**. No asumimos entornos locales de prueba desconectados. Los cambios impactan usuarios reales.
+2.  **CEREBRO = SUPABASE:** Toda la información de productos, stock, y usuarios vive en **Supabase**. Es la FUENTE ÚNICA DE VERDAD.
+3.  **FLUJO DE DESPLIEGUE:** Todo cambio se hace vía **Git** (`git push origin main`) -> dispara deploy en **Vercel**.
+    - ❌ PROHIBIDO asumir que los archivos locales "se ven" mágicamente en la web sin git push.
+    - ❌ PROHIBIDO usar datos hardcodeados que contradigan a Supabase.
+
+---
+
 ## 🏆 LOGROS COMPLETADOS (SESIÓN HOY)
 
 ### 1. 🛍️ Google Merchant Center (Google Shopping)
@@ -37,6 +47,16 @@
 
 - **Pinterest:** Cuenta verificada (Meta tag instalada). Tablero conectado.
 - **Legal:** Creada página de `Politica de Devolución` (`/politica-devolucion`) para cumplir con Google.
+
+### 5. 🤖 IA & UX (Printy & Chat)
+
+- **Avatar Personalizado:** Implementado **"Printy"** (Robot 3D Pixar-style) en el botón flotante y cabecera del chat.
+  - Diseño estilo "burbuja flotante" (64px, borde blanco, sin fondo).
+  - Manejo de errores: Si la imagen falla, vuelve al icono de impresora.
+- **Tarjetas Visuales:**
+  - Gemini ahora recibe URLs reales de imágenes e IDs de Supabase.
+  - El chatbot muestra **Tarjetas de Producto** con foto, precio y botón que navega correctamente al detalle.
+- **Identidad:** Migrado de "Asistente genérico" a "Printy, el experto de 3D2".
 
 ---
 
