@@ -104,25 +104,22 @@ async function handleQuestion(resource, accessToken, res) {
       return res.status(200).json({ status: "Already answered" });
     }
 
-    // 2. Fetch Item Details
-    const iRes = await fetch(
-      `https://api.mercadolibre.com/items/${question.item_id}`,
-      {
+    // 2. Parallel Fetch: Item Details & Local Stock (Optimization)
+    const [item, dbResult] = await Promise.all([
+      fetch(`https://api.mercadolibre.com/items/${question.item_id}`, {
         headers: { Authorization: `Bearer ${accessToken}` },
-      },
-    );
-    const item = await iRes.json();
+      }).then((r) => r.json()),
 
-    // 3. Fetch Local Stock (Source of Truth)
-    const { data: products } = await supabase
-      .from("products")
-      .select("stock, name")
-      .eq("ml_item_id", question.item_id);
+      supabase
+        .from("products")
+        .select("stock, name")
+        .eq("ml_item_id", question.item_id)
+        .limit(1)
+        .single(),
+    ]);
 
-    const localProduct = products?.[0];
-    const realStock = localProduct
-      ? localProduct.stock
-      : item.available_quantity;
+    // 3. Determine Real Stock
+    const realStock = dbResult.data?.stock ?? item.available_quantity;
 
     // 4. Generate Answer with Gemini
     const model = genAI.getGenerativeModel({
