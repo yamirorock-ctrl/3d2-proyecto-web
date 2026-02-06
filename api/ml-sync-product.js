@@ -184,6 +184,14 @@ export default async function handler(req, res) {
           ? [{ id: "GTIN", value_name: product.gtin }]
           : [{ id: "EMPTY_GTIN_REASON", value_id: "17055158" }]),
         ...(product.mpn ? [{ id: "SKU", value_name: product.mpn }] : []),
+
+        // Dynamic Attributes from UI (Flexible Schema)
+        ...(product.ml_attributes
+          ? Object.entries(product.ml_attributes).map(([key, value]) => ({
+              id: key,
+              value_name: String(value), // Ensure simple string values
+            }))
+          : []),
       ],
       sale_terms: [
         { id: "WARRANTY_TYPE", value_id: "2230280" }, // "Garantía del vendedor"

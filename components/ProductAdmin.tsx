@@ -382,6 +382,135 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
               </div>
             )}
           </div>
+
+          {/* ATRIBUTOS ESPECÍFICOS DE MERCADOLIBRE (Dinámicos) */}
+          <div className="sm:col-span-2 border-t pt-4 mt-2">
+            <h4 className="font-semibold text-slate-800 mb-2 flex items-center gap-2">
+                <span className="bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded text-xs">MercadoLibre</span>
+                Atributos Técnicos
+            </h4>
+            
+            {/* Selector de Plantilla */}
+            <div className="bg-yellow-50 p-3 rounded-md border border-yellow-100 mb-3">
+               <label className="block text-xs font-medium text-yellow-800 mb-1">Tipo de Producto (Plantilla ML)</label>
+               <select 
+                 className="block w-full rounded-md border-yellow-200 text-sm"
+                 value={form.category || ''} 
+                 onChange={(e) => {
+                     // Solo sugerencia visual, realmente usa la categoría principal
+                     // Pero podríamos hacer que esto pre-llene atributos
+                 }}
+               >
+                  <option value="">-- Seleccionar para ver campos requeridos --</option>
+                  <option value="Mates">Mates y Accesorios</option>
+                  <option value="Muñecos">Muñecos y Figuras</option>
+                  <option value="Cortantes">Cortantes de Repostería</option>
+                  <option value="Soportes">Soportes de Celular</option>
+                  <option value="Llaveros">Llaveros</option>
+                  <option value="Adornos">Adornos y Decoración</option>
+               </select>
+               
+               {/* Campos Dinámicos según Categoría */}
+               <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  
+                  {/* MATES */}
+                  {(form.category?.toLowerCase().includes('mate') || form.name?.toLowerCase().includes('mate')) && (
+                      <>
+                        <div>
+                            <label className="block text-xs font-medium text-slate-600">Tipo de Mate (MATE_GOURD_TYPE)</label>
+                            <input 
+                                type="text" 
+                                placeholder="Ej: Bocón, Poro, Galleta"
+                                value={form.ml_attributes?.['MATE_GOURD_TYPE'] || ''}
+                                onChange={e => handleChange('ml_attributes', { ...form.ml_attributes, 'MATE_GOURD_TYPE': e.target.value })}
+                                className="mt-1 block w-full rounded-md border-gray-200 text-sm" 
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-medium text-slate-600">Material (MATE_GOURD_MATERIALS)</label>
+                            <input 
+                                type="text" 
+                                placeholder="Ej: Plástico PLA, Madera"
+                                value={form.ml_attributes?.['MATE_GOURD_MATERIALS'] || ''}
+                                onChange={e => handleChange('ml_attributes', { ...form.ml_attributes, 'MATE_GOURD_MATERIALS': e.target.value })}
+                                className="mt-1 block w-full rounded-md border-gray-200 text-sm" 
+                            />
+                        </div>
+                      </>
+                  )}
+
+                  {/* MUÑECOS / DECO */}
+                  {(form.category?.toLowerCase().includes('muñeco') || form.category?.toLowerCase().includes('figura') || form.category?.toLowerCase().includes('adorno')) && (
+                      <>
+                        <div>
+                            <label className="block text-xs font-medium text-slate-600">Personaje</label>
+                            <input 
+                                type="text" 
+                                value={form.ml_attributes?.['CHARACTER'] || ''}
+                                onChange={e => handleChange('ml_attributes', { ...form.ml_attributes, 'CHARACTER': e.target.value })}
+                                className="mt-1 block w-full rounded-md border-gray-200 text-sm" 
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-medium text-slate-600">Fabricante (MANUFACTURER)</label>
+                            <input 
+                                type="text" 
+                                value={form.ml_attributes?.['MANUFACTURER'] || '3D2'}
+                                onChange={e => handleChange('ml_attributes', { ...form.ml_attributes, 'MANUFACTURER': e.target.value })}
+                                className="mt-1 block w-full rounded-md border-gray-200 text-sm" 
+                            />
+                        </div>
+                      </>
+                  )}
+
+                   {/* SOPORTES */}
+                  {(form.category?.toLowerCase().includes('soporte') || form.name?.toLowerCase().includes('soporte')) && (
+                      <>
+                        <div>
+                            <label className="block text-xs font-medium text-slate-600">Tipo de Ajuste (MOUNTING_TYPE)</label>
+                            <input 
+                                type="text" 
+                                placeholder="Ej: De escritorio, Pinza"
+                                value={form.ml_attributes?.['CELL_PHONE_HOLDER_MOUNTING_TYPE'] || ''}
+                                onChange={e => handleChange('ml_attributes', { ...form.ml_attributes, 'CELL_PHONE_HOLDER_MOUNTING_TYPE': e.target.value })}
+                                className="mt-1 block w-full rounded-md border-gray-200 text-sm" 
+                            />
+                        </div>
+                         <div>
+                            <label className="block text-xs font-medium text-slate-600">Marcas Compatibles</label>
+                            <input 
+                                type="text" 
+                                placeholder="Ej: Universal, Samsung, iPhone"
+                                value={form.ml_attributes?.['COMPATIBLE_BRANDS'] || 'Universal'}
+                                onChange={e => handleChange('ml_attributes', { ...form.ml_attributes, 'COMPATIBLE_BRANDS': e.target.value })}
+                                className="mt-1 block w-full rounded-md border-gray-200 text-sm" 
+                            />
+                        </div>
+                      </>
+                  )}
+                  
+                  {/* GENERÍCO / EXTRA */}
+                  <div className="col-span-1 sm:col-span-2 mt-2 pt-2 border-t border-yellow-200">
+                      <label className="block text-xs font-medium text-slate-500 mb-1">Otros Atributos (JSON)</label>
+                      <textarea 
+                          rows={2}
+                          className="block w-full rounded-md border-gray-200 text-xs font-mono"
+                          placeholder='{"OTRO_CAMPO": "Valor"}'
+                          value={JSON.stringify(form.ml_attributes || {}, null, 2)}
+                          onChange={e => {
+                              try {
+                                  const parsed = JSON.parse(e.target.value);
+                                  handleChange('ml_attributes', parsed);
+                              } catch {
+                                  // Ignorar error de parseo mientras escribe
+                              }
+                          }}
+                      />
+                  </div>
+
+               </div>
+            </div>
+          </div>
           <div className="sm:col-span-2">
             <label className="block text-sm font-medium text-slate-700 mb-2">Imágenes y Colores</label>
             <div className="mt-1 grid gap-2">

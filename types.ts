@@ -28,6 +28,9 @@ export interface Product {
   model?: string;
   gtin?: string; // EAN/UPC
   mpn?: string; // Part Number
+  
+  // Atributos Flexibles de ML (JSON)
+  ml_attributes?: Record<string, any>; 
 
   // Propiedades para tipos de venta (pack, mayorista)
   saleType?: 'unidad' | 'pack' | 'mayorista'; // DEPRECATED for product config (used for cart items)

@@ -1,0 +1,102 @@
+[
+  {
+    "id": "BRAND",
+    "name": "Marca",
+    "tags": {
+      "catalog_required": true,
+      "required": true
+    },
+    "hierarchy": "PARENT_PK",
+    "relevance": 1,
+    "value_type": "string",
+    "value_max_length": 255,
+    "attribute_group_id": "OTHERS",
+    "attribute_group_name": "Otros",
+    "hint": "Escribe la marca real del producto o 'Genérica' si no tiene marca."
+  },
+  {
+    "id": "MATE_GOURD_TYPE",
+    "name": "Tipo de mate",
+    "tags": {
+      "catalog_required": true,
+      "required": true
+    },
+    "hierarchy": "PARENT_PK",
+    "relevance": 1,
+    "value_type": "string",
+    "value_max_length": 255,
+    "values": [
+      {
+        "id": "2750831",
+        "name": "Criollo"
+      },
+      {
+        "id": "2750828",
+        "name": "Cáliz"
+      },
+      {
+        "id": "2750830",
+        "name": "Mágico"
+      },
+      {
+        "id": "2750827",
+        "name": "Porongo"
+      },
+      {
+        "id": "2750826",
+        "name": "Torpedo"
+      },
+      {
+        "id": "2750829",
+        "name": "Uruguayo"
+      }
+    ],
+    "attribute_group_id": "OTHERS",
+    "attribute_group_name": "Otros"
+  },
+  {
+    "id": "MATE_GOURD_MATERIALS",
+    "name": "Materiales del mate",
+    "tags": {
+      "catalog_required": true,
+      "multivalued": true,
+      "required": true
+    },
+    "hierarchy": "FAMILY",
+    "relevance": 1,
+    "value_type": "string",
+    "value_max_length": 255,
+    "values": [
+      {
+        "id": "2750849",
+        "name": "Acero inoxidable"
+      },
+      {
+        "id": "2750854",
+        "name": "Alpaca"
+      },
+      {
+        "id": "2750850",
+        "name": "Aluminio"
+      },
+      {
+        "id": "2750852",
+        "name": "Calabaza"
+      },
+      {
+        "id": "2750855",
+        "name": "Cuero"
+      },
+      {
+        "id": "2750853",
+        "name": "Madera"
+      },
+      {
+        "id": "2750851",
+        "name": "Plástico"
+      }
+    ],
+    "attribute_group_id": "OTHERS",
+    "attribute_group_name": "Otros"
+  }
+]

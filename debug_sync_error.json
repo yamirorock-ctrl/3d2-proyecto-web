@@ -1,0 +1,48 @@
+{
+  "message": "Validation error",
+  "error": "validation_error",
+  "status": 400,
+  "cause": [
+    {
+      "department": "structured-data",
+      "cause_id": 3704,
+      "type": "warning",
+      "code": "item.attribute.missing_catalog_required",
+      "references": [
+        "item.attributes"
+      ],
+      "message": "El campo \"Tipo de mate\" es obligatorio y no está cargado."
+    },
+    {
+      "department": "items",
+      "cause_id": 147,
+      "type": "error",
+      "code": "item.attributes.missing_required",
+      "references": [
+        "item.attributes",
+        "item.variations.attribute_combinations"
+      ],
+      "message": "The attributes [MATE_GOURD_TYPE, MATE_GOURD_MATERIALS] are required for category MLA392282 and channel marketplace. Check the attribute is present in the attributes list or in all variation's attributes_combination or attributes."
+    },
+    {
+      "department": "shipping",
+      "cause_id": 4053,
+      "type": "warning",
+      "code": "shipping.lost_me1_by_user",
+      "references": [
+        "user.shipping_preferences.modes"
+      ],
+      "message": "User has not mode me1"
+    },
+    {
+      "department": "structured-data",
+      "cause_id": 3704,
+      "type": "warning",
+      "code": "item.attribute.missing_catalog_required",
+      "references": [
+        "item.attributes"
+      ],
+      "message": "El campo \"Materiales del mate\" es obligatorio y no está cargado."
+    }
+  ]
+}
