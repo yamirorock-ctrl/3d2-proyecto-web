@@ -269,12 +269,13 @@ async function generatePinterestDescription(
       TAREA:
       Crear descripción para un PIN de Pinterest del producto: "${productName}".
       
-      REGLAS:
-      1. MÁXIMO 450 caracteres.
-      2. Tono inspirador.
-      3. IMPORTANTE: Genera 5-7 HASHTAGS DE ALTO VALOR basándote en la IMAGEN (si hay) y el texto.
-         - NO uses hashtags genéricos aburridos (#MateRojo, #Regalo).
-         - IDENTIFICA EL FANDOM/MARCA/CLUB: Si ves River Plate, usa #RiverPlate #CARP #ElMasGrande #Millonarios.
+      REGLAS CRÍTICAS:
+      1. MÁXIMO 350 caracteres TOTALES (incluyendo hashtags). SE MUY CONCISO.
+      2. Si te pasas de largo, Pinterest rechazará el pin. Resume al máximo.
+      3. Tono inspirador pero directo.
+      4. Genera 5-7 HASHTAGS DE ALTO VALOR AL FINAL.
+         - IDENTIFICA EL FANDOM/MARCA/CLUB con precisión (ej: #Cerati #SodaStereo).
+         - Busca hashtags de nicho populares.
          - Si ves Harry Potter, usa #HarryPotter #Hogwarts #Potterhead.
          - Si ves Boca, usa #BocaJuniors #LaDoce #CABJ.
          - Busca los hashtags más populares de ese nicho específico.
