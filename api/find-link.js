@@ -178,8 +178,11 @@ async function urlToGenerativePart(url) {
 }
 
 async function findProductWithAI(queryText, products, genAI, imageUrl) {
-  // ⚡🚀 UPGRADE: Usamos el modelo más avanzado disponible (Gemini 3)
-  const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" });
+  // ⚡🚀 USAMOS GEMINI 3 FLASH PREVIEW
+  const model = genAI.getGenerativeModel({
+    model: "gemini-3-flash-preview",
+    generationConfig: { responseMimeType: "application/json" }, // Force JSON
+  });
 
   const productsList = products
     .map((p) => `- ${p.name} (ID: ${p.id})`)
@@ -188,26 +191,28 @@ async function findProductWithAI(queryText, products, genAI, imageUrl) {
   let parts = [];
 
   const prompt = `
-    Actúa como un experto gestor de inventario de e-commerce.
+    Actúa como un sistema de inventario inteligente.
     
     OBJETIVO:
-    Identificar qué producto de la lista está siendo descrito y mostrado.
+    Identificar qué producto de la lista corresponde a la imagen y texto provistos.
     
-    TEXTO DE ENTRADA (Caption):
-    "${queryText.slice(0, 5000)}"
-    
-    LISTA DE PRODUCTOS DISPONIBLES (${products.length} productos):
+    LISTA DE PRODUCTOS:
     ${productsList}
     
-    INSTRUCCIONES:
-    1. Analiza el texto ${imageUrl ? "Y LA IMAGEN provista" : ""} para entender qué producto es.
-    2. Si la imagen muestra a "Cerati" y el texto dice "Gracias Totales", el producto ES "Cuadro 3D Decorativo Gustavo Cerati".
-    3. Si la imagen muestra un soporte de joystick, busca "Soporte".
-    4. SE FLEXIBLE PERO PRECISO: Si hay una coincidencia clara (ej: "Cerati" en texto y producto), ELÍGELA.
-    5. Si no coincide nada, devuelve "null".
+    ENTRADA:
+    Texto: "${queryText.slice(0, 5000)}"
+    Imagen: ${imageUrl ? "SÍ" : "NO"}
     
-    RESPUESTA:
-    Devuelve SOLAMENTE el ID del producto (UUID). Nada más.
+    INSTRUCCIONES:
+    1. Analiza TODA la información visual y textual.
+    2. Busca coincidencias semánticas e IDENTIDAD visual.
+       - Ejemplo: Si ves "Cerati" -> Busca "Cuadro Cerati".
+       - Ejemplo: Si ves figuras de Mortal Kombat -> Busca "Sub-Zero".
+    3. Si encuentras el producto exacto, devuelve su ID.
+    4. Si NO estás seguro, devuelve null.
+    
+    FORMATO DE RESPUESTA JSON:
+    { "id": "UUID_DEL_PRODUCTO_O_NULL" }
   `;
 
   parts.push(prompt);
@@ -215,14 +220,22 @@ async function findProductWithAI(queryText, products, genAI, imageUrl) {
   if (imageUrl) {
     const imagePart = await urlToGenerativePart(imageUrl);
     if (imagePart) parts.push(imagePart);
-    else console.warn("Skipping image part due to fetch error.");
   }
 
   const result = await model.generateContent(parts);
   const response = await result.response;
   const text = response.text().trim();
-  console.log("AI Raw Response:", text);
-  return text;
+  console.log("AI Raw JSON Response:", text);
+
+  try {
+    // Parsear JSON (puede venir con markdown)
+    const cleanJson = text.replace(/```json|```/g, "").trim();
+    const data = JSON.parse(cleanJson);
+    return data.id;
+  } catch (e) {
+    console.error("Error parsing AI JSON:", e);
+    return "null";
+  }
 }
 
 function performManualFuzzySearch(normalizedText, products) {
