@@ -69,13 +69,13 @@ export default async function handler(req, res) {
     // Extract Image URL if available (Multimodal "Eyes")
     const imageUrl = req.query.image_url || body.image_url || null;
 
+    // 🔍 ESTRATEGIA DE BÚSQUEDA HÍBRIDA
+    // 1. Intentamos con IA (Visual + Semántica)
+    // 2. Si la IA falla o no está segura, usamos Búsqueda Clásica (Palabras clave)
+
     if (genAI) {
-      // Usamos IA para encontrar el match
       try {
-        console.log(
-          "Iniciando búsqueda IA con imagen:",
-          imageUrl ? "SÍ" : "NO",
-        );
+        console.log("Iniciando búsqueda IA...");
         const matchId = await findProductWithAI(
           queryText,
           products,
@@ -83,32 +83,33 @@ export default async function handler(req, res) {
           imageUrl,
         );
 
-        console.log("IA Match Result ID:", matchId);
+        console.log("IA Match ID:", matchId);
 
         if (matchId && matchId !== "null") {
           bestMatch = products.find((p) => p.id === matchId);
-          if (bestMatch) maxScore = 100; // La IA confía, así que le damos score alto
+          if (bestMatch) {
+            maxScore = 100;
+            console.log("✅ Match confirmado por IA:", bestMatch.name);
+          }
         } else {
-          // Si la IA dice explícitamente "null", respetamos eso y NO buscamos manualmente.
-          // Esto evita alucinaciones.
-          console.log("IA no encontró coincidencia. Abortando fallback.");
-          bestMatch = null;
+          console.log(
+            "⚠️ La IA no encontró coincidencia (retornó null). Pasando a búsqueda manual...",
+          );
         }
       } catch (aiError) {
-        console.error("AI Match Error Critical:", aiError);
-        // Si falla la IA por error técnico, devolvemos el error para verlo en Make
-        return res.status(200).json({
-          found: false,
-          url: "https://www.creart3d2.com/",
-          reason: "ai_error_debug",
-          details: aiError.message,
-          stack: aiError.stack, // More info!!!
-        });
+        console.error("❌ Error CRÍTICO en IA:", aiError);
+        // No devolvemos error al cliente todavía, dejamos que el fallback intente salvar el día.
       }
-    } else {
-      // Fallback si no hay API Key configurada
+    }
+
+    // 3. Fallback: Si la IA no encontró nada (o falló), buscamos por texto
+    if (!bestMatch) {
+      console.log("🕵️ Ejecutando Búsqueda Manual Fuzzy...");
       bestMatch = performManualFuzzySearch(normalizedText, products);
-      maxScore = bestMatch ? 50 : 0;
+      if (bestMatch) {
+        maxScore = 50;
+        console.log("✅ Match por Búsqueda Manual:", bestMatch.name);
+      }
     }
 
     if (bestMatch && maxScore > 0) {
