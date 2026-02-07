@@ -306,7 +306,17 @@ async function generatePinterestDescription(
 
     const result = await model.generateContent(parts);
     const response = await result.response;
-    return response.text().trim();
+    let text = response.text().trim();
+
+    // SAFETY CLIP: Cortamos a 750 caracteres para asegurar que entre en Make (límite 800)
+    if (text.length > 750) {
+      console.warn(
+        "⚠️ AI Description too long (" + text.length + "). Truncating...",
+      );
+      text = text.slice(0, 747) + "...";
+    }
+
+    return text;
   } catch (error) {
     console.error("Gemini Error:", error);
     return originalText.slice(0, 450) + "..."; // Fallback simple
