@@ -23,6 +23,9 @@ export default async function handler(req, res) {
     return res.status(200).end();
   }
 
+  // Safe body access in case it's GET or oddly parsed
+  const body = req.body || {};
+
   try {
     const queryText = req.query.q || req.body.text || "";
 
