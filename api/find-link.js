@@ -64,19 +64,27 @@ export default async function handler(req, res) {
     // En lugar de contar palabras, le damos el contexto a Gemini para que elija.
 
     let bestMatch = null;
-    let maxScore = 0; // Mantenemos variable para compatibilidad, aunque AI devuelve "match" o "null"
+    let maxScore = 0; // Mantenemos variable para compatibilidad
+
+    // Extract Image URL if available (Multimodal "Eyes")
+    const imageUrl = req.query.image_url || body.image_url || null;
 
     if (genAI) {
       // Usamos IA para encontrar el match
       try {
-        const matchId = await findProductWithAI(queryText, products, genAI);
+        const matchId = await findProductWithAI(
+          queryText,
+          products,
+          genAI,
+          imageUrl,
+        );
         if (matchId && matchId !== "null") {
           bestMatch = products.find((p) => p.id === matchId);
           if (bestMatch) maxScore = 100; // La IA confía, así que le damos score alto
         }
       } catch (aiError) {
         console.error("AI Match Error:", aiError);
-        // Fallback a lógica antigua si la IA falla (por cuota o lo que sea)
+        // Fallback a lógica antigua si la IA falla
         bestMatch = performManualFuzzySearch(normalizedText, products);
         maxScore = bestMatch ? 50 : 0;
       }
@@ -106,6 +114,7 @@ export default async function handler(req, res) {
         responseJson.pinterest_description = await generatePinterestDescription(
           bestMatch.name,
           queryText,
+          imageUrl,
           genAI,
         );
       }
@@ -125,7 +134,26 @@ export default async function handler(req, res) {
   }
 }
 
-async function findProductWithAI(queryText, products, genAI) {
+// Helper para convertir URL de imagen a Part de Gemini
+async function urlToGenerativePart(url) {
+  try {
+    const response = await fetch(url);
+    if (!response.ok)
+      throw new Error(`Failed to fetch image: ${response.statusText}`);
+    const buffer = await response.arrayBuffer();
+    return {
+      inlineData: {
+        data: Buffer.from(buffer).toString("base64"),
+        mimeType: response.headers.get("content-type") || "image/jpeg",
+      },
+    };
+  } catch (error) {
+    console.error("Error loading image:", error);
+    return null;
+  }
+}
+
+async function findProductWithAI(queryText, products, genAI, imageUrl) {
   const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
   // Optimizamos la lista para gastar menos tokens (ID y Nombre es suficiente)
@@ -133,36 +161,44 @@ async function findProductWithAI(queryText, products, genAI) {
     .map((p) => `- ${p.name} (ID: ${p.id})`)
     .join("\n");
 
+  let parts = [];
+
   const prompt = `
     Actúa como un experto gestor de inventario de e-commerce.
     
     OBJETIVO:
-    Identificar qué producto de la lista está siendo descrito en el texto de entrada.
+    Identificar qué producto de la lista está siendo descrito y mostrado.
     
-    TEXTO DE ENTRADA (Caption de Instagram):
-    "${queryText.slice(0, 10000)}"
+    TEXTO DE ENTRADA (Caption):
+    "${queryText.slice(0, 5000)}"
     
     LISTA DE PRODUCTOS DISPONIBLES:
     ${productsList}
     
     INSTRUCCIONES:
-    1. Analiza el texto de entrada en busca de pistas semánticas sobre el producto (nombres de personajes, bandas, objetos, funcionalidades).
-    2. Compara con la lista de productos.
-    3. SE ESTRICTO: Si el texto habla de "Cerati", busca específicamente productos de "Cerati" o "Soda Stereo". NO elijas "Soporte Sub-Zero" solo porque sea un soporte. Buscamos relevancia temática.
-    4. Si hay ambigüedad, elige el más específico.
+    1. Analiza el texto ${imageUrl ? "Y LA IMAGEN provista" : ""} para entender qué producto es.
+    2. Si la imagen muestra a "Cerati", busca "Cuadro Cerati". Si muestra un soporte, busca "Soporte".
+    3. SE ESTRICTO. Prioriza la coincidencia visual y semántica exacta.
+    4. Si no coincide nada, devuelve "null".
     
     RESPUESTA:
-    Devuelve SOLAMENTE el ID del producto (UUID).
-    Si NO encuentras ninguna coincidencia razonable, devuelve la palabra "null".
-    NO escribas explicaciones. SOLO el ID.
+    Devuelve SOLAMENTE el ID del producto (UUID). Nada más.
   `;
 
-  const result = await model.generateContent(prompt);
+  parts.push(prompt);
+
+  if (imageUrl) {
+    const imagePart = await urlToGenerativePart(imageUrl);
+    if (imagePart) parts.push(imagePart);
+  }
+
+  const result = await model.generateContent(parts);
   const response = await result.response;
   return response.text().trim();
 }
 
 function performManualFuzzySearch(normalizedText, products) {
+  // ... (Same as before) ...
   let bestMatch = null;
   let maxScore = 0;
 
@@ -189,27 +225,42 @@ function performManualFuzzySearch(normalizedText, products) {
   return maxScore > 0 ? bestMatch : null;
 }
 
-async function generatePinterestDescription(productName, originalText, genAI) {
+async function generatePinterestDescription(
+  productName,
+  originalText,
+  imageUrl,
+  genAI,
+) {
   try {
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+    let parts = [];
+
     const prompt = `
       Actúa como un experto en Marketing Digital y SEO para Pinterest.
       
       TAREA:
-      Resumir y optimizar el siguiente texto (que viene de Instagram) para que sirva como descripción de un PIN de Pinterest.
+      Crear descripción para un PIN de Pinterest del producto: "${productName}".
       
       REGLAS:
-      1. El producto principal es: "${productName}". Asegúrate de mencionarlo.
-      2. MÁXIMO 450 CARACTERES (Pinterest corta a los 500).
-      3. Mantén un tono inspirador y atractivo.
-      4. Incluye 3-5 hashtags relevantes al final.
-      5. Elimina menciones a "Link en bio" o llamadas a la acción que no sirvan en Pinterest.
+      1. MÁXIMO 450 caracteres.
+      2. Tono inspirador.
+      3. IMPORTANTE: Genera 3-5 HASHTAGS basándote en la IMAGEN (si hay) y el texto.
+         - Si ves colores, usa hashtags de colores.
+         - Si ves "Gaming", usa #Gaming #Setup.
       
       TEXTO ORIGINAL:
-      "${originalText.slice(0, 2000)}"
+      "${originalText.slice(0, 1000)}"
     `;
 
-    const result = await model.generateContent(prompt);
+    parts.push(prompt);
+
+    if (imageUrl) {
+      const imagePart = await urlToGenerativePart(imageUrl);
+      if (imagePart) parts.push(imagePart);
+    }
+
+    const result = await model.generateContent(parts);
     const response = await result.response;
     return response.text().trim();
   } catch (error) {
