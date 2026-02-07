@@ -178,7 +178,8 @@ async function urlToGenerativePart(url) {
 }
 
 async function findProductWithAI(queryText, products, genAI, imageUrl) {
-  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+  // ⚡🚀 UPGRADE: Usamos el modelo más avanzado disponible (Gemini 3)
+  const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" });
 
   const productsList = products
     .map((p) => `- ${p.name} (ID: ${p.id})`)
@@ -258,7 +259,7 @@ async function generatePinterestDescription(
   genAI,
 ) {
   try {
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" });
 
     let parts = [];
 
