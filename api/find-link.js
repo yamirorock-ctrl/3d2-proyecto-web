@@ -105,11 +105,10 @@ export default async function handler(req, res) {
       };
 
       // ✨ AI Summarization Logic
-      if (
-        (req.body.optimize_for === "pinterest" ||
-          req.body.platform === "pinterest") &&
-        genAI
-      ) {
+      const optimizeFor =
+        req.query.optimize_for || body.optimize_for || body.platform;
+
+      if (optimizeFor === "pinterest" && genAI) {
         responseJson.pinterest_description = await generatePinterestDescription(
           bestMatch.name,
           queryText,
