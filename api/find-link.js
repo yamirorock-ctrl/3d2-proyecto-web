@@ -72,21 +72,37 @@ export default async function handler(req, res) {
     if (genAI) {
       // Usamos IA para encontrar el match
       try {
+        console.log(
+          "Iniciando búsqueda IA con imagen:",
+          imageUrl ? "SÍ" : "NO",
+        );
         const matchId = await findProductWithAI(
           queryText,
           products,
           genAI,
           imageUrl,
         );
+
+        console.log("IA Match Result ID:", matchId);
+
         if (matchId && matchId !== "null") {
           bestMatch = products.find((p) => p.id === matchId);
           if (bestMatch) maxScore = 100; // La IA confía, así que le damos score alto
+        } else {
+          // Si la IA dice explícitamente "null", respetamos eso y NO buscamos manualmente.
+          // Esto evita alucinaciones.
+          console.log("IA no encontró coincidencia. Abortando fallback.");
+          bestMatch = null;
         }
       } catch (aiError) {
-        console.error("AI Match Error:", aiError);
-        // Fallback a lógica antigua si la IA falla
-        bestMatch = performManualFuzzySearch(normalizedText, products);
-        maxScore = bestMatch ? 50 : 0;
+        console.error("AI Match Error Critical:", aiError);
+        // Si falla la IA por error técnico, devolvemos el error para verlo en Make
+        return res.status(200).json({
+          found: false,
+          url: "https://www.creart3d2.com/",
+          reason: "ai_error_debug",
+          details: aiError.message,
+        });
       }
     } else {
       // Fallback si no hay API Key configurada
