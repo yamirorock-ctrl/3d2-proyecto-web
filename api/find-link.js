@@ -154,10 +154,16 @@ export default async function handler(req, res) {
 // Helper para convertir URL de imagen a Part de Gemini
 async function urlToGenerativePart(url) {
   try {
+    console.log("Fetching image from URL:", url);
     const response = await fetch(url);
-    if (!response.ok)
+    if (!response.ok) {
+      console.error(
+        `Failed to fetch image: ${response.status} ${response.statusText}`,
+      );
       throw new Error(`Failed to fetch image: ${response.statusText}`);
+    }
     const buffer = await response.arrayBuffer();
+    console.log("Image fetched successfully. Size:", buffer.byteLength);
     return {
       inlineData: {
         data: Buffer.from(buffer).toString("base64"),
@@ -165,7 +171,7 @@ async function urlToGenerativePart(url) {
       },
     };
   } catch (error) {
-    console.error("Error loading image:", error);
+    console.error("Error loading image for AI:", error);
     return null;
   }
 }
@@ -173,7 +179,6 @@ async function urlToGenerativePart(url) {
 async function findProductWithAI(queryText, products, genAI, imageUrl) {
   const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
-  // Optimizamos la lista para gastar menos tokens (ID y Nombre es suficiente)
   const productsList = products
     .map((p) => `- ${p.name} (ID: ${p.id})`)
     .join("\n");
@@ -189,14 +194,15 @@ async function findProductWithAI(queryText, products, genAI, imageUrl) {
     TEXTO DE ENTRADA (Caption):
     "${queryText.slice(0, 5000)}"
     
-    LISTA DE PRODUCTOS DISPONIBLES:
+    LISTA DE PRODUCTOS DISPONIBLES (${products.length} productos):
     ${productsList}
     
     INSTRUCCIONES:
     1. Analiza el texto ${imageUrl ? "Y LA IMAGEN provista" : ""} para entender qué producto es.
-    2. Si la imagen muestra a "Cerati", busca "Cuadro Cerati". Si muestra un soporte, busca "Soporte".
-    3. SE ESTRICTO. Prioriza la coincidencia visual y semántica exacta.
-    4. Si no coincide nada, devuelve "null".
+    2. Si la imagen muestra a "Cerati" y el texto dice "Gracias Totales", el producto ES "Cuadro 3D Decorativo Gustavo Cerati".
+    3. Si la imagen muestra un soporte de joystick, busca "Soporte".
+    4. SE FLEXIBLE PERO PRECISO: Si hay una coincidencia clara (ej: "Cerati" en texto y producto), ELÍGELA.
+    5. Si no coincide nada, devuelve "null".
     
     RESPUESTA:
     Devuelve SOLAMENTE el ID del producto (UUID). Nada más.
@@ -207,15 +213,17 @@ async function findProductWithAI(queryText, products, genAI, imageUrl) {
   if (imageUrl) {
     const imagePart = await urlToGenerativePart(imageUrl);
     if (imagePart) parts.push(imagePart);
+    else console.warn("Skipping image part due to fetch error.");
   }
 
   const result = await model.generateContent(parts);
   const response = await result.response;
-  return response.text().trim();
+  const text = response.text().trim();
+  console.log("AI Raw Response:", text);
+  return text;
 }
 
 function performManualFuzzySearch(normalizedText, products) {
-  // ... (Same as before) ...
   let bestMatch = null;
   let maxScore = 0;
 
