@@ -102,6 +102,7 @@ export default async function handler(req, res) {
           url: "https://www.creart3d2.com/",
           reason: "ai_error_debug",
           details: aiError.message,
+          stack: aiError.stack, // More info!!!
         });
       }
     } else {
