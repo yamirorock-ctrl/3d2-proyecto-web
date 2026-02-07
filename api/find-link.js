@@ -79,7 +79,7 @@ export default async function handler(req, res) {
     if (genAI) {
       try {
         console.log("Iniciando búsqueda IA (Single Shot)...");
-        // AHORA DEVUELVE UN OBJETO con { product_id, pinterest_description }
+        // AHORA DEVUELVE UN OBJETO con { product_name, pinterest_description }
         const aiResult = await findProductWithAI(
           queryText,
           products,
@@ -88,13 +88,22 @@ export default async function handler(req, res) {
           optimizeFor,
         );
 
-        const matchId = aiResult.product_id;
+        const matchName = aiResult.product_name;
         aiDescription = aiResult.pinterest_description; // Guardamos la descripción si la generó
 
-        console.log("IA Match ID:", matchId);
+        console.log("IA Match Name:", matchName);
 
-        if (matchId && matchId !== "null") {
-          bestMatch = products.find((p) => p.id === matchId);
+        if (matchName && matchName !== "null") {
+          // Buscamos exacto o muy parecido
+          bestMatch = products.find((p) => p.name === matchName);
+
+          // Si la IA alucinó un poco el nombre, intentamos buscarlo "fuzzy" dentro de los noms reales
+          if (!bestMatch) {
+            bestMatch = products.find(
+              (p) => p.name.includes(matchName) || matchName.includes(p.name),
+            );
+          }
+
           if (bestMatch) {
             maxScore = 100;
             console.log("✅ Match confirmado por IA:", bestMatch.name);
@@ -181,53 +190,50 @@ async function findProductWithAI(
   optimizeFor,
 ) {
   // ⚡🚀 USAMOS GEMINI 3 FLASH PREVIEW - SINGLE SHOT MODE
-  // Combinamos Búsqueda + Generación en 1 sola llamada para evitar Timeouts.
+  // ESTRATEGIA "PAPELITO": Pedimos el NOMBRE EXACTO, no el ID.
   const model = genAI.getGenerativeModel({
     model: "gemini-3-flash-preview",
     generationConfig: { responseMimeType: "application/json" },
   });
 
-  const productsList = products
-    .map((p) => `- ${p.name} (ID: ${p.id})`)
-    .join("\n");
+  // Solo enviamos nombres para que la IA no se confunda con IDs raros.
+  const productsList = products.map((p) => p.name).join("\n");
 
   let parts = [];
 
   const generateDescription = optimizeFor === "pinterest";
 
   const prompt = `
-    Actúa como un sistema de inventario y marketing inteligente.
+    Actúa como un experto en inventario. Tienes una lista de productos y debes encontrar CUAL de ellos coincide con la imagen y texto.
     
-    OBJETIVO:
-    1. Identificar qué producto de la lista corresponde a la imagen y texto provistos.
-    ${generateDescription ? "2. Generar una descripción optimizada para Pinterest si se encuentra el producto." : ""}
-    
-    LISTA DE PRODUCTOS:
+    CATÁLOGO DE PRODUCTOS (Nombres Exactos):
     ${productsList}
     
     ENTRADA:
     Texto: "${queryText.slice(0, 5000)}"
     Imagen: ${imageUrl ? "SÍ" : "NO"}
     
-    INSTRUCCIONES DE MATCHING:
-    - Analiza coincidencias visuales y semánticas.
-    - Ejemplo: "Cerati" -> "Cuadro Cerati".
-    - Si no estás seguro, product_id es null.
+    TU MISIÓN:
+    1. Mira la entrada.
+    2. Busca en el CATÁLOGO el nombre que MEJOR describa esa entrada.
+    3. IMPORTANTE: El nombre debe ser IDÉNTICO, letra por letra, al de la lista.
+    4. Si no estás seguro o no hay coincidencia, devuelve null.
     
     ${
       generateDescription
         ? `
-    INSTRUCCIONES DE DESCRIPCIÓN (Solo si hay match):
+    TU SEGUNDA MISIÓN (Descripción):
+    - Si encontraste el producto, genera una descripción para Pinterest.
     - MÁXIMO 750 caracteres.
     - Tono inspirador.
-    - Incluye 5-7 HASHTAGS de alto valor al final (ej: #SodaStereo #Cerati).
+    - Incluye 5-7 HASHTAGS de nicho.
     `
         : ""
     }
 
-    FORMATO DE RESPUESTA JSON:
+    RESPUESTA JSON OBLIGATORIA:
     { 
-      "product_id": "UUID_O_NULL",
+      "product_name": "NOMBRE_EXACTO_DE_LA_LISTA_O_NULL",
       "pinterest_description": "${generateDescription ? "TEXTO_GENERADO_O_NULL" : "null"}"
     }
   `;
@@ -249,7 +255,7 @@ async function findProductWithAI(
     return JSON.parse(cleanJson);
   } catch (e) {
     console.error("Error parsing AI JSON:", e);
-    return { product_id: null, pinterest_description: null };
+    return { product_name: null, pinterest_description: null };
   }
 }
 
