@@ -68,9 +68,10 @@ export default async function handler(req, res) {
 
     // Extract Image URL if available (Multimodal "Eyes")
     const imageUrl = req.query.image_url || body.image_url || null;
-    
+
     // ✨ AI Summarization Logic (Para saber si pedir descripción)
-    const optimizeFor = req.query.optimize_for || body.optimize_for || body.platform;
+    const optimizeFor =
+      req.query.optimize_for || body.optimize_for || body.platform;
 
     // 🔍 ESTRATEGIA DE BÚSQUEDA HÍBRIDA + GENERACIÓN ATÓMICA
     let aiDescription = null;
@@ -79,21 +80,29 @@ export default async function handler(req, res) {
       try {
         console.log("Iniciando búsqueda IA (Single Shot)...");
         // AHORA DEVUELVE UN OBJETO con { product_id, pinterest_description }
-        const aiResult = await findProductWithAI(queryText, products, genAI, imageUrl, optimizeFor);
-        
+        const aiResult = await findProductWithAI(
+          queryText,
+          products,
+          genAI,
+          imageUrl,
+          optimizeFor,
+        );
+
         const matchId = aiResult.product_id;
         aiDescription = aiResult.pinterest_description; // Guardamos la descripción si la generó
-        
+
         console.log("IA Match ID:", matchId);
 
         if (matchId && matchId !== "null") {
           bestMatch = products.find((p) => p.id === matchId);
           if (bestMatch) {
-             maxScore = 100;
-             console.log("✅ Match confirmado por IA:", bestMatch.name);
+            maxScore = 100;
+            console.log("✅ Match confirmado por IA:", bestMatch.name);
           }
         } else {
-             console.log("⚠️ La IA no encontró coincidencia (retornó null). Pasando a búsqueda manual...");
+          console.log(
+            "⚠️ La IA no encontró coincidencia (retornó null). Pasando a búsqueda manual...",
+          );
         }
       } catch (aiError) {
         console.error("❌ Error CRÍTICO en IA:", aiError);
@@ -106,10 +115,10 @@ export default async function handler(req, res) {
       console.log("🕵️ Ejecutando Búsqueda Manual Fuzzy...");
       bestMatch = performManualFuzzySearch(normalizedText, products);
       if (bestMatch) {
-         maxScore = 50;
-         console.log("✅ Match por Búsqueda Manual:", bestMatch.name);
-         // OJO: Si falló la IA, no tenemos descripción generada. Podríamos intentar regenerarla aqui, 
-         // pero para evitar timeouts, dejamos que Make use la default o el usuario edite.
+        maxScore = 50;
+        console.log("✅ Match por Búsqueda Manual:", bestMatch.name);
+        // OJO: Si falló la IA, no tenemos descripción generada. Podríamos intentar regenerarla aqui,
+        // pero para evitar timeouts, dejamos que Make use la default o el usuario edite.
       }
     }
 
@@ -127,7 +136,7 @@ export default async function handler(req, res) {
 
       // Si la IA ya generó la descripción en el "Single Shot", la usamos
       if (aiDescription && aiDescription !== "null") {
-          responseJson.pinterest_description = aiDescription;
+        responseJson.pinterest_description = aiDescription;
       }
 
       return res.status(200).json(responseJson);
@@ -164,12 +173,18 @@ async function urlToGenerativePart(url) {
   }
 }
 
-async function findProductWithAI(queryText, products, genAI, imageUrl, optimizeFor) {
+async function findProductWithAI(
+  queryText,
+  products,
+  genAI,
+  imageUrl,
+  optimizeFor,
+) {
   // ⚡🚀 USAMOS GEMINI 3 FLASH PREVIEW - SINGLE SHOT MODE
   // Combinamos Búsqueda + Generación en 1 sola llamada para evitar Timeouts.
-  const model = genAI.getGenerativeModel({ 
-      model: "gemini-3-flash-preview",
-      generationConfig: { responseMimeType: "application/json" }
+  const model = genAI.getGenerativeModel({
+    model: "gemini-3-flash-preview",
+    generationConfig: { responseMimeType: "application/json" },
   });
 
   const productsList = products
@@ -177,7 +192,7 @@ async function findProductWithAI(queryText, products, genAI, imageUrl, optimizeF
     .join("\n");
 
   let parts = [];
-  
+
   const generateDescription = optimizeFor === "pinterest";
 
   const prompt = `
@@ -199,12 +214,16 @@ async function findProductWithAI(queryText, products, genAI, imageUrl, optimizeF
     - Ejemplo: "Cerati" -> "Cuadro Cerati".
     - Si no estás seguro, product_id es null.
     
-    ${generateDescription ? `
+    ${
+      generateDescription
+        ? `
     INSTRUCCIONES DE DESCRIPCIÓN (Solo si hay match):
     - MÁXIMO 750 caracteres.
     - Tono inspirador.
     - Incluye 5-7 HASHTAGS de alto valor al final (ej: #SodaStereo #Cerati).
-    ` : ""}
+    `
+        : ""
+    }
 
     FORMATO DE RESPUESTA JSON:
     { 
@@ -212,9 +231,9 @@ async function findProductWithAI(queryText, products, genAI, imageUrl, optimizeF
       "pinterest_description": "${generateDescription ? "TEXTO_GENERADO_O_NULL" : "null"}"
     }
   `;
-  
+
   parts.push(prompt);
-  
+
   if (imageUrl) {
     const imagePart = await urlToGenerativePart(imageUrl);
     if (imagePart) parts.push(imagePart);
@@ -224,13 +243,13 @@ async function findProductWithAI(queryText, products, genAI, imageUrl, optimizeF
   const response = await result.response;
   const text = response.text().trim();
   console.log("AI Raw JSON Response:", text);
-  
+
   try {
-      const cleanJson = text.replace(/```json|```/g, "").trim();
-      return JSON.parse(cleanJson);
+    const cleanJson = text.replace(/```json|```/g, "").trim();
+    return JSON.parse(cleanJson);
   } catch (e) {
-      console.error("Error parsing AI JSON:", e);
-      return { product_id: null, pinterest_description: null };
+    console.error("Error parsing AI JSON:", e);
+    return { product_id: null, pinterest_description: null };
   }
 }
 
@@ -260,4 +279,3 @@ function performManualFuzzySearch(normalizedText, products) {
   }
   return maxScore > 0 ? bestMatch : null;
 }
-```
