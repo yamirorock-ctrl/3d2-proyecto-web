@@ -60,36 +60,30 @@ export default async function handler(req, res) {
       });
     }
 
-    // Búsqueda "Fuzzy" Inversa:
-    // Buscamos cuál NOMBRE de producto está contenido en el CAPTION.
-    // Priorizamos el nombre más largo para evitar falsos positivos (ej: "Mate" vs "Mate Harry Potter")
+    // 🧠 AI Semantic Search Logic (Opción B: Inteligente)
+    // En lugar de contar palabras, le damos el contexto a Gemini para que elija.
 
     let bestMatch = null;
-    let maxScore = 0;
+    let maxScore = 0; // Mantenemos variable para compatibilidad, aunque AI devuelve "match" o "null"
 
-    const searchTokens = normalizedText
-      .split(/\s+/)
-      .filter((t) => t.length > 2); // Ignorar palabras de < 3 letras
-
-    for (const product of products) {
-      const normalizedName = product.name
-        .toLowerCase()
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "");
-
-      let score = 0;
-      // Por cada palabra clave buscada, sumamos puntos si aparece en el nombre del producto
-      searchTokens.forEach((token) => {
-        if (normalizedName.includes(token)) score++;
-      });
-
-      // Si el nombre del producto está LITERALMENTE en el texto (caption largo), le damos score infinito
-      if (normalizedText.includes(normalizedName)) score += 100;
-
-      if (score > maxScore) {
-        maxScore = score;
-        bestMatch = product;
+    if (genAI) {
+      // Usamos IA para encontrar el match
+      try {
+        const matchId = await findProductWithAI(queryText, products, genAI);
+        if (matchId && matchId !== "null") {
+          bestMatch = products.find((p) => p.id === matchId);
+          if (bestMatch) maxScore = 100; // La IA confía, así que le damos score alto
+        }
+      } catch (aiError) {
+        console.error("AI Match Error:", aiError);
+        // Fallback a lógica antigua si la IA falla (por cuota o lo que sea)
+        bestMatch = performManualFuzzySearch(normalizedText, products);
+        maxScore = bestMatch ? 50 : 0;
       }
+    } else {
+      // Fallback si no hay API Key configurada
+      bestMatch = performManualFuzzySearch(normalizedText, products);
+      maxScore = bestMatch ? 50 : 0;
     }
 
     if (bestMatch && maxScore > 0) {
@@ -129,6 +123,70 @@ export default async function handler(req, res) {
     console.error("API Error:", e);
     return res.status(500).json({ error: e.message });
   }
+}
+
+async function findProductWithAI(queryText, products, genAI) {
+  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+  // Optimizamos la lista para gastar menos tokens (ID y Nombre es suficiente)
+  const productsList = products
+    .map((p) => `- ${p.name} (ID: ${p.id})`)
+    .join("\n");
+
+  const prompt = `
+    Actúa como un experto gestor de inventario de e-commerce.
+    
+    OBJETIVO:
+    Identificar qué producto de la lista está siendo descrito en el texto de entrada.
+    
+    TEXTO DE ENTRADA (Caption de Instagram):
+    "${queryText.slice(0, 10000)}"
+    
+    LISTA DE PRODUCTOS DISPONIBLES:
+    ${productsList}
+    
+    INSTRUCCIONES:
+    1. Analiza el texto de entrada en busca de pistas semánticas sobre el producto (nombres de personajes, bandas, objetos, funcionalidades).
+    2. Compara con la lista de productos.
+    3. SE ESTRICTO: Si el texto habla de "Cerati", busca específicamente productos de "Cerati" o "Soda Stereo". NO elijas "Soporte Sub-Zero" solo porque sea un soporte. Buscamos relevancia temática.
+    4. Si hay ambigüedad, elige el más específico.
+    
+    RESPUESTA:
+    Devuelve SOLAMENTE el ID del producto (UUID).
+    Si NO encuentras ninguna coincidencia razonable, devuelve la palabra "null".
+    NO escribas explicaciones. SOLO el ID.
+  `;
+
+  const result = await model.generateContent(prompt);
+  const response = await result.response;
+  return response.text().trim();
+}
+
+function performManualFuzzySearch(normalizedText, products) {
+  let bestMatch = null;
+  let maxScore = 0;
+
+  const searchTokens = normalizedText.split(/\s+/).filter((t) => t.length > 2);
+
+  for (const product of products) {
+    const normalizedName = product.name
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "");
+
+    let score = 0;
+    searchTokens.forEach((token) => {
+      if (normalizedName.includes(token)) score++;
+    });
+
+    if (normalizedText.includes(normalizedName)) score += 100;
+
+    if (score > maxScore) {
+      maxScore = score;
+      bestMatch = product;
+    }
+  }
+  return maxScore > 0 ? bestMatch : null;
 }
 
 async function generatePinterestDescription(productName, originalText, genAI) {
