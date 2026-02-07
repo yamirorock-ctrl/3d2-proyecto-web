@@ -68,37 +68,36 @@ export default async function handler(req, res) {
 
     // Extract Image URL if available (Multimodal "Eyes")
     const imageUrl = req.query.image_url || body.image_url || null;
+    
+    // ✨ AI Summarization Logic (Para saber si pedir descripción)
+    const optimizeFor = req.query.optimize_for || body.optimize_for || body.platform;
 
-    // 🔍 ESTRATEGIA DE BÚSQUEDA HÍBRIDA
-    // 1. Intentamos con IA (Visual + Semántica)
-    // 2. Si la IA falla o no está segura, usamos Búsqueda Clásica (Palabras clave)
+    // 🔍 ESTRATEGIA DE BÚSQUEDA HÍBRIDA + GENERACIÓN ATÓMICA
+    let aiDescription = null;
 
     if (genAI) {
       try {
-        console.log("Iniciando búsqueda IA...");
-        const matchId = await findProductWithAI(
-          queryText,
-          products,
-          genAI,
-          imageUrl,
-        );
-
+        console.log("Iniciando búsqueda IA (Single Shot)...");
+        // AHORA DEVUELVE UN OBJETO con { product_id, pinterest_description }
+        const aiResult = await findProductWithAI(queryText, products, genAI, imageUrl, optimizeFor);
+        
+        const matchId = aiResult.product_id;
+        aiDescription = aiResult.pinterest_description; // Guardamos la descripción si la generó
+        
         console.log("IA Match ID:", matchId);
 
         if (matchId && matchId !== "null") {
           bestMatch = products.find((p) => p.id === matchId);
           if (bestMatch) {
-            maxScore = 100;
-            console.log("✅ Match confirmado por IA:", bestMatch.name);
+             maxScore = 100;
+             console.log("✅ Match confirmado por IA:", bestMatch.name);
           }
         } else {
-          console.log(
-            "⚠️ La IA no encontró coincidencia (retornó null). Pasando a búsqueda manual...",
-          );
+             console.log("⚠️ La IA no encontró coincidencia (retornó null). Pasando a búsqueda manual...");
         }
       } catch (aiError) {
         console.error("❌ Error CRÍTICO en IA:", aiError);
-        // No devolvemos error al cliente todavía, dejamos que el fallback intente salvar el día.
+        // Fallback continúa...
       }
     }
 
@@ -107,8 +106,10 @@ export default async function handler(req, res) {
       console.log("🕵️ Ejecutando Búsqueda Manual Fuzzy...");
       bestMatch = performManualFuzzySearch(normalizedText, products);
       if (bestMatch) {
-        maxScore = 50;
-        console.log("✅ Match por Búsqueda Manual:", bestMatch.name);
+         maxScore = 50;
+         console.log("✅ Match por Búsqueda Manual:", bestMatch.name);
+         // OJO: Si falló la IA, no tenemos descripción generada. Podríamos intentar regenerarla aqui, 
+         // pero para evitar timeouts, dejamos que Make use la default o el usuario edite.
       }
     }
 
@@ -124,17 +125,9 @@ export default async function handler(req, res) {
         score: maxScore,
       };
 
-      // ✨ AI Summarization Logic
-      const optimizeFor =
-        req.query.optimize_for || body.optimize_for || body.platform;
-
-      if (optimizeFor === "pinterest" && genAI) {
-        responseJson.pinterest_description = await generatePinterestDescription(
-          bestMatch.name,
-          queryText,
-          imageUrl,
-          genAI,
-        );
+      // Si la IA ya generó la descripción en el "Single Shot", la usamos
+      if (aiDescription && aiDescription !== "null") {
+          responseJson.pinterest_description = aiDescription;
       }
 
       return res.status(200).json(responseJson);
@@ -155,16 +148,10 @@ export default async function handler(req, res) {
 // Helper para convertir URL de imagen a Part de Gemini
 async function urlToGenerativePart(url) {
   try {
-    console.log("Fetching image from URL:", url);
     const response = await fetch(url);
-    if (!response.ok) {
-      console.error(
-        `Failed to fetch image: ${response.status} ${response.statusText}`,
-      );
+    if (!response.ok)
       throw new Error(`Failed to fetch image: ${response.statusText}`);
-    }
     const buffer = await response.arrayBuffer();
-    console.log("Image fetched successfully. Size:", buffer.byteLength);
     return {
       inlineData: {
         data: Buffer.from(buffer).toString("base64"),
@@ -172,16 +159,17 @@ async function urlToGenerativePart(url) {
       },
     };
   } catch (error) {
-    console.error("Error loading image for AI:", error);
+    console.error("Error loading image:", error);
     return null;
   }
 }
 
-async function findProductWithAI(queryText, products, genAI, imageUrl) {
-  // ⚡🚀 USAMOS GEMINI 3 FLASH PREVIEW
-  const model = genAI.getGenerativeModel({
-    model: "gemini-3-flash-preview",
-    generationConfig: { responseMimeType: "application/json" }, // Force JSON
+async function findProductWithAI(queryText, products, genAI, imageUrl, optimizeFor) {
+  // ⚡🚀 USAMOS GEMINI 3 FLASH PREVIEW - SINGLE SHOT MODE
+  // Combinamos Búsqueda + Generación en 1 sola llamada para evitar Timeouts.
+  const model = genAI.getGenerativeModel({ 
+      model: "gemini-3-flash-preview",
+      generationConfig: { responseMimeType: "application/json" }
   });
 
   const productsList = products
@@ -189,12 +177,15 @@ async function findProductWithAI(queryText, products, genAI, imageUrl) {
     .join("\n");
 
   let parts = [];
+  
+  const generateDescription = optimizeFor === "pinterest";
 
   const prompt = `
-    Actúa como un sistema de inventario inteligente.
+    Actúa como un sistema de inventario y marketing inteligente.
     
     OBJETIVO:
-    Identificar qué producto de la lista corresponde a la imagen y texto provistos.
+    1. Identificar qué producto de la lista corresponde a la imagen y texto provistos.
+    ${generateDescription ? "2. Generar una descripción optimizada para Pinterest si se encuentra el producto." : ""}
     
     LISTA DE PRODUCTOS:
     ${productsList}
@@ -203,20 +194,27 @@ async function findProductWithAI(queryText, products, genAI, imageUrl) {
     Texto: "${queryText.slice(0, 5000)}"
     Imagen: ${imageUrl ? "SÍ" : "NO"}
     
-    INSTRUCCIONES:
-    1. Analiza TODA la información visual y textual.
-    2. Busca coincidencias semánticas e IDENTIDAD visual.
-       - Ejemplo: Si ves "Cerati" -> Busca "Cuadro Cerati".
-       - Ejemplo: Si ves figuras de Mortal Kombat -> Busca "Sub-Zero".
-    3. Si encuentras el producto exacto, devuelve su ID.
-    4. Si NO estás seguro, devuelve null.
+    INSTRUCCIONES DE MATCHING:
+    - Analiza coincidencias visuales y semánticas.
+    - Ejemplo: "Cerati" -> "Cuadro Cerati".
+    - Si no estás seguro, product_id es null.
     
+    ${generateDescription ? `
+    INSTRUCCIONES DE DESCRIPCIÓN (Solo si hay match):
+    - MÁXIMO 750 caracteres.
+    - Tono inspirador.
+    - Incluye 5-7 HASHTAGS de alto valor al final (ej: #SodaStereo #Cerati).
+    ` : ""}
+
     FORMATO DE RESPUESTA JSON:
-    { "id": "UUID_DEL_PRODUCTO_O_NULL" }
+    { 
+      "product_id": "UUID_O_NULL",
+      "pinterest_description": "${generateDescription ? "TEXTO_GENERADO_O_NULL" : "null"}"
+    }
   `;
-
+  
   parts.push(prompt);
-
+  
   if (imageUrl) {
     const imagePart = await urlToGenerativePart(imageUrl);
     if (imagePart) parts.push(imagePart);
@@ -226,15 +224,13 @@ async function findProductWithAI(queryText, products, genAI, imageUrl) {
   const response = await result.response;
   const text = response.text().trim();
   console.log("AI Raw JSON Response:", text);
-
+  
   try {
-    // Parsear JSON (puede venir con markdown)
-    const cleanJson = text.replace(/```json|```/g, "").trim();
-    const data = JSON.parse(cleanJson);
-    return data.id;
+      const cleanJson = text.replace(/```json|```/g, "").trim();
+      return JSON.parse(cleanJson);
   } catch (e) {
-    console.error("Error parsing AI JSON:", e);
-    return "null";
+      console.error("Error parsing AI JSON:", e);
+      return { product_id: null, pinterest_description: null };
   }
 }
 
@@ -264,61 +260,4 @@ function performManualFuzzySearch(normalizedText, products) {
   }
   return maxScore > 0 ? bestMatch : null;
 }
-
-async function generatePinterestDescription(
-  productName,
-  originalText,
-  imageUrl,
-  genAI,
-) {
-  try {
-    const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" });
-
-    let parts = [];
-
-    const prompt = `
-      Actúa como un experto en Marketing Digital y SEO para Pinterest.
-      
-      TAREA:
-      Crear descripción para un PIN de Pinterest del producto: "${productName}".
-      
-      REGLAS CRÍTICAS:
-      1. MÁXIMO 350 caracteres TOTALES (incluyendo hashtags). SE MUY CONCISO.
-      2. Si te pasas de largo, Pinterest rechazará el pin. Resume al máximo.
-      3. Tono inspirador pero directo.
-      4. Genera 5-7 HASHTAGS DE ALTO VALOR AL FINAL.
-         - IDENTIFICA EL FANDOM/MARCA/CLUB con precisión (ej: #Cerati #SodaStereo).
-         - Busca hashtags de nicho populares.
-         - Si ves Harry Potter, usa #HarryPotter #Hogwarts #Potterhead.
-         - Si ves Boca, usa #BocaJuniors #LaDoce #CABJ.
-         - Busca los hashtags más populares de ese nicho específico.
-      
-      TEXTO ORIGINAL:
-      "${originalText.slice(0, 1000)}"
-    `;
-
-    parts.push(prompt);
-
-    if (imageUrl) {
-      const imagePart = await urlToGenerativePart(imageUrl);
-      if (imagePart) parts.push(imagePart);
-    }
-
-    const result = await model.generateContent(parts);
-    const response = await result.response;
-    let text = response.text().trim();
-
-    // SAFETY CLIP: Cortamos a 750 caracteres para asegurar que entre en Make (límite 800)
-    if (text.length > 750) {
-      console.warn(
-        "⚠️ AI Description too long (" + text.length + "). Truncating...",
-      );
-      text = text.slice(0, 747) + "...";
-    }
-
-    return text;
-  } catch (error) {
-    console.error("Gemini Error:", error);
-    return originalText.slice(0, 450) + "..."; // Fallback simple
-  }
-}
+```
