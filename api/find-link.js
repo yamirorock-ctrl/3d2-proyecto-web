@@ -141,6 +141,7 @@ export default async function handler(req, res) {
         found: true,
         product: bestMatch.name,
         url: productUrl,
+        product_image_url: bestMatch.image_url || null, // 📸 Foto oficial para Pinterest
         match_type: maxScore >= 100 ? "exact_name_in_text" : "keyword_match",
         score: maxScore,
       };
