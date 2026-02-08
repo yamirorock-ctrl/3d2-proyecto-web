@@ -75,11 +75,12 @@ export default async function handler(req, res) {
 
     // 🔍 ESTRATEGIA DE BÚSQUEDA HÍBRIDA + GENERACIÓN ATÓMICA
     let aiDescription = null;
+    let aiTitle = null;
 
     if (genAI) {
       try {
         console.log("Iniciando búsqueda IA (Single Shot)...");
-        // AHORA DEVUELVE UN OBJETO con { product_name, pinterest_description }
+        // AHORA DEVUELVE UN OBJETO con { product_name, pinterest_title, pinterest_description }
         const aiResult = await findProductWithAI(
           queryText,
           products,
@@ -89,7 +90,8 @@ export default async function handler(req, res) {
         );
 
         const matchName = aiResult.product_name;
-        aiDescription = aiResult.pinterest_description; // Guardamos la descripción si la generó
+        aiDescription = aiResult.pinterest_description; // Guardamos la descripción
+        aiTitle = aiResult.pinterest_title; // Guardamos el título SEO
 
         console.log("IA Match Name:", matchName);
 
@@ -148,6 +150,11 @@ export default async function handler(req, res) {
         responseJson.pinterest_description = aiDescription;
       }
 
+      // Si la IA generó un título SEO, lo usamos
+      if (aiTitle && aiTitle !== "null") {
+        responseJson.pinterest_title = aiTitle;
+      }
+
       return res.status(200).json(responseJson);
     }
 
@@ -204,7 +211,7 @@ async function findProductWithAI(
   const generateDescription = optimizeFor === "pinterest";
 
   const prompt = `
-    Actúa como un experto en inventario. Tienes una lista de productos y debes encontrar CUAL de ellos coincide con la imagen y texto.
+    Actúa como un experto en inventario y SEO para Pinterest.
     
     CATÁLOGO DE PRODUCTOS (Nombres Exactos):
     ${productsList}
@@ -222,11 +229,10 @@ async function findProductWithAI(
     ${
       generateDescription
         ? `
-    TU SEGUNDA MISIÓN (Descripción):
-    - Si encontraste el producto, genera una descripción para Pinterest.
-    - MÁXIMO 750 caracteres.
-    - Tono inspirador.
-    - Incluye 5-7 HASHTAGS de nicho.
+    TU SEGUNDA MISIÓN (SEO & Copywriting):
+    - Si encontraste el producto, genera dos textos optimizados para Pinterest:
+      A. TÍTULO SEO (pinterest_title): Máximo 100 caracteres. Atractivo, incluye keywords como "Regalo", "Decoración", "3D", "Original". Ej: "Escudo River Plate 3D - El Regalo Perfecto para Fanáticos".
+      B. DESCRIPCIÓN (pinterest_description): Máximo 750 caracteres. Tono inspirador. Incluye 5-7 HASHTAGS de nicho al final.
     `
         : ""
     }
@@ -234,7 +240,8 @@ async function findProductWithAI(
     RESPUESTA JSON OBLIGATORIA:
     { 
       "product_name": "NOMBRE_EXACTO_DE_LA_LISTA_O_NULL",
-      "pinterest_description": "${generateDescription ? "TEXTO_GENERADO_O_NULL" : "null"}"
+      "pinterest_title": "${generateDescription ? "TEXTO_TITULO_SEO_O_NULL" : "null"}",
+      "pinterest_description": "${generateDescription ? "TEXTO_DESCRIPCION_O_NULL" : "null"}"
     }
   `;
 
@@ -255,7 +262,11 @@ async function findProductWithAI(
     return JSON.parse(cleanJson);
   } catch (e) {
     console.error("Error parsing AI JSON:", e);
-    return { product_name: null, pinterest_description: null };
+    return {
+      product_name: null,
+      pinterest_title: null,
+      pinterest_description: null,
+    };
   }
 }
 
