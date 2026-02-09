@@ -2,8 +2,13 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 
 // CONFIGURACIÓN MANUAL (Edita esto con tu API KEY)
 // ===============================================
-const API_KEY =
-  process.env.VITE_GEMINI_API_KEY || "AIzaSyABekNYY5eytOnrElO_JjgkC0x0q-zfYxU";
+const API_KEY = process.env.VITE_GEMINI_API_KEY; // LEER DE VARIABLE DE ENTORNO
+
+// SI NO EXISTE LA VARIABLE, REVISA .env O EJECUTA CON:
+// Node 20+: node --env-file=.env scripts/test-ai-manual.js
+// O SETEANDOLA ANTES: set VITE_GEMINI_API_KEY=tu_key && node scripts/test-ai-manual.js
+// NUNCA SUBAS TU API KEY DIRECTAMENTE AL CÓDIGO
+// ===============================================
 const TEST_CAPTION = "¡Gracias Totales! Un Homenaje Eterno";
 const TEST_IMAGE_URL =
   "https://i.pinimg.com/736x/8d/f3/0e/8df30e8d0e8d0e8d0e8d0e8d0e8d.jpg"; // URL real de prueba
