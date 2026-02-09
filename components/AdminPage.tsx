@@ -3,7 +3,8 @@ import { toast } from 'sonner';
 import { Product, Order } from '../types';
 import { CustomOrder } from './CustomOrderForm';
 import ProductAdmin from './ProductAdmin';
-import { Trash2, Edit, Plus, ArrowLeft, Package, Users, Mail, Phone, Calendar, CheckCircle, Clock, ShoppingCart, TrendingUp, DollarSign, ShieldAlert, RefreshCw, ListChecks, ShoppingBag, Settings, LogOut, ChevronDown, Database, Upload, Download, Wrench } from 'lucide-react';
+import { ManualOrderForm } from './ManualOrderForm';
+import { Trash2, Edit, Plus, ArrowLeft, Package, Users, Mail, Phone, Calendar, CheckCircle, Clock, ShoppingCart, TrendingUp, DollarSign, ShieldAlert, RefreshCw, ListChecks, ShoppingBag, Settings, LogOut, ChevronDown, Database, Upload, Download, Wrench, Truck } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { saveDataUrl, getBlob } from '../services/imageStore';
@@ -21,6 +22,7 @@ interface Props {
 
 const AdminPage: React.FC<Props> = ({ products, onAdd, onEdit, onDelete }) => {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [isManualOrderOpen, setIsManualOrderOpen] = useState(false);
   const [editing, setEditing] = useState<Product | null>(null);
   const [activeTab, setActiveTab] = useState<'products' | 'orders' | 'sales'>('products');
   const [customOrders, setCustomOrders] = useState<CustomOrder[]>([]);
@@ -367,6 +369,15 @@ const AdminPage: React.FC<Props> = ({ products, onAdd, onEdit, onDelete }) => {
             </>
           )}
 
+          {activeTab === 'sales' && (
+             <button 
+               onClick={() => setIsManualOrderOpen(true)} 
+               className="whitespace-nowrap px-4 py-2 bg-emerald-600 text-white rounded-lg flex items-center gap-2 text-sm font-medium hover:bg-emerald-700 shadow-md transform hover:-translate-y-0.5 transition-all"
+             >
+               <Truck size={16} /> Nueva Venta Manual
+             </button>
+          )}
+
           <div className="relative">
             <button
               onClick={() => setShowSettings(!showSettings)}
@@ -641,6 +652,17 @@ const AdminPage: React.FC<Props> = ({ products, onAdd, onEdit, onDelete }) => {
                     setIsPriceToolOpen(false);
                   }}
                   onClose={() => setIsPriceToolOpen(false)}
+                />
+              )}
+
+              {isManualOrderOpen && (
+                <ManualOrderForm 
+                  products={products}
+                  onClose={() => setIsManualOrderOpen(false)}
+                  onOrderCreated={() => {
+                     refreshSalesOrders();
+                     toast.success('Lista de ventas actualizada');
+                  }}
                 />
               )}
             </>
