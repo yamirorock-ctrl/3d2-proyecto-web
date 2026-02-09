@@ -1,18 +1,19 @@
 import React, { useState, useMemo } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { Order } from '../types';
-import { TrendingUp, Package, DollarSign, Clock, Download, Calendar, CheckCircle, Loader, XCircle, Trash2, RefreshCw, Truck } from 'lucide-react';
+import { TrendingUp, Package, DollarSign, Clock, Download, Calendar, CheckCircle, Loader, XCircle, Trash2, RefreshCw, Truck, Edit, AlertCircle } from 'lucide-react';
 
 interface Props {
   orders: Order[];
   onUpdateStatus?: (orderId: string, newStatus: Order['status']) => void;
+  onEdit?: (order: Order) => void;
   onDelete?: (orderId: string) => void;
   onRefresh?: () => void;
 }
 
 type DateFilter = 'today' | 'week' | 'month' | 'all';
 
-const SalesDashboard: React.FC<Props> = ({ orders, onUpdateStatus, onDelete, onRefresh }) => {
+const SalesDashboard: React.FC<Props> = ({ orders, onUpdateStatus, onEdit, onDelete, onRefresh }) => {
   const [dateFilter, setDateFilter] = useState<DateFilter>('all');
 
   const filteredOrders = useMemo(() => {
@@ -58,7 +59,7 @@ const SalesDashboard: React.FC<Props> = ({ orders, onUpdateStatus, onDelete, onR
   }, [filteredOrders]);
 
   const handleExportCSV = () => {
-    const headers = ['ID', 'Fecha', 'Cliente', 'Email', 'Teléfono', 'Total', 'Método Pago', 'Estado', 'Productos'];
+    const headers = ['ID', 'Fecha', 'Cliente', 'Email', 'Teléfono', 'Total', 'Método Pago', 'Estado', 'Productos', 'Notas/Deuda'];
     const rows = filteredOrders.map(o => [
       o.id,
       new Date((o as any).timestamp || (o as any).created_at).toLocaleString('es-AR'),
@@ -68,7 +69,8 @@ const SalesDashboard: React.FC<Props> = ({ orders, onUpdateStatus, onDelete, onR
       o.total.toFixed(2),
       (o as any).paymentMethod || ((o as any).payment_id ? 'mercadopago' : 'otro'),
       o.status,
-      o.items.map(i => `${i.name} (x${i.quantity})`).join('; ')
+      o.items.map(i => `${i.name} (x${i.quantity})`).join('; '),
+      o.notes || ''
     ]);
     
     const csv = [headers, ...rows].map(row => row.map(cell => `"${cell}"`).join(',')).join('\n');
@@ -79,6 +81,17 @@ const SalesDashboard: React.FC<Props> = ({ orders, onUpdateStatus, onDelete, onR
     a.download = `ventas-${dateFilter}-${Date.now()}.csv`;
     a.click();
     URL.revokeObjectURL(url);
+  };
+
+  // Helper para parsear info extra de notas
+  const getExtraInfo = (notes?: string) => {
+    if (!notes) return { debt: 0, delivery: null };
+    const debtMatch = notes.match(/RESTA: \$(\d+)/);
+    const deliveryMatch = notes.match(/ENTREGA: (\d{1,2})\/(\d{1,2})\/(\d{4})/);
+    return {
+      debt: debtMatch ? parseInt(debtMatch[1]) : 0,
+      delivery: deliveryMatch ? `${deliveryMatch[1]}/${deliveryMatch[2]}` : null // Solo día/mes para display corto
+    };
   };
 
   return (
@@ -246,7 +259,9 @@ const SalesDashboard: React.FC<Props> = ({ orders, onUpdateStatus, onDelete, onR
               const aTime = new Date((a as any).timestamp || (a as any).created_at).getTime();
               const bTime = new Date((b as any).timestamp || (b as any).created_at).getTime();
               return bTime - aTime;
-            }).map(order => (
+            }).map(order => {
+              const { debt, delivery } = getExtraInfo(order.notes);
+              return (
               <div key={order.id} className="p-6 hover:bg-gray-50 transition-colors">
                 <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
                   <div className="flex-1">
@@ -271,6 +286,13 @@ const SalesDashboard: React.FC<Props> = ({ orders, onUpdateStatus, onDelete, onR
                       <span className="text-sm text-slate-500">
                         {new Date(((order as any).timestamp || (order as any).created_at)).toLocaleString('es-AR')}
                       </span>
+                      
+                      {/* Delivery Date Tag */}
+                      {delivery && (
+                         <span className="px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-xs font-bold border border-purple-200">
+                            ENTREGA: {delivery}
+                         </span>
+                      )}
                     </div>
 
                     {/* Customer info */}
@@ -296,6 +318,19 @@ const SalesDashboard: React.FC<Props> = ({ orders, onUpdateStatus, onDelete, onR
                         ))}
                       </div>
                     </div>
+
+                    {/* DEUDA EN ROJO */}
+                    {debt > 0 && (
+                      <div className="bg-red-50 border border-red-200 p-2 rounded-lg mb-3 flex items-center justify-between animate-pulse">
+                         <div className="flex items-center gap-2 text-red-700 font-bold text-sm">
+                           <AlertCircle size={16} />
+                           DEUDA PENDIENTE:
+                         </div>
+                         <div className="text-red-700 font-extrabold text-lg">
+                           ${debt.toLocaleString('es-AR')}
+                         </div>
+                      </div>
+                    )}
 
                     {/* Tracking Info (si existe) */}
                     {((order as any).tracking_number || (order as any).ml_shipment_id) && (
@@ -339,90 +374,103 @@ const SalesDashboard: React.FC<Props> = ({ orders, onUpdateStatus, onDelete, onR
                   </div>
 
                   {/* Actions */}
-                  {(onUpdateStatus || onDelete) && (
-                    <div className="flex flex-col gap-2 lg:w-64">
-                      {/* Descargar etiqueta MercadoEnvíos si existe shipment */}
-                      {(order as any).ml_shipment_id && (
-                        <button
-                          onClick={async () => {
-                            try {
-                              const token = localStorage.getItem('ml_access_token');
-                              if (!token) {
-                                alert('Conectá MercadoLibre en Admin para descargar etiquetas.');
-                                return;
-                              }
-                              const resp = await fetch(`https://api.mercadolibre.com/shipments/${(order as any).ml_shipment_id}/label`, {
-                                headers: {
-                                  'Authorization': `Bearer ${token}`,
-                                  'Accept': 'application/pdf'
-                                }
-                              });
-                              if (!resp.ok) {
-                                const txt = await resp.text();
-                                console.error('Error label ML:', resp.status, txt);
-                                alert('No se pudo descargar la etiqueta. Probá nuevamente.');
-                                return;
-                              }
-                              const blob = await resp.blob();
-                              const url = window.URL.createObjectURL(blob);
-                              const a = document.createElement('a');
-                              a.href = url;
-                              a.download = `etiqueta-${(order as any).ml_shipment_id}.pdf`;
-                              a.click();
-                              window.URL.revokeObjectURL(url);
-                            } catch (e) {
-                              console.error('Excepción al descargar etiqueta:', e);
-                              alert('Error inesperado al descargar la etiqueta.');
-                            }
-                          }}
-                          className="px-4 py-2 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-md text-sm hover:bg-indigo-100 transition-colors flex items-center justify-center gap-2"
-                        >
-                          <Download size={14} />
-                          Etiqueta ML
-                        </button>
-                      )}
+                  <div className="flex flex-col gap-2 lg:w-64">
+                    
+                    {/* Botón Editar - NUEVO */}
+                    {onEdit && (
+                       <button
+                          onClick={() => onEdit(order)}
+                          className="px-4 py-2 bg-indigo-600 text-white rounded-md text-sm hover:bg-indigo-700 transition-colors flex items-center justify-center gap-2 shadow-sm"
+                       >
+                         <Edit size={14} />
+                         Editar Venta
+                       </button>
+                    )}
 
-                      {onUpdateStatus && order.status === 'pending' && (
-                        <button
-                          onClick={() => onUpdateStatus(order.id, 'processing')}
-                          className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
-                        >
-                          <Loader size={14} />
-                          Procesar
-                        </button>
-                      )}
-                      {onUpdateStatus && order.status === 'processing' && (
-                        <button
-                          onClick={() => onUpdateStatus(order.id, 'completed')}
-                          className="px-4 py-2 bg-green-600 text-white rounded-md text-sm hover:bg-green-700 transition-colors flex items-center justify-center gap-2"
-                        >
-                          <CheckCircle size={14} />
-                          Completar
-                        </button>
-                      )}
-                      {onUpdateStatus && order.status !== 'cancelled' && (
-                        <button
-                          onClick={() => onUpdateStatus(order.id, 'cancelled')}
-                          className="px-4 py-2 bg-red-50 text-red-700 border border-red-200 rounded-md text-sm hover:bg-red-100 transition-colors flex items-center justify-center gap-2"
-                        >
-                          <XCircle size={14} />
-                          Cancelar
-                        </button>
-                      )}
-                      {onDelete && (
-                        <button
-                          onClick={() => onDelete(order.id)}
-                          className="px-4 py-2 bg-slate-50 text-slate-700 border border-slate-200 rounded-md text-sm hover:bg-slate-100 transition-colors flex items-center justify-center gap-2"
-                        >
-                          <Trash2 size={14} />
-                          Eliminar
-                        </button>
-                      )}
-                    </div>
-                  )}
+                    {/* Descargar etiqueta MercadoEnvíos si existe shipment */}
+                    {(order as any).ml_shipment_id && (
+                      <button
+                        onClick={async () => {
+                          try {
+                            const token = localStorage.getItem('ml_access_token');
+                            if (!token) {
+                              alert('Conectá MercadoLibre en Admin para descargar etiquetas.');
+                              return;
+                            }
+                            const resp = await fetch(`https://api.mercadolibre.com/shipments/${(order as any).ml_shipment_id}/label`, {
+                              headers: {
+                                'Authorization': `Bearer ${token}`,
+                                'Accept': 'application/pdf'
+                              }
+                            });
+                            if (!resp.ok) {
+                              alert('No se pudo descargar la etiqueta.');
+                              return;
+                            }
+                            const blob = await resp.blob();
+                            const url = window.URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.href = url;
+                            a.download = `etiqueta-${(order as any).ml_shipment_id}.pdf`;
+                            a.click();
+                            window.URL.revokeObjectURL(url);
+                          } catch (e) {
+                            alert('Error inesperado al descargar la etiqueta.');
+                          }
+                        }}
+                        className="px-4 py-2 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-md text-sm hover:bg-indigo-100 transition-colors flex items-center justify-center gap-2"
+                      >
+                        <Download size={14} />
+                        Etiqueta ML
+                      </button>
+                    )}
+
+                    {/* Botones de estado solo si onUpdateStatus existe */}
+                    {onUpdateStatus && (
+                      <>
+                        {order.status === 'pending' && (
+                          <button
+                            onClick={() => onUpdateStatus(order.id, 'processing')}
+                            className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
+                          >
+                            <Loader size={14} />
+                            Procesar
+                          </button>
+                        )}
+                        {order.status === 'processing' && (
+                          <button
+                            onClick={() => onUpdateStatus(order.id, 'completed')}
+                            className="px-4 py-2 bg-green-600 text-white rounded-md text-sm hover:bg-green-700 transition-colors flex items-center justify-center gap-2"
+                          >
+                            <CheckCircle size={14} />
+                            Completar
+                          </button>
+                        )}
+                        {order.status !== 'cancelled' && (
+                          <button
+                            onClick={() => onUpdateStatus(order.id, 'cancelled')}
+                            className="px-4 py-2 bg-red-50 text-red-700 border border-red-200 rounded-md text-sm hover:bg-red-100 transition-colors flex items-center justify-center gap-2"
+                          >
+                            <XCircle size={14} />
+                            Cancelar
+                          </button>
+                        )}
+                      </>
+                    )}
+                    
+                    {onDelete && (
+                      <button
+                        onClick={() => onDelete(order.id)}
+                        className="px-4 py-2 bg-slate-50 text-slate-700 border border-slate-200 rounded-md text-sm hover:bg-slate-100 transition-colors flex items-center justify-center gap-2"
+                      >
+                        <Trash2 size={14} />
+                        Eliminar
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
-            ))
+            )})
           )}
         </div>
       </div>

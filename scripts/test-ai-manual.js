@@ -9,16 +9,17 @@ const API_KEY = process.env.VITE_GEMINI_API_KEY; // LEER DE VARIABLE DE ENTORNO
 // O SETEANDOLA ANTES: set VITE_GEMINI_API_KEY=tu_key && node scripts/test-ai-manual.js
 // NUNCA SUBAS TU API KEY DIRECTAMENTE AL CÓDIGO
 // ===============================================
+
 const TEST_CAPTION = "¡Gracias Totales! Un Homenaje Eterno";
 const TEST_IMAGE_URL =
-  "https://i.pinimg.com/736x/8d/f3/0e/8df30e8d0e8d0e8d0e8d0e8d0e8d.jpg"; // URL real de prueba
+  "https://placehold.co/600x400/222222/FFF.png?text=Cerati+Cuadro"; // Placeholder público y seguro
 // ===============================================
 
 const genAI = new GoogleGenerativeAI(API_KEY);
 
 async function runTest() {
   console.log(
-    "🤖 Iniciando SIMULACIÓN DE IA (Gemini 3 Flash Preview - Single Shot)...",
+    "🤖 Iniciando SIMULACIÓN DE IA (Gemini 3 Flash Preview - Printy Config)...",
   );
 
   if (!API_KEY || API_KEY.includes("PEGAR_TU_API_KEY")) {
@@ -29,10 +30,10 @@ async function runTest() {
     return;
   }
 
-  // USAMOS EL MISMO MODELO QUE EN LA API REAL
+  // CONFIGURACIÓN EXACTA DE PRINTY (Services/geminiService.ts) !!!
   const model = genAI.getGenerativeModel({
     model: "gemini-3-flash-preview",
-    generationConfig: { responseMimeType: "application/json" },
+    // generationConfig: { responseMimeType: "application/json" }, // Printy NO usa esto en su config, lo quitamos.
   });
 
   // Lista SIMULADA (como si viniera de Supabase)
@@ -68,7 +69,8 @@ async function runTest() {
     - Tono inspirador.
     - Incluye 5-7 HASHTAGS de alto valor al final (ej: #SodaStereo #Cerati).
 
-    FORMATO DE RESPUESTA JSON:
+    FORMATO DE RESPUESTA JSON (ESTRICTO):
+    Debes responder ÚNICAMENTE con un objeto JSON válido, sin markdown ni explicaciones adicionales.
     { 
       "product_id": "UUID_O_NULL",
       "pinterest_description": "TEXTO_GENERADO_O_NULL"
@@ -78,13 +80,14 @@ async function runTest() {
   console.log("\n🖼️ Fetching imagen:", TEST_IMAGE_URL);
 
   try {
-    // Fetch Imagen
     const imgResp = await fetch(TEST_IMAGE_URL);
+    console.log("📸 Image Status:", imgResp.status, imgResp.statusText);
+    if (!imgResp.ok) throw new Error("Failed to fetch image");
     const imgBuff = await imgResp.arrayBuffer();
     const imagePart = {
       inlineData: {
         data: Buffer.from(imgBuff).toString("base64"),
-        mimeType: imgResp.headers.get("content-type") || "image/jpeg",
+        mimeType: "image/jpeg", // Forzamos JPEG porque la API de Pinterest a veces devuelve headers raros
       },
     };
 
@@ -95,13 +98,19 @@ async function runTest() {
     const response = await result.response;
     const text = response.text().trim();
 
-    console.log("\n✨ RESPUESTA DE LA IA (RAW JSON):");
+    console.log("\n✨ RESPUESTA DE LA IA (RAW):");
     console.log("-----------------------");
     console.log(text);
     console.log("-----------------------");
 
     try {
-      const json = JSON.parse(text);
+      // Limpieza agresiva de Markdown para asegurar JSON válido
+      const cleanText = text
+        .replace(/```json/g, "")
+        .replace(/```/g, "")
+        .trim();
+      const json = JSON.parse(cleanText);
+
       if (json.product_id === "222") {
         console.log("🎉 ÉXITO TOTAL: Identificó el Cuadro de Cerati (ID 222).");
         console.log("📝 Descripción Generada:\n", json.pinterest_description);
@@ -114,7 +123,12 @@ async function runTest() {
       console.error("❌ ERROR PARSEANDO JSON:", e);
     }
   } catch (e) {
-    console.error("❌ ERROR EXCEPCIÓN:", e);
+    console.error("\n❌ ERROR EXCEPCIÓN DETALLADO:");
+    console.error("Message:", e.message);
+    if (e.status) console.error("Status:", e.status);
+    if (e.statusText) console.error("StatusText:", e.statusText);
+    if (e.errorDetails)
+      console.error("Details:", JSON.stringify(e.errorDetails, null, 2));
   }
 }
 

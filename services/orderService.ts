@@ -337,3 +337,24 @@ export async function deleteOrder(orderId: string): Promise<boolean> {
 
   return true;
 }
+/**
+ * Actualizar una orden completa (edición)
+ */
+export async function updateOrder(orderId: string, updates: Partial<Order>): Promise<{ data: Order | null, error: PostgrestError | null }> {
+  const { data, error } = await supabase
+    .from('orders')
+    .update({ 
+      ...updates, 
+      updated_at: new Date().toISOString() 
+    })
+    .eq('id', orderId)
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Error al actualizar orden:', error);
+    return handleSupabaseError(error, 'updateOrder');
+  }
+
+  return { data, error: null };
+}

@@ -28,6 +28,7 @@ const AdminPage: React.FC<Props> = ({ products, onAdd, onEdit, onDelete }) => {
   const [customOrders, setCustomOrders] = useState<CustomOrder[]>([]);
   const [salesOrders, setSalesOrders] = useState<Order[]>([]);
   const [isPriceToolOpen, setIsPriceToolOpen] = useState(false);
+  const [editingOrder, setEditingOrder] = useState<Order | null>(null);
   const [showSettings, setShowSettings] = useState(false);
   const navigate = useNavigate();
 
@@ -488,6 +489,15 @@ const AdminPage: React.FC<Props> = ({ products, onAdd, onEdit, onDelete }) => {
             </span>
           )}
         </button>
+        <button
+          onClick={() => setActiveTab('calendar' as any)}
+          className={`px-4 py-3 font-medium flex items-center gap-2 border-b-2 transition-colors ${
+            activeTab === 'calendar' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500 hover:text-slate-700'
+          }`}
+        >
+          <Calendar size={20} />
+          Calendario
+        </button>
           {/* Users tab removed as it is now managed via Supabase Dashboard */}
           {/* Security tab logic simplified or removed as Supabase logs audit events */}
       </div>
@@ -622,9 +632,26 @@ const AdminPage: React.FC<Props> = ({ products, onAdd, onEdit, onDelete }) => {
         <SalesDashboard 
           orders={salesOrders} 
           onUpdateStatus={handleUpdateSaleStatus}
+          onEdit={(order) => { setEditingOrder(order); setIsManualOrderOpen(true); }}
           onDelete={handleDeleteSale}
           onRefresh={refreshSalesOrders}
         />
+      )}
+
+      {/* Calendar Tab */}
+      {activeTab === 'calendar' && (
+        <React.Suspense fallback={<div className="p-10 text-center text-slate-400">Cargando calendario...</div>}>
+          {React.createElement(
+            React.lazy(() => import('./DeliveryCalendar').then(module => ({ default: module.DeliveryCalendar }))), 
+            { 
+              orders: salesOrders,
+              onSelectOrder: (order: Order) => { 
+                setEditingOrder(order); 
+                setIsManualOrderOpen(true); 
+              }
+            }
+          )}
+        </React.Suspense>
       )}
 
 
@@ -658,10 +685,11 @@ const AdminPage: React.FC<Props> = ({ products, onAdd, onEdit, onDelete }) => {
               {isManualOrderOpen && (
                 <ManualOrderForm 
                   products={products}
-                  onClose={() => setIsManualOrderOpen(false)}
+                  initialOrder={editingOrder || undefined}
+                  onClose={() => { setIsManualOrderOpen(false); setEditingOrder(null); }}
                   onOrderCreated={() => {
                      refreshSalesOrders();
-                     toast.success('Lista de ventas actualizada');
+                     toast.success(editingOrder ? 'Orden actualizada' : 'Venta registrada');
                   }}
                 />
               )}

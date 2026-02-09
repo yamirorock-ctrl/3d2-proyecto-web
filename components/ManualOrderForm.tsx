@@ -2,17 +2,18 @@
 import React, { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { Product, Order, OrderItem, ShippingMethod } from '../types';
-import { createOrder } from '../services/orderService';
+import { createOrder, updateOrder } from '../services/orderService';
 import { updateProductStock } from '../services/productService';
-import { Search, Calculator, Check, Plus, X, User, Phone, FileText, ShoppingCart, DollarSign, Trash2 } from 'lucide-react';
+import { Search, Calculator, Check, Plus, X, User, Phone, FileText, ShoppingCart, DollarSign, Trash2, Edit } from 'lucide-react';
 
 interface Props {
   products: Product[];
+  initialOrder?: Order; // Para modo edición
   onClose: () => void;
   onOrderCreated: () => void;
 }
 
-export const ManualOrderForm: React.FC<Props> = ({ products, onClose, onOrderCreated }) => {
+export const ManualOrderForm: React.FC<Props> = ({ products, initialOrder, onClose, onOrderCreated }) => {
   // Estado del "Carrito Manual"
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
   
@@ -33,6 +34,47 @@ export const ManualOrderForm: React.FC<Props> = ({ products, onClose, onOrderCre
   const [paymentAmount, setPaymentAmount] = useState<string>(''); // Monto que paga AHORA
   const [deliveryDate, setDeliveryDate] = useState<string>(''); // Fecha prometida
 
+  // Cargar datos si es edición
+  useEffect(() => {
+    if (initialOrder) {
+      setOrderItems(initialOrder.items || []);
+      setCustomerName(initialOrder.customer_name || '');
+      setCustomerPhone(initialOrder.customer_phone || '');
+      setStatus(initialOrder.status);
+      
+      // Parsear notas para recuperar: Notas reales, Seña, Fecha Entrega
+      const fullNotes = initialOrder.notes || '';
+      
+      // 1. Extraer Seña/Pago
+      const paymentMatch = fullNotes.match(/\[(SEÑA|PAGADO TOTAL): \$(\d+)/);
+      if (paymentMatch) {
+        setPaymentAmount(paymentMatch[2]);
+      } else {
+        // Si no hay tag, y está pagado, asumimos total. Si pendiente, tal vez 0.
+        if (initialOrder.status === 'paid') {
+           setPaymentAmount(initialOrder.total.toString()); 
+        }
+      }
+
+      // 2. Extraer Fecha Entrega: [ENTREGA: DD/MM/YYYY]
+      const deliveryMatch = fullNotes.match(/\[ENTREGA: (\d{1,2})\/(\d{1,2})\/(\d{4})\]/);
+      if (deliveryMatch) {
+         const [_, d, m, y] = deliveryMatch;
+         // Input type="date" requiere YYYY-MM-DD
+         setDeliveryDate(`${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`);
+      }
+
+      // 3. Limpiar notas visuales (quitando los tags de sistema)
+      const cleanNotes = fullNotes
+        .replace(/VENTA MANUAL:\s*/, '')
+        .replace(/\n\[SEÑA:.*?\]/, '')
+        .replace(/\n\[PAGADO TOTAL:.*?\]/, '')
+        .replace(/\n\[ENTREGA:.*?\]/, '')
+        .trim();
+      setNotes(cleanNotes);
+    }
+  }, [initialOrder]);
+
   // Filtrar productos
   const filteredProducts = products.filter(p => 
     p.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -43,16 +85,16 @@ export const ManualOrderForm: React.FC<Props> = ({ products, onClose, onOrderCre
   const orderTotal = orderItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
   const remainingBalance = Math.max(0, orderTotal - (Number(paymentAmount) || 0));
 
-  // Cuando cambia el total, sugerir pago completo por defecto (si no se ha editado)
+  // Cuando cambia el total, sugerir pago completo por defecto (solo si NO es edición o si estamos creando)
   useEffect(() => {
-     if (paymentAmount === '' && orderTotal > 0) {
+     if (!initialOrder && paymentAmount === '' && orderTotal > 0) {
        setPaymentAmount(orderTotal.toString());
-     } else if (orderItems.length === 0) {
+     } else if (!initialOrder && orderItems.length === 0) {
        setPaymentAmount('');
      }
-  }, [orderTotal]);
+  }, [orderTotal, initialOrder]);
 
-  // Si hay saldo pendiente, sugerir estado 'Pendiente'
+  // Si hay saldo pendiente, sugerir estado 'Pendiente' (reactivo)
   useEffect(() => {
     if (remainingBalance > 0) {
       setStatus('pending');
@@ -136,10 +178,10 @@ export const ManualOrderForm: React.FC<Props> = ({ products, onClose, onOrderCre
         finalNotes += `\n[ENTREGA: ${d}/${m}/${y}]`;
       }
 
-      // Construir orden completa
-      const orderData = {
+      // Payload base
+      const commonData = {
         customer_name: customerName,
-        customer_email: 'manual@ventas.local', 
+        customer_email: (initialOrder as any)?.customer_email || 'manual@ventas.local', 
         customer_phone: customerPhone || 'Sin teléfono',
         items: orderItems,
         subtotal: orderTotal,
@@ -147,34 +189,40 @@ export const ManualOrderForm: React.FC<Props> = ({ products, onClose, onOrderCre
         total: orderTotal,
         shipping_method: 'retiro' as ShippingMethod,
         notes: finalNotes,
+        status: status // Forzamos el estado calculado
       };
 
-      const result = await createOrder(orderData);
-
-      if (result.error) {
-        throw result.error;
-      }
-
-      if (result.data && status !== 'pending') {
-         const { updateOrderStatus } = await import('../services/orderService');
-         await updateOrderStatus(result.data.id, status);
-      }
-
-      // --- STOCK UPDATE (LOOP) ---
-      for (const item of orderItems) {
-        if (item.product_id) {
-          await updateProductStock(item.product_id, item.quantity);
+      if (initialOrder) {
+        // === MODO EDICIÓN ===
+        const result = await updateOrder(initialOrder.id, commonData);
+        if (result.error) throw result.error;
+        toast.success('¡Orden actualizada correctamente!');
+        // NOTA: No descontamos stock en edición para evitar duplicados complejos.
+      } else {
+        // === MODO CREACIÓN ===
+        const result = await createOrder(commonData);
+        if (result.error) throw result.error;
+        
+        // Stock solo se descuenta en creación
+        for (const item of orderItems) {
+          if (item.product_id) {
+            await updateProductStock(item.product_id, item.quantity);
+          }
         }
+        
+        if (result.data && status !== 'pending') {
+           const { updateOrderStatus } = await import('../services/orderService');
+           await updateOrderStatus(result.data.id, status);
+        }
+        toast.success('¡Venta registrada y stock actualizado!');
       }
-      // ---------------------------
 
-      toast.success('¡Venta registrada y stock actualizado!');
-      onOrderCreated(); 
+      onOrderCreated(); // Refrescar lista
       onClose(); 
 
     } catch (error: any) {
-      console.error('Error al crear orden manual:', error);
-      toast.error('Error al guardar la venta: ' + (error.message || 'Desconocido'));
+      console.error('Error al guardar orden:', error);
+      toast.error('Error al guardar: ' + (error.message || 'Desconocido'));
     } finally {
       setIsSubmitting(false);
     }
