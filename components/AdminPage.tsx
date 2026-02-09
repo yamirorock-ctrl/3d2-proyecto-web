@@ -63,8 +63,8 @@ const AdminPage: React.FC<Props> = ({ products, onAdd, onEdit, onDelete }) => {
     (async () => {
       try {
         const { getAllOrders } = await import('../services/orderService');
-        const orders = await getAllOrders();
-        if (Array.isArray(orders) && orders.length >= 0) {
+        const { data: orders } = await getAllOrders();
+        if (Array.isArray(orders)) {
           setSalesOrders(orders);
           try { localStorage.setItem('orders', JSON.stringify(orders)); } catch {}
         }
@@ -77,8 +77,8 @@ const AdminPage: React.FC<Props> = ({ products, onAdd, onEdit, onDelete }) => {
   const refreshSalesOrders = async () => {
     try {
       const { getAllOrders } = await import('../services/orderService');
-      const orders = await getAllOrders();
-      if (Array.isArray(orders) && orders.length >= 0) {
+      const { data: orders } = await getAllOrders();
+      if (Array.isArray(orders)) {
         setSalesOrders(orders);
         try { localStorage.setItem('orders', JSON.stringify(orders)); } catch {}
       }
