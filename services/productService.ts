@@ -147,3 +147,37 @@ export async function upsertProductsBulk(products: Partial<Product>[]): Promise<
 
   return { data: data as Product[], error: null };
 }
+
+/**
+ * Actualizar Stock de un Producto (Resta la cantidad vendida)
+ */
+export async function updateProductStock(productId: number, quantitySold: number): Promise<{ success: boolean; error: any }> {
+  // Primero obtenemos el stock actual
+  const { data: current, error: fetchError } = await supabase
+    .from('products')
+    .select('stock')
+    .eq('id', productId)
+    .single();
+
+  if (fetchError) {
+    console.error('Error obteniendo stock actual:', fetchError);
+    return { success: false, error: fetchError };
+  }
+
+  // Cast seguro porque sabemos que la columna existe en produccion
+  const currentStock = Number((current as any)?.stock || 0);
+  const newStock = Math.max(0, currentStock - quantitySold); // Evitar negativos
+
+  // Actualizamos
+  const { error: updateError } = await (supabase
+    .from('products') as any)
+    .update({ stock: newStock })
+    .eq('id', productId);
+
+  if (updateError) {
+    console.error('Error actualizando stock:', updateError);
+    return { success: false, error: updateError };
+  }
+
+  return { success: true, error: null };
+}

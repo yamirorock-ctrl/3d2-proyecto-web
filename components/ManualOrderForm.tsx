@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { Product, Order, OrderItem, ShippingMethod } from '../types';
 import { createOrder } from '../services/orderService';
+import { updateProductStock } from '../services/productService';
 import { Search, Calculator, Check, X, User, Phone, FileText, ShoppingCart, DollarSign } from 'lucide-react';
 
 interface Props {
@@ -94,7 +95,14 @@ export const ManualOrderForm: React.FC<Props> = ({ products, onClose, onOrderCre
          await updateOrderStatus(result.data.id, status);
       }
 
-      toast.success('¡Venta registrada con éxito!');
+      // --- STOCK UPDATE ---
+      // Descontar stock automáticamente
+      if (selectedProduct.id) {
+        await updateProductStock(selectedProduct.id, quantity);
+      }
+      // --------------------
+
+      toast.success('¡Venta registrada y stock actualizado!');
       onOrderCreated(); // Refrescar lista
       onClose(); // Cerrar modal
 
@@ -196,7 +204,7 @@ export const ManualOrderForm: React.FC<Props> = ({ products, onClose, onOrderCre
               </div>
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1 flex items-center justify-between">
+              <label className="text-sm font-medium text-slate-700 mb-1 flex items-center justify-between">
                 <span>Total a Cobrar</span>
                 {Number(customPrice) !== (selectedProduct?.price || 0) * quantity && selectedProduct && (
                    <span className="text-[10px] bg-yellow-100 text-yellow-800 px-1 rounded-sm">Modificado</span>
