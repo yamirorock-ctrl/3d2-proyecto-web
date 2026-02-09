@@ -453,7 +453,7 @@ export const ManualOrderForm: React.FC<Props> = ({ products, onClose, onOrderCre
                   <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                 ) : (
                   <>
-                    <Check size={20} className="stroke-[3]" /> Registrar Venta Final (${orderTotal.toLocaleString('es-AR')})
+                    <Check size={20} className="stroke-3" /> Registrar Venta Final (${orderTotal.toLocaleString('es-AR')})
                   </>
                 )}
               </button>
