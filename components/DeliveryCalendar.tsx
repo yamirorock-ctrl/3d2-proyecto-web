@@ -35,8 +35,9 @@ export const DeliveryCalendar: React.FC<Props> = ({ orders, onSelectOrder }) => 
   }, [orders]);
 
   const daysInMonth = useMemo(() => {
-    const start = startOfWeek(startOfMonth(currentMonth), { locale: es });
-    const end = endOfWeek(endOfMonth(currentMonth), { locale: es });
+    // Force week start on Sunday (0) to match the visual headers ['Dom', 'Lun', ...]
+    const start = startOfWeek(startOfMonth(currentMonth), { weekStartsOn: 0 });
+    const end = endOfWeek(endOfMonth(currentMonth), { weekStartsOn: 0 });
     return eachDayOfInterval({ start, end });
   }, [currentMonth]);
 

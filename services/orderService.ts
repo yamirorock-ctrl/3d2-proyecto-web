@@ -1,6 +1,7 @@
 import { getClient } from './supabaseService';
 import { Order, OrderItem, OrderStatus, ShippingMethod, ShippingConfig } from '../types';
 import { PostgrestError } from '@supabase/supabase-js';
+import { sendSaleNotificationEmail } from './emailService';
 
 const supabase = getClient() as any;
 
@@ -166,6 +167,7 @@ export async function createOrder(orderData: {
   try {
     const MAKE_WEBHOOK_URL = "https://hook.us2.make.com/3du519txd4fyw541s7gtcfnto432gmeg";
     
+    // Disparamos Make en segundo plano
     fetch(MAKE_WEBHOOK_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -179,6 +181,11 @@ export async function createOrder(orderData: {
       })
     }).catch(err => console.error('Error enviando notificación a Make:', err));
     
+    // === NOTIFICACIÓN POR EMAIL (Nueva Implementación) ===
+    sendSaleNotificationEmail(data, newOrderData.items)
+      .then(sent => sent ? console.log('Email de venta enviado') : console.warn('Fallo envío email venta'))
+      .catch(e => console.error('Error procesando email:', e));
+
   } catch (e) {
     console.error('Error preparando notificación:', e);
   }
