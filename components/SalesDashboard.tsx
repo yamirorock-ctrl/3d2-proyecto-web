@@ -9,11 +9,12 @@ interface Props {
   onEdit?: (order: Order) => void;
   onDelete?: (orderId: string) => void;
   onRefresh?: () => void;
+  onPatchOrder?: (orderId: string, updates: Partial<Order>) => void;
 }
 
 type DateFilter = 'today' | 'week' | 'month' | 'all';
 
-const SalesDashboard: React.FC<Props> = ({ orders, onUpdateStatus, onEdit, onDelete, onRefresh }) => {
+const SalesDashboard: React.FC<Props> = ({ orders, onUpdateStatus, onEdit, onDelete, onRefresh, onPatchOrder }) => {
   const [dateFilter, setDateFilter] = useState<DateFilter>('all');
 
   const filteredOrders = useMemo(() => {
@@ -92,6 +93,31 @@ const SalesDashboard: React.FC<Props> = ({ orders, onUpdateStatus, onEdit, onDel
       debt: debtMatch ? parseInt(debtMatch[1]) : 0,
       delivery: deliveryMatch ? `${deliveryMatch[1]}/${deliveryMatch[2]}` : null // Solo día/mes para display corto
     };
+  };
+
+  const handleStatusClick = (order: Order, nextStatus: string) => {
+    const { debt } = getExtraInfo(order.notes);
+    
+    // Si hay deuda y estamos avanzando el estado (a procesar o completar), preguntar si se paga.
+    if (debt > 0 && (nextStatus === 'processing' || nextStatus === 'completed') && onPatchOrder) {
+        const shouldPay = window.confirm(
+            `Esta orden tiene una deuda pendiente de $${debt.toLocaleString('es-AR')}.\n\n¿Deseas registrar el PAGO TOTAL y borrar la deuda?\n\n[ACEPTAR] = Sí, saldar deuda y cambiar estado.\n[CANCELAR] = No, mantener deuda y cambiar estado.`
+        );
+        
+        if (shouldPay) {
+            // Eliminar [RESTA: $...] y agregar [PAGADO TOTAL]
+            // Usamos regex para encontrar el patrón exacto.
+            let newNotes = (order.notes || '').replace(/\[RESTA: \$[\d\.]+\]/g, '').trim();
+            if (!newNotes.includes('[PAGADO TOTAL]')) {
+                newNotes += ' [PAGADO TOTAL]';
+            }
+            onPatchOrder(order.id, { status: nextStatus as any, notes: newNotes });
+        } else {
+             onUpdateStatus && onUpdateStatus(order.id, nextStatus as any);
+        }
+    } else {
+        onUpdateStatus && onUpdateStatus(order.id, nextStatus as any);
+    }
   };
 
   return (
@@ -430,7 +456,7 @@ const SalesDashboard: React.FC<Props> = ({ orders, onUpdateStatus, onEdit, onDel
                       <>
                         {order.status === 'pending' && (
                           <button
-                            onClick={() => onUpdateStatus(order.id, 'processing')}
+                            onClick={() => handleStatusClick(order, 'processing')}
                             className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
                           >
                             <Loader size={14} />
@@ -439,7 +465,7 @@ const SalesDashboard: React.FC<Props> = ({ orders, onUpdateStatus, onEdit, onDel
                         )}
                         {order.status === 'processing' && (
                           <button
-                            onClick={() => onUpdateStatus(order.id, 'completed')}
+                            onClick={() => handleStatusClick(order, 'completed')}
                             className="px-4 py-2 bg-green-600 text-white rounded-md text-sm hover:bg-green-700 transition-colors flex items-center justify-center gap-2"
                           >
                             <CheckCircle size={14} />

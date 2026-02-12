@@ -168,6 +168,27 @@ const AdminPage: React.FC<Props> = ({ products, onAdd, onEdit, onDelete }) => {
     localStorage.setItem('orders', JSON.stringify(updated));
   };
 
+  const handlePatchOrder = async (orderId: string, updates: Partial<Order>) => {
+    try {
+      const { updateOrder } = await import('../services/orderService');
+      const { error } = await updateOrder(orderId, updates);
+      
+      if (error) {
+        toast.error('Error al actualizar la orden');
+        return;
+      }
+
+      // Actualizar estado local
+      const updated = salesOrders.map(o => o.id === orderId ? { ...o, ...updates } : o);
+      setSalesOrders(updated);
+      localStorage.setItem('orders', JSON.stringify(updated));
+      toast.success('Orden actualizada correctamente');
+    } catch (err) {
+      console.error('Error patching order:', err);
+      toast.error('Error al actualizar');
+    }
+  };
+
   const handleDeleteSale = async (orderId: string) => {
     if (!confirm('¿Eliminar esta orden de venta?')) return;
     
@@ -635,6 +656,7 @@ const AdminPage: React.FC<Props> = ({ products, onAdd, onEdit, onDelete }) => {
           onEdit={(order) => { setEditingOrder(order); setIsManualOrderOpen(true); }}
           onDelete={handleDeleteSale}
           onRefresh={refreshSalesOrders}
+          onPatchOrder={handlePatchOrder}
         />
       )}
 
