@@ -105,9 +105,15 @@ const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product, isOpen
             <X size={24} />
         </button>
 
+        {/* Mobile Header (Visible only on mobile) */}
+        <div className="md:hidden p-4 pb-0 border-b border-gray-50">
+           <span className="text-indigo-600 font-bold tracking-wider text-xs uppercase mb-1 block">{product.category}</span>
+           <h2 className="text-2xl font-bold text-slate-900 leading-tight">{product.name}</h2>
+        </div>
+
         {/* Galería */}
-        <div className="w-full md:w-1/2 bg-gray-50 flex flex-col p-6 items-center justify-center relative min-h-[250px] sm:min-h-[300px]">
-           <div className="relative w-full h-64 sm:h-80 flex items-center justify-center">
+        <div className="w-full md:w-1/2 bg-white md:bg-gray-50 flex flex-col p-0 sm:p-6 items-center justify-center relative min-h-[300px]">
+           <div className="relative w-full h-[45vh] sm:h-80 flex items-center justify-center p-4">
              <SmartImage 
                 src={images[active].url} 
                 storageKey={images[active].storageKey} 
@@ -117,12 +123,12 @@ const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product, isOpen
              />
            </div>
            {images.length > 1 && (
-             <div className="flex gap-2 mt-4 overflow-x-auto w-full justify-center py-2">
+             <div className="flex gap-2 mt-2 px-4 pb-4 overflow-x-auto w-full justify-center">
                {images.map((img, idx) => (
                  <button 
                    key={idx} 
                    onClick={() => setActive(idx)}
-                   className={`h-16 w-16 border-2 rounded-lg overflow-hidden shrink-0 transition-all ${idx === active ? 'border-indigo-600 ring-2 ring-indigo-200' : 'border-gray-200 opacity-60 hover:opacity-100'}`}
+                   className={`h-14 w-14 border-2 rounded-lg overflow-hidden shrink-0 transition-all ${idx === active ? 'border-indigo-600 ring-2 ring-indigo-200' : 'border-gray-200 opacity-60 hover:opacity-100'}`}
                  >
                    <SmartImage src={img.url} storageKey={img.storageKey} className="w-full h-full object-cover" />
                  </button>
@@ -132,8 +138,9 @@ const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product, isOpen
         </div>
 
         {/* Info */}
-        <div className="w-full md:w-1/2 p-6 md:p-8 flex flex-col">
-           <div className="mb-4">
+        <div className="w-full md:w-1/2 p-4 md:p-8 flex flex-col">
+           {/* Desktop Header (Hidden on mobile) */}
+           <div className="mb-4 hidden md:block">
              <span className="text-indigo-600 font-bold tracking-wider text-xs uppercase mb-1 block">{product.category}</span>
              <h2 className="text-3xl font-bold text-slate-900 leading-tight">{product.name}</h2>
            </div>
