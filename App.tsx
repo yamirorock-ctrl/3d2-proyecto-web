@@ -174,6 +174,7 @@ const MainLayout: React.FC = () => {
 };
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { HelmetProvider } from 'react-helmet-async';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -186,15 +187,17 @@ const queryClient = new QueryClient({
 
 const App: React.FC = () => {
   return (
-    <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <ProductProvider>
-          <CartProvider>
-            <MainLayout />
-          </CartProvider>
-        </ProductProvider>
-      </AuthProvider>
-    </QueryClientProvider>
+    <HelmetProvider>
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+          <ProductProvider>
+            <CartProvider>
+              <MainLayout />
+            </CartProvider>
+          </ProductProvider>
+        </AuthProvider>
+      </QueryClientProvider>
+    </HelmetProvider>
   );
 };
 

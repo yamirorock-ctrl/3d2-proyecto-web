@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { X, Plus, Star } from 'lucide-react';
+import { Helmet } from 'react-helmet-async';
 import { Product, ProductImage } from '../types';
 import SmartImage from './SmartImage';
 import { useProductCalculations } from '../hooks/useProductCalculations';
@@ -98,6 +99,51 @@ const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product, isOpen
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity" onClick={onClose} />
       
       <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto flex flex-col md:flex-row animate-scale-in">
+        <Helmet>
+          <title>{product.name} | 3D2</title>
+          <meta name="description" content={product.description?.slice(0, 160) || `Comprá ${product.name} en 3D2.`} />
+          
+          {/* Open Graph / Facebook / WhatsApp */}
+          <meta property="og:type" content="product" />
+          <meta property="og:title" content={product.name} />
+          <meta property="og:description" content={product.description?.slice(0, 200)} />
+          <meta property="og:image" content={product.image} />
+          <meta property="og:url" content={`${window.location.origin}/?product_id=${product.id}`} />
+          <meta property="product:price:amount" content={String(product.price)} />
+          <meta property="product:price:currency" content="ARS" />
+          <meta property="product:availability" content={product.stock && product.stock > 0 ? "instock" : "oos"} />
+
+          {/* Twitter Card */}
+          <meta name="twitter:card" content="summary_large_image" />
+          <meta name="twitter:title" content={product.name} />
+          <meta name="twitter:description" content={product.description?.slice(0, 200)} />
+          <meta name="twitter:image" content={product.image} />
+
+          {/* Schema.org for Pinterest Rich Pins & Google */}
+          <script type="application/ld+json">
+            {JSON.stringify({
+              "@context": "https://schema.org/",
+              "@type": "Product",
+              "name": product.name,
+              "image": [product.image],
+              "description": product.description,
+              "sku": String(product.id),
+              "brand": {
+                "@type": "Brand",
+                "name": "3D2"
+              },
+              "offers": {
+                "@type": "Offer",
+                "url": `${window.location.origin}/?product_id=${product.id}`,
+                "priceCurrency": "ARS",
+                "price": product.price,
+                "availability": product.stock && product.stock > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
+                "itemCondition": "https://schema.org/NewCondition"
+              }
+            })}
+          </script>
+        </Helmet>
+        
         <button 
             onClick={onClose}
             className="absolute top-4 right-4 z-10 p-2 bg-white/80 hover:bg-white rounded-full shadow-md text-slate-500 hover:text-red-500 transition-colors"
