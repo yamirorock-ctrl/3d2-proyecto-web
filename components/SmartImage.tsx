@@ -5,9 +5,10 @@ interface Props extends React.ImgHTMLAttributes<HTMLImageElement> {
   src?: string;
   storageKey?: string;
   showError?: boolean;
+  wrapperClassName?: string;
 }
 
-const SmartImage: React.FC<Props> = ({ src, storageKey, showError, ...rest }) => {
+const SmartImage: React.FC<Props> = ({ src, storageKey, showError, wrapperClassName, ...rest }) => {
   const [resolved, setResolved] = React.useState<string | undefined>(undefined);
   const [loadError, setLoadError] = React.useState<boolean>(false);
 
@@ -46,11 +47,14 @@ const SmartImage: React.FC<Props> = ({ src, storageKey, showError, ...rest }) =>
 
   const base = (import.meta as any).env?.BASE_URL || '/';
   const fallback = `${base}placeholder.svg`;
+  
+  const containerStyle: React.CSSProperties = { position: 'relative', display: 'inline-block' };
+
   if (!resolved) {
     return (
-      <div style={{ position: 'relative', display: 'inline-block' }}>
+      <div style={containerStyle} className={wrapperClassName}>
         {/* eslint-disable-next-line jsx-a11y/alt-text */}
-        <img src={fallback} {...rest} alt={rest.alt} />
+        <img src={fallback} {...rest} alt={rest.alt || 'Placeholder'} />
         {showError ? (
           <div style={{ position: 'absolute', bottom: 4, right: 4, background: 'rgba(220,38,38,0.9)', color: '#fff', padding: '2px 6px', borderRadius: 4, fontSize: 12 }}>
             Error al cargar
@@ -67,7 +71,7 @@ const SmartImage: React.FC<Props> = ({ src, storageKey, showError, ...rest }) =>
   };
   // eslint-disable-next-line jsx-a11y/alt-text
   return (
-    <div style={{ position: 'relative', display: 'inline-block' }}>
+    <div style={containerStyle} className={wrapperClassName}>
       {/* eslint-disable-next-line jsx-a11y/alt-text */}
       <img src={resolved} onError={handleError} {...rest} />
       {showError && loadError ? (
