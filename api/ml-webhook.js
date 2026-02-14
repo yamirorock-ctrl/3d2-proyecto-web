@@ -3,7 +3,8 @@ import { createClient } from "@supabase/supabase-js";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
-const SUPABASE_ANON_KEY = process.env.VITE_SUPABASE_ANON_TOKEN;
+const SUPABASE_ANON_KEY =
+  process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_TOKEN;
 const GEMINI_API_KEY =
   process.env.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
 
@@ -49,6 +50,16 @@ Atributos (Ficha Técnica): {ATTRIBUTES}
 `;
 
 export default async function handler(req, res) {
+  // Debug Connection
+  if (!supabase) {
+    console.warn(
+      `[ML Webhook] Supabase NOT Configured! URL: ${!!SUPABASE_URL}, key: ${!!SUPABASE_ANON_KEY}`,
+    );
+    return res
+      .status(200)
+      .json({ error: "Supabase connection failed (Missing Envs)" });
+  }
+
   try {
     const topic = req.query?.topic || req.body?.topic;
     const resource = req.query?.resource || req.body?.resource;
