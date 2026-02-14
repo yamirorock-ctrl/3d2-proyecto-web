@@ -105,9 +105,13 @@ const SalesDashboard: React.FC<Props> = ({ orders, onUpdateStatus, onEdit, onDel
         );
         
         if (shouldPay) {
-            // Eliminar [RESTA: $...] y agregar [PAGADO TOTAL]
-            // Usamos regex para encontrar el patrón exacto.
-            let newNotes = (order.notes || '').replace(/\[RESTA: \$[\d\.]+\]/g, '').trim();
+            // Eliminar variaciones de [RESTA: $...] o RESTA: $...
+            // Regex explicación:
+            // \[?  -> Corchete opcional al inicio
+            // RESTA:\s*\$ -> Texto literal "RESTA: $" con espacios opcionales
+            // [\d\.,]+ -> Numeros, puntos y comas
+            // \]? -> Corchete opcional al final
+            let newNotes = (order.notes || '').replace(/\[?RESTA:\s*\$[\d\.,\s]+\]?/gi, '').trim();
             if (!newNotes.includes('[PAGADO TOTAL]')) {
                 newNotes += ' [PAGADO TOTAL]';
             }
