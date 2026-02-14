@@ -133,17 +133,19 @@ async function handleQuestion(resource, accessToken, res) {
     });
 
     if (question.status !== "UNANSWERED") {
-      // Log that it was skipped
+      // Log warning but TRY TO ANSWER ANYWAY (Aggressive Mode)
+      console.warn(
+        `[ML Webhook] Question status is ${question.status}, but forcing answer.`,
+      );
       await supabase
         .from("ml_questions")
         .update({
-          status: "ignored",
-          answer_text: `Omitida por estado: ${question.status} (ML dice que no está pendiente)`,
+          answer_text: `Forzando respuesta sobre estado: ${question.status}`,
         })
         .eq("question_text", questionText)
         .eq("status", "pending");
 
-      return res.status(200).json({ status: "Already answered" });
+      // NO RETURN HERE! Let it flow to Gemini...
     }
 
     if (!genAI) {
