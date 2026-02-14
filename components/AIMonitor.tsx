@@ -8,7 +8,7 @@ interface AIQuestion {
   item_id: string;
   question_text: string;
   answer_text: string;
-  status: 'pending' | 'answered' | 'error';
+  status: 'pending' | 'answered' | 'error' | 'ignored';
   created_at: string;
   ai_model: string;
 }
@@ -111,10 +111,12 @@ const AIMonitor: React.FC = () => {
                             <span className={`px-2 py-1 rounded text-xs font-bold uppercase tracking-wider ${
                                 q.status === 'answered' ? 'bg-emerald-100 text-emerald-700' :
                                 q.status === 'error' ? 'bg-rose-100 text-rose-700' :
+                                q.status === 'ignored' ? 'bg-gray-100 text-gray-500' :
                                 'bg-amber-100 text-amber-700'
                             }`}>
                                 {q.status === 'answered' ? 'Respondida' : 
-                                 q.status === 'error' ? 'Error' : 'Pendiente'}
+                                 q.status === 'error' ? 'Error' : 
+                                 q.status === 'ignored' ? 'Omitida' : 'Pendiente'}
                             </span>
                             <span className="text-xs text-slate-400 font-mono">
                                 {new Date(q.created_at).toLocaleString('es-AR')}

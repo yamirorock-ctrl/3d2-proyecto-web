@@ -113,17 +113,27 @@ async function handleQuestion(resource, accessToken, res) {
     questionId = question.id;
     itemId = question.item_id;
 
-    if (question.status !== "UNANSWERED") {
-      return res.status(200).json({ status: "Already answered" });
-    }
-
     // 2. Audit Log: Start (Insert Pending)
     await supabase.from("ml_questions").insert({
       item_id: itemId,
       question_text: questionText,
       status: "pending",
-      ai_model: "gemini-3-flash-preview", // Manteniendo tu modelo preferido
+      ai_model: "gemini-3-flash-preview",
     });
+
+    if (question.status !== "UNANSWERED") {
+      // Log that it was skipped
+      await supabase
+        .from("ml_questions")
+        .update({
+          status: "ignored",
+          answer_text: "Respondido externamente (quizás IA de ML)",
+        })
+        .eq("question_text", questionText)
+        .eq("status", "pending");
+
+      return res.status(200).json({ status: "Already answered" });
+    }
 
     if (!genAI) {
       console.warn("[ML Webhook] Gemini Not Configured.");
