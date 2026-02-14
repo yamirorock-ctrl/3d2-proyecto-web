@@ -84,14 +84,35 @@ const FinancialDashboard: React.FC<Props> = ({ orders }) => {
     return { monthlyOrders: filteredOrders, monthlyExpenses: filteredExpenses };
   }, [orders, expenses, selectedMonth, selectedYear]);
 
+  // Helper para extraer deuda de las notas
+  const getDebt = (notes?: string | null) => {
+    if (!notes) return 0;
+    // Busca variaciones de RESTA: $5000, RESTA: $ 5.000, etc.
+    const match = notes.match(/RESTA:\s*\$([\d\.,]+)/i);
+    if (match) {
+       // Limpiar puntos y comas para parsear número
+       const cleanNumber = match[1].replace(/\./g, '').replace(',', '.');
+       return parseFloat(cleanNumber) || 0;
+    }
+    return 0;
+  };
+
   // Cálculos Financieros
   const financials = useMemo(() => {
-    const income = monthlyOrders.reduce((sum, o) => sum + (o.total || 0), 0);
+    let salesTotal = 0; // Lo facturado total
+    let debtTotal = 0;  // Lo que falta cobrar
+    
+    monthlyOrders.forEach(o => {
+        salesTotal += (o.total || 0);
+        debtTotal += getDebt(o.notes);
+    });
+
+    const income = salesTotal - debtTotal; // Ingreso Real (Caja)
     const outcome = monthlyExpenses.reduce((sum, e) => sum + (e.amount || 0), 0);
     const profit = income - outcome;
     const margin = income > 0 ? ((profit / income) * 100) : 0;
 
-    return { income, outcome, profit, margin };
+    return { salesTotal, debtTotal, income, outcome, profit, margin };
   }, [monthlyOrders, monthlyExpenses]);
 
   // Handlers Gastos
@@ -239,8 +260,14 @@ const FinancialDashboard: React.FC<Props> = ({ orders }) => {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="p-6 rounded-xl bg-linear-to-br from-emerald-500 to-emerald-600 text-white shadow-lg relative overflow-hidden">
           <div className="absolute top-0 right-0 p-4 opacity-20"><TrendingUp size={48} /></div>
-          <p className="text-emerald-100 text-sm font-medium mb-1">Ingresos</p>
+          <p className="text-emerald-100 text-sm font-medium mb-1">Ingresos (Caja Real)</p>
           <h3 className="text-3xl font-bold">${financials.income.toLocaleString('es-AR')}</h3>
+          {financials.debtTotal > 0 && (
+            <div className="text-xs bg-black/20 px-2 py-0.5 rounded mt-2 inline-flex items-center gap-1">
+              <AlertCircle size={10} className="text-yellow-300" />
+              <span>Por Cobrar: ${financials.debtTotal.toLocaleString('es-AR')}</span>
+            </div>
+          )}
         </div>
 
         <div className="p-6 rounded-xl bg-linear-to-br from-rose-500 to-rose-600 text-white shadow-lg relative overflow-hidden">
