@@ -12,6 +12,7 @@ import SmartImage from './SmartImage';
 import SalesDashboard from './SalesDashboard';
 import PriceUpdateTool from './PriceUpdateTool';
 import { getAuthUrl } from '../services/mlService';
+import FinancialDashboard from './FinancialDashboard';
 
 interface Props {
   products: Product[];
@@ -24,7 +25,8 @@ const AdminPage: React.FC<Props> = ({ products, onAdd, onEdit, onDelete }) => {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isManualOrderOpen, setIsManualOrderOpen] = useState(false);
   const [editing, setEditing] = useState<Product | null>(null);
-  const [activeTab, setActiveTab] = useState<'products' | 'orders' | 'sales'>('products');
+  const [activeTab, setActiveTab] = useState<'products' | 'orders' | 'sales' | 'calendar' | 'finances'>('products');
+
   const [customOrders, setCustomOrders] = useState<CustomOrder[]>([]);
   const [salesOrders, setSalesOrders] = useState<Order[]>([]);
   const [isPriceToolOpen, setIsPriceToolOpen] = useState(false);
@@ -519,6 +521,15 @@ const AdminPage: React.FC<Props> = ({ products, onAdd, onEdit, onDelete }) => {
           <Calendar size={20} />
           Calendario
         </button>
+        <button
+          onClick={() => setActiveTab('finances')}
+          className={`px-4 py-3 font-medium flex items-center gap-2 border-b-2 transition-colors ${
+            activeTab === 'finances' ? 'border-emerald-600 text-emerald-600' : 'border-transparent text-slate-500 hover:text-slate-700'
+          }`}
+        >
+          <DollarSign size={20} />
+          Finanzas
+        </button>
           {/* Users tab removed as it is now managed via Supabase Dashboard */}
           {/* Security tab logic simplified or removed as Supabase logs audit events */}
       </div>
@@ -674,6 +685,11 @@ const AdminPage: React.FC<Props> = ({ products, onAdd, onEdit, onDelete }) => {
             }
           )}
         </React.Suspense>
+      )}
+
+      {/* Finances Tab */}
+      {activeTab === 'finances' && (
+        <FinancialDashboard orders={salesOrders} />
       )}
 
 

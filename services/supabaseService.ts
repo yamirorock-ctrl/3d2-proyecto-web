@@ -111,3 +111,27 @@ export async function getAllProductsFromSupabase(): Promise<{ success: boolean; 
     return { success: false, error: (e as Error).message };
   }
 }
+
+// Expenses management
+export async function getExpenses() {
+  const client = getClient();
+  const { data, error } = await client
+    .from('expenses')
+    .select('*')
+    .order('date', { ascending: false });
+  return { data, error };
+}
+
+export async function addExpense(expense: any) {
+  const client = getClient();
+  // Ensure amount is number
+  const cleanExpense = { ...expense, amount: Number(expense.amount) };
+  const { data, error } = await (client.from('expenses') as any).insert([cleanExpense]).select();
+  return { data, error };
+}
+
+export async function deleteExpense(id: string) {
+  const client = getClient();
+  const { error } = await (client.from('expenses') as any).delete().eq('id', id);
+  return { error };
+}

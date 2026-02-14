@@ -142,3 +142,13 @@ export enum ViewState {
   CHECKOUT = 'CHECKOUT',
   SUCCESS = 'SUCCESS'
 }
+
+export interface Expense {
+  id: string;
+  date: string; // ISO Date string (YYYY-MM-DD)
+  amount: number;
+  category: 'Filamento' | 'Madera' | 'Insumos' | 'Mantenimiento' | 'Publicidad' | 'Otros';
+  subcategory?: string; // e.g. 'PLA', 'PETG', 'MDF 3mm'
+  description?: string;
+  created_at?: string;
+}
