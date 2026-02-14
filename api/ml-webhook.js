@@ -44,6 +44,8 @@ CONTEXTO ACTUAL:
 Producto: {TITLE}
 Precio: {CURRENCY} {PRICE}
 Stock Real (Sistema): {STOCK}
+Descripción: {DESCRIPTION}
+Atributos (Ficha Técnica): {ATTRIBUTES}
 `;
 
 export default async function handler(req, res) {
@@ -132,11 +134,15 @@ async function handleQuestion(resource, accessToken, res) {
       return res.status(200).json({ error: "No AI" });
     }
 
-    // 3. Parallel Fetch: Item Details & Local Stock (Optimization)
-    const [item, dbResult] = await Promise.all([
+    // 3. Parallel Fetch: Item Details, Description & Local Stock (Optimization)
+    const [item, descriptionData, dbResult] = await Promise.all([
       fetch(`https://api.mercadolibre.com/items/${itemId}`, {
         headers: { Authorization: `Bearer ${accessToken}` },
       }).then((r) => r.json()),
+
+      fetch(`https://api.mercadolibre.com/items/${itemId}/description`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      }).then((r) => (r.ok ? r.json() : { plain_text: "" })), // Manejo de error si no tiene descripcion
 
       supabase
         .from("products")
@@ -146,16 +152,25 @@ async function handleQuestion(resource, accessToken, res) {
         .single(),
     ]);
 
-    // 4. Determine Real Stock
+    // 4. Extract Attributes & Description
+    const attributesText = item.attributes
+      ? item.attributes.map((a) => `${a.name}: ${a.value_name}`).join(", ")
+      : "Sin especificaciones";
+
+    const descriptionText = descriptionData.plain_text || "Sin descripción";
     const realStock = dbResult.data?.stock ?? item.available_quantity;
 
     // 5. Generate Answer with Gemini
+    const finalPrompt = SYSTEM_PROMPT.replace("{TITLE}", item.title)
+      .replace("{PRICE}", item.price)
+      .replace("{CURRENCY}", item.currency_id)
+      .replace("{STOCK}", realStock)
+      .replace("{DESCRIPTION}", descriptionText.slice(0, 1000)) // Limitamos largo para no exceder tokens
+      .replace("{ATTRIBUTES}", attributesText);
+
     const model = genAI.getGenerativeModel({
       model: "gemini-3-flash-preview",
-      systemInstruction: SYSTEM_PROMPT.replace("{TITLE}", item.title)
-        .replace("{PRICE}", item.price)
-        .replace("{CURRENCY}", item.currency_id)
-        .replace("{STOCK}", realStock),
+      systemInstruction: finalPrompt,
     });
 
     console.log(`[ML Webhook] Asking Gemini about: "${questionText}"`);
