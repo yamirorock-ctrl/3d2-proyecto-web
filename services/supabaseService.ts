@@ -135,3 +135,28 @@ export async function deleteExpense(id: string) {
   const { error } = await (client.from('expenses') as any).delete().eq('id', id);
   return { error };
 }
+
+// Raw Material Inventory
+export async function getMaterials() {
+  const client = getClient();
+  const { data, error } = await (client.from('raw_materials') as any).select('*').order('name');
+  return { data, error };
+}
+
+export async function addMaterial(material: any) {
+  const client = getClient();
+  const { data, error } = await (client.from('raw_materials') as any).insert([material]).select();
+  return { data, error };
+}
+
+export async function updateMaterial(id: string, updates: Partial<any>) {
+  const client = getClient();
+  const { error } = await (client.from('raw_materials') as any).update(updates).eq('id', id);
+  return { error };
+}
+
+export async function deleteMaterial(id: string) {
+  const client = getClient();
+  const { error } = await (client.from('raw_materials') as any).delete().eq('id', id);
+  return { error };
+}

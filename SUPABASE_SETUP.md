@@ -3,6 +3,7 @@
 ## ¿Por qué necesitas esto?
 
 Sin backend, cualquier persona con conocimientos técnicos puede:
+
 - Ver el código en el navegador
 - Modificar localStorage
 - Crear múltiples cuentas admin
@@ -49,15 +50,19 @@ Sin backend, cualquier persona con conocimientos técnicos puede:
 3. Verás dos valores importantes:
 
 ### Project URL
+
 ```
 https://xxxxxxxxxxxxx.supabase.co
 ```
+
 Copia este valor completo
 
 ### anon/public key
+
 ```
 eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 ```
+
 Copia esta clave completa (es muy larga, asegúrate de copiarla toda)
 
 ---
@@ -137,15 +142,18 @@ Con Supabase configurado:
 ## 💡 Troubleshooting
 
 ### "Error: No se puede conectar a Supabase"
+
 - Verifica que las URLs y keys estén correctas
 - Asegúrate de que no haya espacios extra
 - Reinicia el servidor de desarrollo
 
 ### "Error: Ya existe un administrador"
+
 - ¡Funciona! El sistema está protegiendo contra múltiples admins
 - Para resetear, usa el botón "Borrar cuenta" con tus credenciales
 
 ### "Sigo viendo modo local"
+
 - Verifica que `.env.local` existe y tiene las variables
 - Reinicia el servidor completamente
 - Verifica la consola del navegador (F12) por errores
@@ -180,8 +188,37 @@ Para un solo admin y logs de sesión, nunca alcanzarás estos límites.
 ## 🚀 Próximos pasos
 
 Una vez configurado, puedes:
+
 - Registrar tu cuenta de admin única
 - Los intentos de crear más admins serán bloqueados
 - Todo quedará registrado en la base de datos
 
 **¿Necesitas ayuda?** Revisa los logs en la consola del navegador (F12)
+
+---
+
+## ⚠️ Actualizaciones Recientes de Seguridad (Feb 2026)
+
+### Tabla de Gastos (`expenses`)
+
+Se ha implementado el módulo de Finanzas. Para facilitar la carga inicial y el uso desde el panel de administración, la tabla `expenses` tiene actualmente una política de acceso público:
+
+```sql
+create policy "Public Access" on expenses for all using (true);
+```
+
+**TODO:**
+
+- [ ] Restringir el acceso a `expenses` solo a usuarios autenticados una vez que el flujo de autenticación esté 100% estable en el dashboard.
+
+### Tabla de Stock (`raw_materials`)
+
+Misma política pública temporal para permitir la gestión de inventario desde el panel:
+
+```sql
+create policy "Public Access Stock" on raw_materials for all using (true);
+```
+
+**TODO:**
+
+- [ ] Unificar permisos con la tabla de `expenses`.

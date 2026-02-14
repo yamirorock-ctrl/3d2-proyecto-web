@@ -152,3 +152,12 @@ export interface Expense {
   description?: string;
   created_at?: string;
 }
+
+export interface RawMaterial {
+  id: string;
+  name: string;
+  category: 'Filamento' | 'Madera' | 'Insumos' | 'Otros';
+  quantity: number;
+  unit: string; // 'rollos', 'placas', 'kg'
+  min_threshold: number;
+}
