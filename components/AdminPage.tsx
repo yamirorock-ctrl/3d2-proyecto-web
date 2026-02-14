@@ -4,7 +4,7 @@ import { Product, Order } from '../types';
 import { CustomOrder } from './CustomOrderForm';
 import ProductAdmin from './ProductAdmin';
 import { ManualOrderForm } from './ManualOrderForm';
-import { Trash2, Edit, Plus, ArrowLeft, Package, Users, Mail, Phone, Calendar, CheckCircle, Clock, ShoppingCart, TrendingUp, DollarSign, ShieldAlert, RefreshCw, ListChecks, ShoppingBag, Settings, LogOut, ChevronDown, Database, Upload, Download, Wrench, Truck } from 'lucide-react';
+import { Trash2, Edit, Plus, ArrowLeft, Package, Users, Mail, Phone, Calendar, CheckCircle, Clock, ShoppingCart, TrendingUp, DollarSign, ShieldAlert, RefreshCw, ListChecks, ShoppingBag, Settings, LogOut, ChevronDown, Database, Upload, Download, Wrench, Truck, Bot } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { saveDataUrl, getBlob } from '../services/imageStore';
@@ -13,6 +13,7 @@ import SalesDashboard from './SalesDashboard';
 import PriceUpdateTool from './PriceUpdateTool';
 import { getAuthUrl } from '../services/mlService';
 import FinancialDashboard from './FinancialDashboard';
+import AIMonitor from './AIMonitor';
 
 interface Props {
   products: Product[];
@@ -25,7 +26,7 @@ const AdminPage: React.FC<Props> = ({ products, onAdd, onEdit, onDelete }) => {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isManualOrderOpen, setIsManualOrderOpen] = useState(false);
   const [editing, setEditing] = useState<Product | null>(null);
-  const [activeTab, setActiveTab] = useState<'products' | 'orders' | 'sales' | 'calendar' | 'finances'>('products');
+  const [activeTab, setActiveTab] = useState<'products' | 'orders' | 'sales' | 'calendar' | 'finances' | 'ai_monitor'>('products');
 
   const [customOrders, setCustomOrders] = useState<CustomOrder[]>([]);
   const [salesOrders, setSalesOrders] = useState<Order[]>([]);
@@ -530,6 +531,15 @@ const AdminPage: React.FC<Props> = ({ products, onAdd, onEdit, onDelete }) => {
           <DollarSign size={20} />
           Finanzas
         </button>
+        <button
+          onClick={() => setActiveTab('ai_monitor')}
+          className={`px-4 py-3 font-medium flex items-center gap-2 border-b-2 transition-colors ${
+            activeTab === 'ai_monitor' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500 hover:text-slate-700'
+          }`}
+        >
+          <Bot size={20} />
+          Monitor IA
+        </button>
           {/* Users tab removed as it is now managed via Supabase Dashboard */}
           {/* Security tab logic simplified or removed as Supabase logs audit events */}
       </div>
@@ -730,6 +740,10 @@ const AdminPage: React.FC<Props> = ({ products, onAdd, onEdit, onDelete }) => {
                      toast.success(editingOrder ? 'Orden actualizada' : 'Venta registrada');
                   }}
                 />
+              )}
+
+              {activeTab === 'ai_monitor' && (
+                <AIMonitor />
               )}
             </>
           );

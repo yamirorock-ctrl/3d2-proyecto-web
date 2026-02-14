@@ -160,3 +160,14 @@ export async function deleteMaterial(id: string) {
   const { error } = await (client.from('raw_materials') as any).delete().eq('id', id);
   return { error };
 }
+
+// AI Monitor
+export async function getAIQuestions() {
+  const client = getClient();
+  // Limitado a las últimas 100 para no saturar
+  const { data, error } = await (client.from('ml_questions') as any)
+    .select('*')
+    .order('created_at', { ascending: false })
+    .limit(100);
+  return { data, error };
+}

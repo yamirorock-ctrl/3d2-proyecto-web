@@ -21,16 +21,24 @@ const MAKE_WEBHOOK_URL =
 // Bot Personality
 const SYSTEM_PROMPT = `
 Eres 'Printy' 🖨️, el robot asistente de la marca "3D2" (Impresión 3D y Corte Láser).
-Tu objetivo es responder preguntas de compradores en MercadoLibre con energía y amabilidad.
+Tu objetivo es responder preguntas de compradores en MercadoLibre con energía, amabilidad y TOTAL SEGURIDAD.
 
-TUS REGLAS DE ORO:
-1. PERSONALIDAD: ¡Sé alegre y servicial! Usa emojis (🚀, ✨, 💜, 🤖) pero sin abusar.
+🚨 REGLAS DE ORO DE MERCADOLIBRE (INTOCABLES):
+1. ⛔ JAMÁS des datos de contacto (teléfono, mail, dirección exacta, instagram, redes).
+   - Si piden contacto: "Por políticas de MercadoLibre no puedo pasarte datos de contacto por acá. Al realizar la compra te llegarán mis datos automáticamente. 😉"
+2. ⛔ NO incites a comprar por fuera ("búscanos", "somos tal").
+3. ⛔ NO uses palabras prohibidas como: "transferencia", "efectivo", "descuento por fuera".
+4. ✅ SIEMPRE invita a ofertar dentro de la plataforma.
+
+TU PERSONALIDAD:
+1. ¡Sé alegre y servicial! Usa emojis (🚀, ✨, 💜, 🤖) con moderación.
 2. NOMBRE: Si te presentas, eres Printy.
 3. SI HAY STOCK (>0): "¡Hola! 👋 Sí, tenemos stock disponible. ¡Esperamos tu compra para enviártelo cuanto antes! 🚀"
 4. SI NO HAY STOCK (=0): "¡Hola! En este momento se nos agotó para entrega inmediata. Consultanos pronto. 💜"
 5. PERSONALIZADOS: "¡Sí! Somos fabricantes y hacemos trabajos a medida en 3D2. 🎨"
-6. ENVÍOS: "Hacemos envíos a todo el país. Podés calcular el costo exacto arriba del botón de comprar. 🚚"
-7. IMPORTANTE: Sé CONCISO (máximo 2-3 líneas) pero CÁLIDO. Jamás respondas en minúsculas secas.
+6. ENVÍOS: "Hacemos envíos a todo el país con MercadoEnvíos. Podés calcular el costo exacto arriba del botón de comprar. 🚚"
+7. UBICACIÓN: Si preguntan, estamos en [TU ZONA/BARRIO AQUI], pero no des calle ni número.
+8. IMPORTANTE: Sé CONCISO (máximo 2-3 líneas) pero CÁLIDO. Jamás respondas en minúsculas secas.
 
 CONTEXTO ACTUAL:
 Producto: {TITLE}
@@ -86,41 +94,62 @@ export default async function handler(req, res) {
 // ------------------------------------------------------------------
 
 async function handleQuestion(resource, accessToken, res) {
-  if (!genAI) {
-    console.warn("[ML Webhook] Gemini Not Configured. Skipping Question.");
-    return res.status(200).json({ error: "No AI" });
-  }
+  // 0. Parse Question info safely
+  let questionText = "Unknown";
+  let questionId = "Unknown";
+  let itemId = "Unknown";
 
   try {
     // 1. Fetch Question
     const qRes = await fetch(`https://api.mercadolibre.com${resource}`, {
       headers: { Authorization: `Bearer ${accessToken}` },
     });
-    if (!qRes.ok) throw new Error("Failed to fetch question");
+    if (!qRes.ok) throw new Error("Failed to fetch question from ML");
     const question = await qRes.json();
+
+    questionText = question.text;
+    questionId = question.id;
+    itemId = question.item_id;
 
     if (question.status !== "UNANSWERED") {
       return res.status(200).json({ status: "Already answered" });
     }
 
-    // 2. Parallel Fetch: Item Details & Local Stock (Optimization)
+    // 2. Audit Log: Start (Insert Pending)
+    await supabase.from("ml_questions").insert({
+      item_id: itemId,
+      question_text: questionText,
+      status: "pending",
+      ai_model: "gemini-3-flash-preview", // Manteniendo tu modelo preferido
+    });
+
+    if (!genAI) {
+      console.warn("[ML Webhook] Gemini Not Configured.");
+      await supabase
+        .from("ml_questions")
+        .update({ status: "error", answer_text: "Gemini API Key missing" })
+        .eq("question_text", questionText); // Fallback match
+      return res.status(200).json({ error: "No AI" });
+    }
+
+    // 3. Parallel Fetch: Item Details & Local Stock (Optimization)
     const [item, dbResult] = await Promise.all([
-      fetch(`https://api.mercadolibre.com/items/${question.item_id}`, {
+      fetch(`https://api.mercadolibre.com/items/${itemId}`, {
         headers: { Authorization: `Bearer ${accessToken}` },
       }).then((r) => r.json()),
 
       supabase
         .from("products")
         .select("stock, name")
-        .eq("ml_item_id", question.item_id)
+        .eq("ml_item_id", itemId)
         .limit(1)
         .single(),
     ]);
 
-    // 3. Determine Real Stock
+    // 4. Determine Real Stock
     const realStock = dbResult.data?.stock ?? item.available_quantity;
 
-    // 4. Generate Answer with Gemini
+    // 5. Generate Answer with Gemini
     const model = genAI.getGenerativeModel({
       model: "gemini-3-flash-preview",
       systemInstruction: SYSTEM_PROMPT.replace("{TITLE}", item.title)
@@ -129,12 +158,10 @@ async function handleQuestion(resource, accessToken, res) {
         .replace("{STOCK}", realStock),
     });
 
-    console.log(
-      `[ML Webhook] Asking Gemini about: "${question.text}" (Stock: ${realStock})`,
-    );
+    console.log(`[ML Webhook] Asking Gemini about: "${questionText}"`);
 
     const result = await model.generateContent(
-      `Pregunta del usuario: "${question.text}"`,
+      `Pregunta del usuario: "${questionText}"`,
     );
     const answerText = result.response.text().trim();
 
@@ -142,7 +169,7 @@ async function handleQuestion(resource, accessToken, res) {
 
     console.log(`[ML Webhook] Answer generated: "${answerText}"`);
 
-    // 5. Post Answer to ML
+    // 6. Post Answer to ML
     const ansRes = await fetch(`https://api.mercadolibre.com/answers`, {
       method: "POST",
       headers: {
@@ -150,31 +177,44 @@ async function handleQuestion(resource, accessToken, res) {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        question_id: question.id,
+        question_id: questionId,
         text: answerText,
       }),
     });
 
     if (!ansRes.ok) {
       const errBody = await ansRes.text();
-      console.error(`[ML Webhook] Failed to post answer: ${errBody}`);
-      throw new Error("ML API Error on Answer");
+      throw new Error(`ML API Error: ${errBody}`);
     }
 
-    // 6. Notify Make (Log)
-    await sendToMake({
-      event: "ml_question_answered",
-      question: question.text,
-      answer: answerText,
-      item: item.title,
-      timestamp: new Date().toISOString(),
-    });
+    // 7. Audit Log: Success (Update Answer)
+    // Usamos item_id + question_text como llave aproximada para actualizar el último registro pendiente
+    // O mejor, insertamos uno nuevo si no queremos complicarnos con IDs, pero update es más limpio.
+    // Como no tenemos el ID de supabase retornado en insert (por limitación de cliente simple a veces), hacemos update where status=pending and question_text=...
+    await supabase
+      .from("ml_questions")
+      .update({
+        status: "answered",
+        answer_text: answerText,
+        created_at: new Date().toISOString(), // Update timestamp
+      })
+      .eq("question_text", questionText)
+      .eq("status", "pending");
 
     return res.status(200).json({ success: true, answer: answerText });
-  } catch (aiError) {
-    console.error("[ML Webhook] AI/Answer Error:", aiError);
-    // Don't fail the webhook, just return error json to stop loop
-    return res.status(200).json({ error: aiError.message });
+  } catch (error) {
+    console.error("[ML Webhook] Error processing question:", error);
+
+    // Audit Log: Error
+    if (questionText !== "Unknown") {
+      await supabase
+        .from("ml_questions")
+        .update({ status: "error", answer_text: error.message })
+        .eq("question_text", questionText)
+        .eq("status", "pending");
+    }
+
+    return res.status(200).json({ error: error.message });
   }
 }
 
