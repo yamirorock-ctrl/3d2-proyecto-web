@@ -138,7 +138,7 @@ async function handleQuestion(resource, accessToken, res) {
         .from("ml_questions")
         .update({
           status: "ignored",
-          answer_text: "Respondido externamente (quizás IA de ML)",
+          answer_text: `Omitida por estado: ${question.status} (ML dice que no está pendiente)`,
         })
         .eq("question_text", questionText)
         .eq("status", "pending");

@@ -19,6 +19,7 @@
     "@types/humps": "^2.0.6",
     "browser-image-compression": "^2.0.2",
     "date-fns": "^4.1.0",
+    "dotenv": "^17.3.1",
     "humps": "^2.0.1",
     "localforage": "^1.10.0",
     "lucide-react": "^0.554.0",
