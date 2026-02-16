@@ -15,6 +15,7 @@ import { getAuthUrl } from '../services/mlService';
 import FinancialDashboard from './FinancialDashboard';
 import AIMonitor from './AIMonitor';
 import AdminPromptEditor from './AdminPromptEditor';
+import { useAdminNotifications } from '../hooks/useAdminNotifications';
 
 interface Props {
   products: Product[];
@@ -42,6 +43,8 @@ const AdminPage: React.FC<Props> = ({ products, onAdd, onEdit, onDelete }) => {
     await logout();
     navigate('/admin/login');
   };
+
+  useAdminNotifications(); // Activate real-time alerts
 
   // Deprecated user management logic removed as we now use Supabase Dashboard for users.
   // Kept basic visualization if needed, but for now we focus on Products and Orders.
