@@ -1,14 +1,9 @@
+
 {
-  "rewrites": [
-    { "source": "/google87bccf3b065bcaa1.html", "destination": "/google87bccf3b065bcaa1.html" },
-    { "source": "/catalog.csv", "destination": "/api/feed" },
-    { "source": "/api/(.*)", "destination": "/api/$1" },
-    { "source": "/((?!api/|.*\\..*).*)", "destination": "/index.html" }
-  ],
   "crons": [
     {
-      "path": "/api/cron-refresh-ml",
-      "schedule": "0 12 * * *"
+      "path": "/api/ml-refresh-token",
+      "schedule": "0 */5 * * *"
     }
   ]
 }

@@ -33,13 +33,13 @@ Tu objetivo es responder preguntas de compradores en MercadoLibre con energía, 
 
 TU PERSONALIDAD:
 1. ¡Sé alegre y servicial! Usa emojis (🚀, ✨, 💜, 🤖) con moderación.
-2. NOMBRE: Si te presentas, eres Printy.
+2. FIRMA: NO uses nombres propios ni firmas. Termina con frases de cierre de venta.
 3. SI HAY STOCK (>0): "¡Hola! 👋 Sí, tenemos stock disponible. ¡Esperamos tu compra para enviártelo cuanto antes! 🚀"
-4. SI NO HAY STOCK (=0): "¡Hola! En este momento se nos agotó para entrega inmediata. Consultanos pronto. 💜"
-5. PERSONALIZADOS: "¡Sí! Somos fabricantes y hacemos trabajos a medida en 3D2. 🎨"
-6. ENVÍOS: "Hacemos envíos a todo el país con MercadoEnvíos. Podés calcular el costo exacto arriba del botón de comprar. 🚚"
-7. UBICACIÓN: Si preguntan, estamos en [TU ZONA/BARRIO AQUI], pero no des calle ni número.
-8. IMPORTANTE: Sé CONCISO (máximo 2-3 líneas) pero CÁLIDO. Jamás respondas en minúsculas secas.
+4. SI NO HAY STOCK (=0): "¡Hola! En este momento se nos agotó para entrega inmediata. Volvé a consultarnos pronto. 💜"
+5. PERSONALIZADOS: "¡Sí! Somos fabricantes. Podés ofertar en esta publicación y luego coordinamos los detalles exactos del diseño por el chat de la compra. 🎨"
+6. ENVÍOS: "Hacemos envíos a todo el país con MercadoEnvíos. El costo figura arriba del botón de comprar. 🚚"
+7. UBICACIÓN: Si preguntan, estamos en [TU ZONA/BARRIO AQUI].
+8. IMPORTANTE: Sé CONCISO. JAMÁS sugieras contactar por fuera. SIEMPRE dirige al botón de comprar.
 
 CONTEXTO ACTUAL:
 Producto: {TITLE}
@@ -48,6 +48,50 @@ Stock Real (Sistema): {STOCK}
 Descripción: {DESCRIPTION}
 Atributos (Ficha Técnica): {ATTRIBUTES}
 `;
+
+// ... (Rest of code)
+
+// 6. Post Answer to ML
+const answerRes = await fetch(
+  `https://api.mercadolibre.com/questions/${questionId}`,
+  {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      question_id: questionId,
+      text: answerText,
+    }),
+  },
+);
+
+const answerData = await answerRes.json();
+
+if (!answerRes.ok) {
+  // HANDLE "ALREADY ANSWERED" CASE (Idempotency)
+  if (
+    answerData.error === "not_unanswered_question" ||
+    answerData.message === "Question closed"
+  ) {
+    console.log(
+      "⚠️ Question was already answered (Race Condition or Retry). Marking as Answered.",
+    );
+    await supabase
+      .from("ml_questions")
+      .update({
+        status: "answered", // Mark as success anyway!
+        answer_text: answerText + " (Confirmado por error de duplicado)",
+      })
+      .eq("question_text", questionText)
+      .eq("status", "pending"); // Only update if it was pending
+
+    return res.status(200).json({ status: "Answered (Duplicate prevented)" });
+  }
+
+  throw new Error(`ML API Error: ${JSON.stringify(answerData)}`);
+}
 
 export default async function handler(req, res) {
   // Debug Connection
@@ -220,9 +264,32 @@ async function handleQuestion(resource, accessToken, res) {
       }),
     });
 
+    const answerData = await ansRes.json();
+
     if (!ansRes.ok) {
-      const errBody = await ansRes.text();
-      throw new Error(`ML API Error: ${errBody}`);
+      // HANDLE "ALREADY ANSWERED" CASE (Idempotency)
+      if (
+        answerData.error === "not_unanswered_question" ||
+        answerData.message === "Question closed"
+      ) {
+        console.log(
+          "⚠️ Question was already answered (Race Condition or Retry). Marking as Answered.",
+        );
+        await supabase
+          .from("ml_questions")
+          .update({
+            status: "answered", // Mark as success anyway!
+            answer_text: answerText + " (Confirmado por error de duplicado)",
+          })
+          .eq("question_text", questionText)
+          .eq("status", "pending"); // Only update if it was pending
+
+        return res
+          .status(200)
+          .json({ status: "Answered (Duplicate prevented)" });
+      }
+
+      throw new Error(`ML API Error: ${JSON.stringify(answerData)}`);
     }
 
     // 7. Audit Log: Success (Update Answer)
