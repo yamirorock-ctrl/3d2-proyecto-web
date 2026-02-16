@@ -473,11 +473,18 @@ export default async function handler(req, res) {
         const sendWap = async (phone, msg) => {
           if (!phone) return;
           try {
-            await fetch(`${baseUrl}/api/notify-whatsapp`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ phone, message: msg }),
-            });
+            await fetch(
+              "https://hook.us2.make.com/3du519txd4fyw541s7gtcfnto432gmeg",
+              {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  phone,
+                  message: msg,
+                  timestamp: new Date().toISOString(),
+                }),
+              },
+            );
           } catch (e) {
             console.error("[Webhook] Error enviando WhatsApp a " + phone, e);
           }
