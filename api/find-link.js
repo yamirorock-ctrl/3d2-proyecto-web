@@ -275,7 +275,33 @@ function performManualFuzzySearch(normalizedText, products) {
   let bestMatch = null;
   let maxScore = 0;
 
-  const searchTokens = normalizedText.split(/\s+/).filter((t) => t.length > 2);
+  // Palabras comunes que NO suman puntos (Stopwords en español)
+  const stopWords = [
+    "el",
+    "la",
+    "los",
+    "las",
+    "un",
+    "una",
+    "de",
+    "del",
+    "y",
+    "o",
+    "que",
+    "en",
+    "tu",
+    "mi",
+    "para",
+    "por",
+    "con",
+    "sin",
+    "es",
+  ];
+
+  // Tokenizar y filtrar stopwords
+  const searchTokens = normalizedText
+    .split(/[\s\W]+/) // Split por cualquier cosa que no sea letra/número
+    .filter((t) => t.length > 2 && !stopWords.includes(t));
 
   for (const product of products) {
     const normalizedName = product.name
@@ -284,16 +310,26 @@ function performManualFuzzySearch(normalizedText, products) {
       .replace(/[\u0300-\u036f]/g, "");
 
     let score = 0;
+
     searchTokens.forEach((token) => {
-      if (normalizedName.includes(token)) score++;
+      // Coincidencia exacta de token suma 2 puntos
+      if (normalizedName.includes(token)) {
+        score += 2;
+        // Bonificación por palabras clave fuertes en tu nicho
+        if (["mate", "set", "3d", "lampara", "llavero"].includes(token))
+          score += 3;
+      }
     });
 
-    if (normalizedText.includes(normalizedName)) score += 100;
+    // Bonificación extra si el nombre del producto está entero en el texto (frase exacta)
+    if (normalizedText.includes(normalizedName)) score += 20;
 
     if (score > maxScore) {
       maxScore = score;
       bestMatch = product;
     }
   }
-  return maxScore > 0 ? bestMatch : null;
+
+  // Umbral mínimo para evitar falsos positivos ridículos
+  return maxScore >= 4 ? bestMatch : null;
 }
