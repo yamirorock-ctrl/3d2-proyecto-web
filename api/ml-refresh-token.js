@@ -15,14 +15,14 @@ export default async function handler(req, res) {
     const SUPABASE_ANON_KEY =
       process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_TOKEN;
 
-    if (!client_id || !client_secret) {
-      return res.status(500).json({ error: "Missing ML App Credentials" });
-    }
-    if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+    const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    const supabaseKey = SUPABASE_SERVICE_ROLE_KEY || SUPABASE_ANON_KEY;
+
+    if (!SUPABASE_URL || !supabaseKey) {
       return res.status(500).json({ error: "Missing Supabase Credentials" });
     }
 
-    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const supabase = createClient(SUPABASE_URL, supabaseKey);
 
     // 2. Obtener el último Refresh Token de la base de datos
     const { data: lastToken, error: fetchError } = await supabase

@@ -1,6 +1,7 @@
+
 import React, { useState, useEffect } from 'react';
 import { getAIQuestions } from '../services/supabaseService';
-import { Bot, MessageSquare, AlertTriangle, CheckCircle, Clock, RefreshCw } from 'lucide-react';
+import { Bot, MessageSquare, AlertTriangle, CheckCircle, Clock, RefreshCw, ChevronDown, ChevronUp } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface AIQuestion {
@@ -13,28 +14,44 @@ interface AIQuestion {
   ai_model: string;
 }
 
-const AIMonitor: React.FC = () => {
+interface AIMonitorProps {
+  onSwitchToBrain?: () => void;
+}
+
+const AIMonitor: React.FC<AIMonitorProps> = ({ onSwitchToBrain }) => {
   const [questions, setQuestions] = useState<AIQuestion[]>([]);
   const [loading, setLoading] = useState(true);
+  const [groupedQuestions, setGroupedQuestions] = useState<AIQuestion[]>([]);
 
   useEffect(() => {
     loadQuestions();
   }, []);
 
   const loadQuestions = async () => {
+    // ... logic remains same
     setLoading(true);
     const { data, error } = await getAIQuestions();
     if (error) {
       toast.error('Error cargando historial de IA');
     } else {
-      setQuestions(data as AIQuestion[]);
+      const rawQuestions = data as AIQuestion[];
+      setQuestions(rawQuestions);
+      
+      const uniqueMap = new Map<string, AIQuestion>();
+      rawQuestions.forEach(q => {
+        const key = `${q.item_id}-${q.question_text.trim()}`;
+        if (!uniqueMap.has(key)) {
+            uniqueMap.set(key, q);
+        }
+      });
+      setGroupedQuestions(Array.from(uniqueMap.values()));
     }
     setLoading(false);
   };
 
-  const pendingCount = questions.filter(q => q.status === 'pending').length;
+  const pendingCount = groupedQuestions.filter(q => q.status === 'pending').length;
   const answeredCount = questions.filter(q => q.status === 'answered').length;
-  const errorCount = questions.filter(q => q.status === 'error').length;
+  const errorCount = groupedQuestions.filter(q => q.status === 'error').length;
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
@@ -46,16 +63,27 @@ const AIMonitor: React.FC = () => {
             <Bot className="text-indigo-600" /> Monitor de Respuestas IA
           </h2>
           <p className="text-sm text-slate-500 mt-1">
-            Supervisa en tiempo real cómo 'Printy' responde a tus clientes en MercadoLibre.
+            Supervisa en tiempo real las respuestas de Printy.
           </p>
         </div>
-        <button 
-          onClick={loadQuestions}
-          className="mt-4 sm:mt-0 px-4 py-2 bg-indigo-50 text-indigo-700 rounded-lg hover:bg-indigo-100 transition-colors flex items-center gap-2 text-sm font-medium"
-        >
-          <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
-          Actualizar
-        </button>
+        <div className="flex gap-2 mt-4 sm:mt-0">
+            {onSwitchToBrain && (
+                <button 
+                  onClick={onSwitchToBrain}
+                  className="px-4 py-2 bg-white border border-indigo-200 text-indigo-700 rounded-lg hover:bg-indigo-50 transition-colors flex items-center gap-2 text-sm font-medium shadow-sm"
+                >
+                  <Bot size={16} />
+                  Configurar Cerebro
+                </button>
+            )}
+            <button 
+              onClick={loadQuestions}
+              className="px-4 py-2 bg-indigo-50 text-indigo-700 rounded-lg hover:bg-indigo-100 transition-colors flex items-center gap-2 text-sm font-medium"
+            >
+              <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
+              Actualizar
+            </button>
+        </div>
       </div>
 
       {/* KPI Cards */}
@@ -65,7 +93,7 @@ const AIMonitor: React.FC = () => {
             <CheckCircle size={24} />
           </div>
           <div>
-            <p className="text-sm text-emerald-800 font-medium">Respondidas Exitosamente</p>
+            <p className="text-sm text-emerald-800 font-medium">Respondidas (Total)</p>
             <p className="text-2xl font-bold text-emerald-900">{answeredCount}</p>
           </div>
         </div>
@@ -75,7 +103,7 @@ const AIMonitor: React.FC = () => {
             <Clock size={24} />
           </div>
           <div>
-            <p className="text-sm text-amber-800 font-medium">Pendientes de Procesar</p>
+            <p className="text-sm text-amber-800 font-medium">Pendientes</p>
             <p className="text-2xl font-bold text-amber-900">{pendingCount}</p>
           </div>
         </div>
@@ -85,74 +113,88 @@ const AIMonitor: React.FC = () => {
             <AlertTriangle size={24} />
           </div>
           <div>
-            <p className="text-sm text-rose-800 font-medium">Errores / Fallidos</p>
+            <p className="text-sm text-rose-800 font-medium">Errores Actuales</p>
             <p className="text-2xl font-bold text-rose-900">{errorCount}</p>
           </div>
         </div>
       </div>
 
-      {/* Questions List */}
+      {/* Questions List (Grouped) */}
       <div className="bg-white rounded-xl border border-slate-200 shadow-xl overflow-hidden">
         <div className="p-4 bg-slate-50 border-b border-slate-200 font-medium text-slate-700 flex items-center gap-2">
-            <MessageSquare size={18}/> Últimas Interacciones
+            <MessageSquare size={18}/> Últimas Interacciones (Agrupadas)
         </div>
         
-        {questions.length === 0 ? (
+        {groupedQuestions.length === 0 ? (
             <div className="p-12 text-center text-slate-400">
                 <Bot size={48} className="mx-auto mb-4 opacity-20" />
                 <p>Aún no hay preguntas registradas.</p>
-                <p className="text-xs mt-2">Las preguntas de MercadoLibre aparecerán aquí automáticamente.</p>
             </div>
         ) : (
             <div className="divide-y divide-slate-100">
-                {questions.map((q) => (
-                    <div key={q.id} className="p-6 hover:bg-slate-50 transition-colors group">
-                        <div className="flex justify-between items-start mb-3">
-                            <span className={`px-2 py-1 rounded text-xs font-bold uppercase tracking-wider ${
-                                q.status === 'answered' ? 'bg-emerald-100 text-emerald-700' :
-                                q.status === 'error' ? 'bg-rose-100 text-rose-700' :
-                                q.status === 'ignored' ? 'bg-gray-100 text-gray-500' :
-                                'bg-amber-100 text-amber-700'
-                            }`}>
-                                {q.status === 'answered' ? 'Respondida' : 
-                                 q.status === 'error' ? 'Error' : 
-                                 q.status === 'ignored' ? 'Omitida' : 'Pendiente'}
-                            </span>
-                            <span className="text-xs text-slate-400 font-mono">
-                                {new Date(q.created_at).toLocaleString('es-AR')}
-                            </span>
-                        </div>
-
-                        <div className="space-y-4">
-                            {/* User Question */}
-                            <div className="flex gap-3">
-                                <div className="mt-1 w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center text-slate-500 shrink-0">
-                                    <span className="text-xs font-bold">👤</span>
-                                </div>
-                                <div className="p-3 bg-slate-100 rounded-lg rounded-tl-none text-slate-700 text-sm">
-                                    <p>{q.question_text}</p>
-                                    <p className="text-[10px] text-slate-400 mt-1 font-mono">Item ID: {q.item_id}</p>
-                                </div>
+                {groupedQuestions.map((q) => (
+                    <div key={q.id} className="p-4 hover:bg-slate-50 transition-colors group">
+                        <div className="flex flex-col sm:flex-row gap-4">
+                            
+                            {/* Status Badge */}
+                            <div className="w-full sm:w-32 shrink-0 flex flex-col gap-2">
+                                <span className={`px-2 py-1 rounded text-xs font-bold uppercase tracking-wider text-center ${
+                                    q.status === 'answered' ? 'bg-emerald-100 text-emerald-700' :
+                                    q.status === 'error' ? 'bg-rose-100 text-rose-700' :
+                                    q.status === 'ignored' ? 'bg-gray-100 text-gray-500' :
+                                    'bg-amber-100 text-amber-700'
+                                }`}>
+                                    {q.status === 'answered' ? 'Respondida' : 
+                                     q.status === 'error' ? 'Fallido' : 
+                                     q.status === 'ignored' ? 'Omitida' : 'Pendiente'}
+                                </span>
+                                <span className="text-[10px] text-slate-400 font-mono text-center">
+                                    {new Date(q.created_at).toLocaleString('es-AR', { 
+                                        hour: '2-digit', minute:'2-digit', day: '2-digit', month: '2-digit' 
+                                    })}
+                                </span>
                             </div>
 
-                            {/* AI Answer */}
-                            {q.answer_text && (
-                                <div className="flex gap-3 justify-end">
-                                    <div className={`p-3 rounded-lg rounded-tr-none text-sm max-w-[85%] shadow-sm ${
-                                        q.status === 'error' 
-                                            ? 'bg-rose-50 border border-rose-100 text-rose-800' 
-                                            : 'bg-indigo-50 border border-indigo-100 text-indigo-900'
-                                    }`}>
-                                        <p className="whitespace-pre-wrap">{q.answer_text}</p>
-                                        <p className="text-[10px] opacity-60 mt-2 flex justify-end gap-1">
-                                            <span>🤖 {q.ai_model || 'AI'}</span>
-                                        </p>
-                                    </div>
-                                    <div className="mt-1 w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 shrink-0">
-                                        <Bot size={16} />
+                            {/* Content */}
+                            <div className="flex-1 space-y-3">
+                                {/* Pregunta */}
+                                <div className="flex gap-2">
+                                    <span className="text-lg">👤</span>
+                                    <div className="bg-slate-50 p-3 rounded-lg w-full">
+                                        <p className="font-medium text-slate-800">{q.question_text}</p>
+                                        <p className="text-[10px] text-slate-400 mt-1 font-mono">Item: {q.item_id}</p>
                                     </div>
                                 </div>
-                            )}
+
+                                {/* Respuesta o Error */}
+                                {q.answer_text && (
+                                    <div className="flex gap-2 justify-end">
+                                        <div className={`p-3 rounded-lg w-full text-sm relative ${
+                                            q.status === 'error' 
+                                                ? 'bg-rose-50 text-rose-800 border-l-4 border-rose-400' 
+                                                : 'bg-indigo-50 text-indigo-900 border-l-4 border-indigo-400'
+                                        }`}>
+                                            {q.status === 'error' ? (
+                                                <div className="flex flex-col gap-1">
+                                                    <div className="flex items-center gap-2 font-bold mb-1">
+                                                        <AlertTriangle size={14} /> Error al responder
+                                                    </div>
+                                                    <div className="opacity-90 font-mono text-xs bg-white/50 p-2 rounded max-h-20 overflow-auto">
+                                                        {q.answer_text.length > 200 ? q.answer_text.slice(0, 200) + '...' : q.answer_text}
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <>
+                                                    <div className="font-bold flex items-center gap-2 mb-1 text-indigo-700">
+                                                        <Bot size={14} /> Printy
+                                                    </div>
+                                                    <p className="whitespace-pre-wrap">{q.answer_text}</p>
+                                                </>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     </div>
                 ))}

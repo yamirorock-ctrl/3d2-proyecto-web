@@ -5,22 +5,24 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
 const SUPABASE_ANON_KEY =
   process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_TOKEN;
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY; // 🗝️ La Llave Maestra
+
 const GEMINI_API_KEY =
   process.env.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
 
 // Initialize clients
+// Usamos la Service Role Key si existe (¡Poder total!), sino la Anon Key
+const supabaseKey = SUPABASE_SERVICE_ROLE_KEY || SUPABASE_ANON_KEY;
 const supabase =
-  SUPABASE_URL && SUPABASE_ANON_KEY
-    ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
-    : null;
+  SUPABASE_URL && supabaseKey ? createClient(SUPABASE_URL, supabaseKey) : null;
 const genAI = GEMINI_API_KEY ? new GoogleGenerativeAI(GEMINI_API_KEY) : null;
 
 // Config
 const MAKE_WEBHOOK_URL =
   "https://hook.us2.make.com/3du519txd4fyw541s7gtcfnto432gmeg";
 
-// Bot Personality
-const SYSTEM_PROMPT = `
+// Bot Personality (Backup)
+const FALLBACK_PROMPT = `
 Eres 'Printy' 🖨️, el robot asistente de la marca "3D2" (Impresión 3D y Corte Láser).
 Tu objetivo es responder preguntas de compradores en MercadoLibre con energía, amabilidad y TOTAL SEGURIDAD.
 
@@ -168,11 +170,42 @@ async function handleQuestion(resource, accessToken, res) {
     questionId = question.id;
     itemId = question.item_id;
 
+    // 1.5 IDEMPOTENCY CHECK (Prevenir respuestas duplicadas)
+    // Buscamos si ya existe esta pregunta exacta (por ID de ML)
+    const { data: existingQ } = await supabase
+      .from("ml_questions")
+      .select("id, status, created_at")
+      .eq("question_id", questionId.toString()) // Check by unique ID!
+      .maybeSingle(); // Use maybeSingle to avoid error if not found
+
+    if (existingQ) {
+      // Si ya está respondida -> Detenerse SIEMPRE.
+      if (existingQ.status === "answered") {
+        console.log(
+          `[ML Webhook] Question already answered in DB. Skipping. ID: ${questionId}`,
+        );
+        return res.status(200).json({ status: "Already processed" });
+      }
+      // Si está pendiente hace menos de 2 minutos -> Detenerse (está procesándose o es reintento rápido)
+      const timeDiff =
+        new Date().getTime() - new Date(existingQ.created_at).getTime();
+      if (existingQ.status === "pending" && timeDiff < 120000) {
+        // 2 mins
+        console.log(
+          `[ML Webhook] Question is already pending processing. Skipping retry. ID: ${questionId}`,
+        );
+        return res.status(200).json({ status: "Processing in progress" });
+      }
+      // Si es Error, permitimos reintentar (continuar ejecución)
+    }
+
     // 2. Audit Log: Start (Insert Pending)
     await supabase.from("ml_questions").insert({
       item_id: itemId,
       question_text: questionText,
+      question_id: questionId.toString(), // Save the unique ID
       status: "pending",
+      // Si pudiéramos guardar question_id sería ideal, pero usamos text+item como proxy
       ai_model: "gemini-3-flash-preview",
     });
 
@@ -227,8 +260,34 @@ async function handleQuestion(resource, accessToken, res) {
     const descriptionText = descriptionData.plain_text || "Sin descripción";
     const realStock = dbResult.data?.stock ?? item.available_quantity;
 
+    // 4.5 Fetch Dynamic Brain 🧠
+    let systemPrompt = FALLBACK_PROMPT;
+    try {
+      const { data: promptData } = await supabase
+        .from("ai_prompts")
+        .select("system_instructions")
+        .eq("role", "printy_ml_assistant")
+        .eq("active", true)
+        .maybeSingle();
+
+      if (promptData?.system_instructions) {
+        console.log("[ML Webhook] Using Dynamic Brain from DB 🧠✨");
+        systemPrompt = promptData.system_instructions;
+      } else {
+        console.warn(
+          "[ML Webhook] Dynamic Brain not found/inactive, using Backup. ⚠️",
+        );
+      }
+    } catch (e) {
+      console.warn(
+        "[ML Webhook] Failed to fetch brain (using backup):",
+        e.message,
+      );
+    }
+
     // 5. Generate Answer with Gemini
-    const finalPrompt = SYSTEM_PROMPT.replace("{TITLE}", item.title)
+    const finalPrompt = systemPrompt
+      .replace("{TITLE}", item.title)
       .replace("{PRICE}", item.price)
       .replace("{CURRENCY}", item.currency_id)
       .replace("{STOCK}", realStock)

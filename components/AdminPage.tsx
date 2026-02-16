@@ -14,6 +14,7 @@ import PriceUpdateTool from './PriceUpdateTool';
 import { getAuthUrl } from '../services/mlService';
 import FinancialDashboard from './FinancialDashboard';
 import AIMonitor from './AIMonitor';
+import AdminPromptEditor from './AdminPromptEditor';
 
 interface Props {
   products: Product[];
@@ -26,7 +27,7 @@ const AdminPage: React.FC<Props> = ({ products, onAdd, onEdit, onDelete }) => {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isManualOrderOpen, setIsManualOrderOpen] = useState(false);
   const [editing, setEditing] = useState<Product | null>(null);
-  const [activeTab, setActiveTab] = useState<'products' | 'orders' | 'sales' | 'calendar' | 'finances' | 'ai_monitor'>('products');
+  const [activeTab, setActiveTab] = useState<'products' | 'orders' | 'sales' | 'calendar' | 'finances' | 'ai_monitor' | 'ai_brain'>('products');
 
   const [customOrders, setCustomOrders] = useState<CustomOrder[]>([]);
   const [salesOrders, setSalesOrders] = useState<Order[]>([]);
@@ -445,6 +446,16 @@ const AdminPage: React.FC<Props> = ({ products, onAdd, onEdit, onDelete }) => {
                 </button>
                 
                 <div className="h-px bg-gray-100 my-1" />
+                <div className="text-xs font-semibold text-slate-400 px-3 py-2 uppercase tracking-wider">Inteligencia Artificial</div>
+                
+                <button 
+                  onClick={() => { setActiveTab('ai_brain'); setShowSettings(false); }} 
+                  className="w-full text-left px-3 py-2 rounded-lg text-sm text-slate-700 hover:bg-gray-50 flex items-center gap-2"
+                >
+                  <Bot size={16} className="text-indigo-600" /> Configurar Cerebro (Prompt)
+                </button>
+
+                <div className="h-px bg-gray-100 my-1" />
                 <div className="text-xs font-semibold text-slate-400 px-3 py-2 uppercase tracking-wider">Integraciones</div>
 
                 {(() => {
@@ -743,7 +754,11 @@ const AdminPage: React.FC<Props> = ({ products, onAdd, onEdit, onDelete }) => {
               )}
 
               {activeTab === 'ai_monitor' && (
-                <AIMonitor />
+                <AIMonitor onSwitchToBrain={() => setActiveTab('ai_brain')} />
+              )}
+
+              {activeTab === 'ai_brain' && (
+                <AdminPromptEditor />
               )}
             </>
           );

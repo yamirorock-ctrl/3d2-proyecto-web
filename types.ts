@@ -53,6 +53,12 @@ export interface Product {
     models?: string[];
     colors?: string[];
   };
+
+  // Opciones seleccionadas por el usuario (Contexto de compra)
+  selectedOptions?: {
+    model?: string;
+    color?: string;
+  };
 }
 
 export interface CartItem extends Product {
