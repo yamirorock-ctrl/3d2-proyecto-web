@@ -1,4 +1,37 @@
-# 🤖 Changelog & Documentación: Resurrección de Printy
+# 🤖 Changelog & Documentación del Proyecto
+
+## 📸 Automatización Redes Sociales (Instagram -> Pinterest)
+
+**Fecha:** 16-17 de Febrero de 2026
+**Estado:** ✅ CORREGIDO (Esperando ejecución automática)
+
+### 1. Error de JSON en Make.com 📝
+
+- **Problema:** El módulo HTTP enviaba un payload mal formado al endpoint `/api/find-link`, causando error 400.
+- **Solución:** Se corrigió la estructura JSON manual en Make, asegurando comillas en claves y valores (`"text": "..."`).
+
+### 2. URLs de Imágenes Rotas (404) 🖼️
+
+- **Problema:** Las imágenes subidas a Supabase Storage no coincidían con la URL guardada en la base de datos `social_queue`.
+  - Causa: Se usaba `now` (timestamp) en la generación del nombre, creando discrepancias de milisegundos.
+- **Solución:** Se estandarizó el nombre del archivo a `ig_{{id}}.jpg` tanto en la subida (Storage) como en el registro (DB).
+- **Resultado:** URLs limpias y accesibles públicamente para Pinterest.
+
+### 3. Lógica de Programación (El Robot Dormido) 😴
+
+- **Problema:** El escenario de publicación (Escenario 2) no encontraba tareas para procesar.
+  - Causa: El filtro `scheduled_for < now` funcionaba bien, pero al crear la tarea (Escenario 1) se programaba para `now + 1 día`.
+  - En pruebas inmediatas, la tarea "del futuro" era ignorada.
+- **Solución (Test):** Se creó script `scripts/force-schedule-update.cjs` para forzar fechas pasadas y probar el flujo.
+- **Solución (Prod):** Se confirmó que la lógica es correcta para un ciclo de publicación de 24 horas.
+
+### 4. Filtro de Tipo de Medio 🎥
+
+- **Ajuste:** Se configuró el trigger de Instagram para procesar **solo Imágenes** (`IMAGE`, `CAROUSEL_ALBUM`), ignorando videos para evitar errores de formato/transcodificación.
+
+---
+
+## 🤖 Resurrección de Printy (MercadoLibre)
 
 **Fecha:** 14 de Febrero de 2026
 **Estado:** ✅ OPERATIVO (Monitor Funcionando, Respuestas Activas)

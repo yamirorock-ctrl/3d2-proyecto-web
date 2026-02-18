@@ -1,8 +1,9 @@
 
 import React, { useState, useEffect } from 'react';
 import { getAIQuestions } from '../services/supabaseService';
-import { Bot, MessageSquare, AlertTriangle, CheckCircle, Clock, RefreshCw, ChevronDown, ChevronUp } from 'lucide-react';
+import { Bot, MessageSquare, AlertTriangle, CheckCircle, Clock, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
+import BotToggle from './BotToggle';
 
 interface AIQuestion {
   id: string;
@@ -28,7 +29,6 @@ const AIMonitor: React.FC<AIMonitorProps> = ({ onSwitchToBrain }) => {
   }, []);
 
   const loadQuestions = async () => {
-    // ... logic remains same
     setLoading(true);
     const { data, error } = await getAIQuestions();
     if (error) {
@@ -57,31 +57,35 @@ const AIMonitor: React.FC<AIMonitorProps> = ({ onSwitchToBrain }) => {
     <div className="space-y-6 animate-in fade-in duration-500">
       
       {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-center bg-white p-6 rounded-xl border border-indigo-100 shadow-sm">
+      <div className="flex flex-col sm:flex-row justify-between items-center bg-white p-6 rounded-xl border border-indigo-100 shadow-sm gap-4">
         <div>
           <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
             <Bot className="text-indigo-600" /> Monitor de Respuestas IA
           </h2>
           <p className="text-sm text-slate-500 mt-1">
-            Supervisa en tiempo real las respuestas de Printy.
+            Supervisa y controla el asistente Printy (MercadoLibre).
           </p>
         </div>
-        <div className="flex gap-2 mt-4 sm:mt-0">
+        
+        <div className="flex flex-wrap items-center gap-3">
+            <BotToggle />
+            
+            <div className="h-8 w-px bg-slate-200 mx-2 hidden sm:block"></div>
+
             {onSwitchToBrain && (
                 <button 
                   onClick={onSwitchToBrain}
-                  className="px-4 py-2 bg-white border border-indigo-200 text-indigo-700 rounded-lg hover:bg-indigo-50 transition-colors flex items-center gap-2 text-sm font-medium shadow-sm"
+                  className="px-4 py-2 bg-white border border-indigo-200 text-indigo-700 rounded-lg hover:bg-indigo-50 transition-colors flex items-center gap-2 text-sm font-medium shadow-sm whitespace-nowrap"
                 >
                   <Bot size={16} />
-                  Configurar Cerebro
+                  Cerebro
                 </button>
             )}
             <button 
               onClick={loadQuestions}
-              className="px-4 py-2 bg-indigo-50 text-indigo-700 rounded-lg hover:bg-indigo-100 transition-colors flex items-center gap-2 text-sm font-medium"
+              className="px-4 py-2 bg-indigo-50 text-indigo-700 rounded-lg hover:bg-indigo-100 transition-colors flex items-center gap-2 text-sm font-medium whitespace-nowrap"
             >
               <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
-              Actualizar
             </button>
         </div>
       </div>

@@ -167,3 +167,21 @@ export interface RawMaterial {
   unit: string; // 'rollos', 'placas', 'kg'
   min_threshold: number;
 }
+
+export interface SocialQueueItem {
+  id: string;
+  original_source: 'instagram' | 'manual' | 'other';
+  original_post_id?: string;
+  status: 'pending' | 'posted' | 'failed' | 'skipped';
+  scheduled_for: string; // ISO Date String
+  platform_target: 'pinterest' | 'google_business' | 'facebook' | 'all';
+  metadata?: {
+    product_link?: string;
+    image_url?: string;
+    pinterest_title?: string;
+    pinterest_description?: string;
+    caption?: string;
+  };
+  created_at?: string;
+  updated_at?: string;
+}
