@@ -184,6 +184,7 @@ export interface RawMaterial {
   quantity: number;
   unit: string; // 'rollos', 'placas', 'kg'
   min_threshold: number;
+  last_cost?: number; // Costo unitario de la última compra
 }
 
 export interface SocialQueueItem {

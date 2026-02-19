@@ -141,7 +141,8 @@ const FinancialDashboard: React.FC<Props> = ({ orders }) => {
         if (existingMaterial) {
           // Actualizar Stock
           await updateMaterial(existingMaterial.id, { 
-            quantity: Number(existingMaterial.quantity) + Number(quantityToAdd) 
+            quantity: Number(existingMaterial.quantity) + Number(quantityToAdd),
+            last_cost: (newExpense.amount || 0) / quantityToAdd
           });
           toast.success('Stock actualizado automáticamente');
         } else {
@@ -151,7 +152,8 @@ const FinancialDashboard: React.FC<Props> = ({ orders }) => {
             category: newExpense.category === 'Insumos' ? 'Insumos' : 'Otros', // Mapeo simple
             quantity: quantityToAdd,
             unit: 'unidades', // Default
-            min_threshold: 1
+            min_threshold: 1,
+            last_cost: (newExpense.amount || 0) / quantityToAdd
           });
           toast.success('Nuevo insumo creado en inventario');
         }
@@ -362,15 +364,58 @@ const FinancialDashboard: React.FC<Props> = ({ orders }) => {
                   </label>
                   
                   {addToInventory && (
-                    <div className="flex items-center gap-1 animate-in slide-in-from-left-2">
-                       <span className="text-xs text-indigo-600">Cant:</span>
-                       <input 
-                        type="number" 
-                        value={quantityToAdd} 
-                        onChange={e => setQuantityToAdd(Number(e.target.value))}
-                        className="w-16 p-1 text-xs border rounded text-center font-bold"
-                        min="1"
-                       />
+                    <div className="mt-3 bg-slate-50 p-3 rounded-md border border-slate-200 animate-in slide-in-from-left-2">
+                       <div className="flex justify-between items-center mb-2">
+                           <label className="text-xs font-bold text-slate-600">Cantidad Comprada:</label>
+                           <div className="flex items-center gap-1">
+                               <input 
+                                type="number" 
+                                value={quantityToAdd} 
+                                onChange={e => setQuantityToAdd(Number(e.target.value))}
+                                className="w-20 p-1 text-sm border rounded text-center font-bold bg-white focus:ring-2 focus:ring-indigo-500"
+                                min="1"
+                               />
+                               <span className="text-xs text-slate-400">unidades</span>
+                           </div>
+                       </div>
+                       
+                       {/* Estimación de Costo Unitario */}
+                       {(newExpense.amount || 0) > 0 && quantityToAdd > 0 && (
+                           <div className="bg-white p-2 rounded border border-indigo-100 shadow-sm text-xs">
+                               <div className="flex justify-between items-center mb-1">
+                                  <span className="text-slate-500">Costo Unitario (Calculado):</span>
+                                  <b className="text-indigo-700 text-sm font-mono">${((newExpense.amount || 0) / quantityToAdd).toFixed(2)}</b>
+                               </div>
+                               
+                               {/* Comparación de Precio */}
+                               {(() => {
+                                   const mat = materials.find(m => m.name === newExpense.subcategory);
+                                   if (mat && mat.last_cost) {
+                                       const current = (newExpense.amount || 0) / quantityToAdd;
+                                       const diff = current - mat.last_cost;
+                                       const percent = ((diff / mat.last_cost) * 100).toFixed(1);
+                                       
+                                       if (diff > 0.01) return (
+                                          <div className="flex items-center justify-end gap-1 text-red-600 font-bold bg-red-50 py-1 px-2 rounded mt-1">
+                                            <TrendingUp size={12}/> 
+                                            Subió {percent}% (Antes: ${mat.last_cost})
+                                          </div>
+                                       );
+                                       if (diff < -0.01) return (
+                                          <div className="flex items-center justify-end gap-1 text-emerald-600 font-bold bg-emerald-50 py-1 px-2 rounded mt-1">
+                                            <TrendingDown size={12}/> 
+                                            Bajó {Math.abs(Number(percent))}% (Antes: ${mat.last_cost})
+                                          </div>
+                                       );
+                                       return <div className="text-right text-slate-400 mt-1 flex items-center justify-end gap-1 bg-gray-50 px-2 py-0.5 rounded"><CheckCircle size={10}/> Mismo precio</div>;
+                                   }
+                                   if (mat && !mat.last_cost) {
+                                       return <div className="text-right text-indigo-400 mt-1 italic">* Se registrará costo inicial</div>;
+                                   }
+                                   return <div className="text-right text-emerald-500 mt-1 italic">* Nuevo insumo</div>;
+                               })()}
+                           </div>
+                       )}
                     </div>
                   )}
                 </div>
@@ -467,6 +512,7 @@ const FinancialDashboard: React.FC<Props> = ({ orders }) => {
                     <th className="px-4 py-3 text-left">Insumo</th>
                     <th className="px-4 py-3 text-left">Categoría</th>
                     <th className="px-4 py-3 text-center">Cantidad</th>
+                    <th className="px-4 py-3 text-right">Costo Unit.</th>
                     <th className="px-4 py-3 text-right">Acciones</th>
                   </tr>
                 </thead>
@@ -490,6 +536,9 @@ const FinancialDashboard: React.FC<Props> = ({ orders }) => {
                           </span>
                           <button onClick={() => handleUpdateStock(m.id, m.quantity, 1)} className="w-6 h-6 rounded bg-gray-100 text-slate-600 hover:bg-gray-200 flex items-center justify-center">+</button>
                         </div>
+                      </td>
+                      <td className="px-4 py-3 text-right font-medium text-slate-600">
+                           {m.last_cost ? `$${m.last_cost.toLocaleString('es-AR')}` : '-'}
                       </td>
                       <td className="px-4 py-3 text-right">
                         <button onClick={() => handleDeleteMaterial(m.id)} className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded transition-colors">
