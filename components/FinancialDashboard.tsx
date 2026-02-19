@@ -15,7 +15,11 @@ interface Props {
 const EXPENSE_CATEGORIES = {
   'Filamento': ['PLA', 'PETG', 'TPU', 'ABS', 'FLEX', 'Otros'],
   'Madera': ['MDF 3mm', 'MDF 5.5mm', 'Fibroplus Blanco', 'Fibroplus Negro', 'Otros'],
-  'Insumos': ['Laca/Barniz', 'Pegamento', 'Lijas', 'Pinceles', 'Cajas/Embalaje'],
+  'Insumos': [
+    'Laca/Barniz', 'Pegamento', 'Lijas', 'Pinceles', 'Cajas/Embalaje',
+    'Vaso Aluminio 500cc', 'Vaso Aluminio 600cc', 'Vaso Aluminio 750cc', 'Vaso Aluminio 1L',
+    'Polímero Mate', 'Bombillas'
+  ],
   'Mantenimiento': ['Repuestos Impresora', 'Repuestos Láser', 'Servicio Técnico', 'Limpieza'],
   'Publicidad': ['Instagram Ads', 'Google Ads', 'Folletos', 'Otros'],
   'Servicios': ['Luz', 'Internet', 'Alquiler', 'Suscripciones (Software)'],
@@ -33,6 +37,9 @@ const FinancialDashboard: React.FC<Props> = ({ orders }) => {
   const [isAddingExpense, setIsAddingExpense] = useState(false);
   const [isAddingMaterial, setIsAddingMaterial] = useState(false);
   
+  const [addToInventory, setAddToInventory] = useState(false);
+  const [quantityToAdd, setQuantityToAdd] = useState(1);
+
   const [newExpense, setNewExpense] = useState<Partial<Expense>>({
     date: new Date().toISOString().split('T')[0],
     category: 'Filamento',
@@ -122,11 +129,39 @@ const FinancialDashboard: React.FC<Props> = ({ orders }) => {
       return;
     }
     try {
+      // 1. Guardar Gasto
       const { error } = await addExpense(newExpense);
       if (error) throw error;
+
+      // 2. Si se marcó "Pasar al Inventario", actualizar/crear material
+      if (addToInventory && newExpense.subcategory) {
+        // Buscar si ya existe el material con ese nombreexacto
+        const existingMaterial = materials.find(m => m.name === newExpense.subcategory);
+        
+        if (existingMaterial) {
+          // Actualizar Stock
+          await updateMaterial(existingMaterial.id, { 
+            quantity: Number(existingMaterial.quantity) + Number(quantityToAdd) 
+          });
+          toast.success('Stock actualizado automáticamente');
+        } else {
+          // Crear Nuevo Material
+          await addMaterial({
+            name: newExpense.subcategory,
+            category: newExpense.category === 'Insumos' ? 'Insumos' : 'Otros', // Mapeo simple
+            quantity: quantityToAdd,
+            unit: 'unidades', // Default
+            min_threshold: 1
+          });
+          toast.success('Nuevo insumo creado en inventario');
+        }
+      }
+
       toast.success('Gasto registrado');
       setIsAddingExpense(false);
       setNewExpense({ ...newExpense, amount: 0, description: '' }); // Reset parcial
+      setAddToInventory(false);
+      setQuantityToAdd(1);
       loadData();
     } catch (e) {
       toast.error('Error al guardar');
@@ -312,6 +347,34 @@ const FinancialDashboard: React.FC<Props> = ({ orders }) => {
                     {EXPENSE_CATEGORIES[newExpense.category as keyof typeof EXPENSE_CATEGORIES]?.map(sub => <option key={sub} value={sub}>{sub}</option>)}
                 </select>
                 <input type="text" placeholder="Descripción..." value={newExpense.description || ''} onChange={e => setNewExpense({...newExpense, description: e.target.value})} className="w-full p-2 border rounded text-sm"/>
+                
+                {/* Opción Agregar a Stock */}
+                <div className="flex items-center gap-2 bg-indigo-50 p-2 rounded border border-indigo-100">
+                  <input 
+                    type="checkbox" 
+                    id="addToStack"
+                    checked={addToInventory}
+                    onChange={e => setAddToInventory(e.target.checked)}
+                    className="rounded text-indigo-600 focus:ring-indigo-500" 
+                  />
+                  <label htmlFor="addToStack" className="text-xs font-bold text-indigo-700 cursor-pointer select-none flex-1">
+                    Pasar al Inventario
+                  </label>
+                  
+                  {addToInventory && (
+                    <div className="flex items-center gap-1 animate-in slide-in-from-left-2">
+                       <span className="text-xs text-indigo-600">Cant:</span>
+                       <input 
+                        type="number" 
+                        value={quantityToAdd} 
+                        onChange={e => setQuantityToAdd(Number(e.target.value))}
+                        className="w-16 p-1 text-xs border rounded text-center font-bold"
+                        min="1"
+                       />
+                    </div>
+                  )}
+                </div>
+
                 <button onClick={handleAddExpense} className="w-full py-2 bg-rose-600 text-white rounded font-medium hover:bg-rose-700">Guardar Gasto</button>
               </div>
             ) : (

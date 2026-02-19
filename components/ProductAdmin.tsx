@@ -75,6 +75,12 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
   const [newModelInput, setNewModelInput] = useState('');
   const [newColorInput, setNewColorInput] = useState('');
 
+  // Estados para Recetas y Colores (UI)
+  const [itemMaterial, setItemMaterial] = useState('');
+  const [itemQuantity, setItemQuantity] = useState(1);
+  const [newColorDistName, setNewColorDistName] = useState('');
+  const [newColorDistPercent, setNewColorDistPercent] = useState(10);
+
   // Category mode + localCats sync
   useEffect(() => {
     setLocalCats(Array.from(new Set((categories || []).filter(Boolean))));
@@ -1019,9 +1025,97 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
                    />
                 </div>
              </div>
+
           </div>
 
-          {/* Sección MercadoLibre */ }
+          {/* SECCIÓN DE CONSUMIBLES (RECETA) */}
+          <div className="sm:col-span-2 border-t pt-4 mt-2">
+             <h4 className="font-semibold text-slate-800 mb-2 flex items-center gap-2">
+                <span className="bg-slate-100 text-slate-700 px-2 py-0.5 rounded text-xs">Producción</span>
+                Consumibles / Receta
+             </h4>
+             <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
+                <p className="text-xs text-slate-500 mb-3">Define qué se gasta del inventario al vender este producto.</p>
+                
+                <div className="space-y-2 mb-3">
+                  {(form.consumables || []).map((c, idx) => (
+                     <div key={idx} className="flex justify-between items-center bg-white p-2 border rounded shadow-xs">
+                        <span className="text-sm font-medium text-slate-800">{c.quantity} x {c.material}</span>
+                        <button type="button" onClick={() => setForm(prev => ({...prev, consumables: prev.consumables?.filter((_,i)=>i!==idx)}))} className="text-red-500 hover:text-red-700 text-xs">Eliminar</button>
+                     </div>
+                  ))}
+                </div>
+
+                <div className="flex gap-2 items-end">
+                   <div className="flex-1">
+                     <label className="text-xs text-slate-500">Material</label>
+                     <select 
+                       className="w-full text-sm border rounded px-2 py-1.5"
+                       value={itemMaterial}
+                       onChange={e => setItemMaterial(e.target.value)}
+                     >
+                        <option value="">Seleccionar...</option>
+                        <option value="Polímero Mate">Polímero Mate</option>
+                        <option value="Bombillas">Bombillas</option>
+                        <option value="Vaso Aluminio 500cc">Vaso Aluminio 500cc</option>
+                        <option value="Vaso Aluminio 600cc">Vaso Aluminio 600cc</option>
+                        <option value="Vaso Aluminio 750cc">Vaso Aluminio 750cc</option>
+                        <option value="Vaso Aluminio 1L">Vaso Aluminio 1L</option>
+                        <option value="Caja">Caja</option>
+                     </select>
+                   </div>
+                   <div className="w-20">
+                     <label className="text-xs text-slate-500">Cant.</label>
+                     <input type="number" min="1" className="w-full text-sm border rounded px-2 py-1.5" value={itemQuantity} onChange={e => setItemQuantity(Number(e.target.value))} />
+                   </div>
+                   <button type="button" onClick={() => {
+                        if (!itemMaterial) return;
+                        setForm(prev => ({...prev, consumables: [...(prev.consumables||[]), {material: itemMaterial, quantity: itemQuantity}]}));
+                        setItemMaterial('');
+                        setItemQuantity(1);
+                   }} className="px-3 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 text-sm rounded transition-colors">Agregar</button>
+                </div>
+             </div>
+          </div>
+
+          {/* SECCIÓN DE COLORES (ESTIMACIÓN) */}
+          <div className="sm:col-span-2 border-t pt-4 mt-2">
+             <h4 className="font-semibold text-slate-800 mb-2 flex items-center gap-2">
+                <span className="bg-rose-100 text-rose-700 px-2 py-0.5 rounded text-xs">Filamento</span>
+                Distribución de Color (Estimado)
+             </h4>
+             <div className="bg-rose-50/50 p-4 rounded-lg border border-rose-100">
+                <p className="text-xs text-slate-500 mb-3">Si el peso total es {form.weight > 0 ? `${form.weight}g` : 'X'}, ¿cómo se distribuye?</p>
+                
+                <div className="space-y-2 mb-3">
+                  {(form.colorPercentage || []).map((c, idx) => (
+                     <div key={idx} className="flex justify-between items-center bg-white p-2 border rounded shadow-xs">
+                        <span className="text-sm font-medium text-slate-800">{c.color} ({c.percentage}%)</span>
+                        <span className="text-xs text-slate-400">~{form.weight > 0 ? ((form.weight * c.percentage) / 100).toFixed(1) : '?'}g</span>
+                        <button type="button" onClick={() => setForm(prev => ({...prev, colorPercentage: prev.colorPercentage?.filter((_,i)=>i!==idx)}))} className="text-red-500 hover:text-red-700 text-xs">Eliminar</button>
+                     </div>
+                  ))}
+                </div>
+
+                <div className="flex gap-2 items-end">
+                   <div className="flex-1">
+                     <label className="text-xs text-slate-500">Color</label>
+                     <input type="text" placeholder="Ej: Blanco" className="w-full text-sm border rounded px-2 py-1.5" value={newColorDistName} onChange={e => setNewColorDistName(e.target.value)} />
+                   </div>
+                   <div className="w-20">
+                     <label className="text-xs text-slate-500">%</label>
+                     <input type="number" min="0" max="100" className="w-full text-sm border rounded px-2 py-1.5" value={newColorDistPercent} onChange={e => setNewColorDistPercent(Number(e.target.value))} />
+                   </div>
+                   <button type="button" onClick={() => {
+                        if (!newColorDistName) return;
+                        setForm(prev => ({...prev, colorPercentage: [...(prev.colorPercentage||[]), {color: newColorDistName, percentage: newColorDistPercent}]}));
+                        setNewColorDistName('');
+                        setNewColorDistPercent(10);
+                   }} className="px-3 py-1.5 bg-rose-200 hover:bg-rose-300 text-rose-800 text-sm rounded transition-colors">Agregar</button>
+                </div>
+             </div>
+          </div>
+
           <div className="sm:col-span-2 border-t pt-4 mt-2">
             <h4 className="font-semibold text-slate-800 mb-2 flex items-center gap-2">
                 <span className="bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded text-xs">MercadoLibre</span>

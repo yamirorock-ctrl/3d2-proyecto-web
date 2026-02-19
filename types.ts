@@ -31,6 +31,12 @@ export interface Product {
   
   // Atributos Flexibles de ML (JSON)
   ml_attributes?: Record<string, any>; 
+  
+  // Estado de Sincronización ML
+  ml_item_id?: string | null;
+  ml_status?: string | null;
+  ml_permalink?: string | null;
+  last_ml_sync?: string | null; 
 
   // Propiedades para tipos de venta (pack, mayorista)
   saleType?: 'unidad' | 'pack' | 'mayorista'; // DEPRECATED for product config (used for cart items)
@@ -59,6 +65,18 @@ export interface Product {
     model?: string;
     color?: string;
   };
+
+  // Consumibles / Receta (Gestión de Stock de Materia Prima)
+  consumables?: {
+    material: string; // Nombre exacto del insumo en 'raw_materials'
+    quantity: number; // Cantidad a descontar por unidad vendida
+  }[];
+
+  // Distribución de Color (Estimación de Filamento)
+  colorPercentage?: {
+    color: string; // 'Blanco', 'Rojo', etc.
+    percentage: number; // 0-100
+  }[];
 }
 
 export interface CartItem extends Product {

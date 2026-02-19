@@ -162,6 +162,14 @@ export async function createOrder(orderData: {
 
   // Se devuelve un objeto consistente con el patrón { data, error }
   
+  // === DESCUENTO DE STOCK DE INSUMOS (MATERIA PRIMA) ===
+  // Intentamos descontar insumos automáticamente. Si falla, no bloqueamos la venta, solo logueamos error.
+  try {
+     await deductRawMaterials(newOrderData.items);
+  } catch (stockError) {
+     console.error('Error descontando insumos:', stockError);
+  }
+  
   // === NOTIFICACIÓN A MAKE (WhatsApp) ===
   // Disparamos el webhook sin esperar respuesta (fire-and-forget) para no bloquear al usuario
   try {
@@ -364,4 +372,103 @@ export async function updateOrder(orderId: string, updates: Partial<Order>): Pro
   }
 
   return { data, error: null };
+}
+
+/**
+ * Lógica auxiliar para descontar Materia Prima basada en productos vendidos (Receta Estática)
+ */
+async function deductRawMaterials(items: OrderItem[]) {
+  // 1. Obtener estado actual de materiales para saber IDs y Nombres
+  const { data: materials, error } = await supabase
+    .from('raw_materials')
+    .select('id, name, quantity');
+
+  if (error || !materials) return;
+
+  // 2. Obtener definiciones de productos para ver sus RECETAS (consumables)
+  const productIds = items.map(i => i.product_id);
+  const { data: productDefinitions } = await supabase
+    .from('products')
+    .select('id, consumables') // Asumimos que la columna existe (JSONB)
+    .in('id', productIds);
+  
+  // Mapa de productos para acceso rápido
+  const productMap = new Map(productDefinitions?.map((p: any) => [p.id, p]) || []);
+
+  const updates = new Map<string, number>(); // ID Material -> Cantidad a RESTAR
+
+  // Helper para sumar al mapa de actualizaciones
+  const addDeductionByMaterialName = (materialName: string, amount: number) => {
+    // Busca insensitive en la lista de materiales reales de la DB
+    const mat = materials.find((m: any) => m.name.toLowerCase() === materialName.toLowerCase());
+    if (mat) {
+      const current = updates.get(mat.id) || 0;
+      updates.set(mat.id, current + amount);
+    } else {
+        console.warn(`[Stock] No se encontró material en inventario con nombre: ${materialName}`);
+    }
+  };
+
+  // 3. Analizar Items
+  for (const item of items) {
+    const qty = item.quantity;
+    const productDef = productMap.get(item.product_id); // Puede ser undefined si no se encontró
+    
+    // ESTRATEGIA A: Usar Receta Configurada (Prioridad)
+    if (productDef && productDef.consumables && Array.isArray(productDef.consumables) && productDef.consumables.length > 0) {
+        console.log(`[Stock] Usando receta para producto ID ${item.product_id}`);
+        productDef.consumables.forEach((c: any) => {
+            if (c.material && c.quantity) {
+                addDeductionByMaterialName(c.material, c.quantity * qty);
+            }
+        });
+    } 
+    // ESTRATEGIA B: Lógica "Mágica" por Nombre (Fallback / Legacy)
+    else {
+        const name = item.name.toLowerCase();
+        
+        // REGLA: Mates
+        if (name.includes('mate')) {
+            addDeductionByMaterialName('Polímero Mate', qty);
+            addDeductionByMaterialName('Bombillas', qty);
+        }
+
+        // REGLA: Chops
+        if (name.includes('chop')) {
+            if (name.includes('500')) {
+                addDeductionByMaterialName('Vaso Aluminio 500cc', qty);
+            } else if (name.includes('600')) {
+                addDeductionByMaterialName('Vaso Aluminio 600cc', qty);
+            } else if (name.includes('750')) {
+                addDeductionByMaterialName('Vaso Aluminio 750cc', qty);
+            } else if (name.includes('1l') || name.includes('1 litro')) {
+                addDeductionByMaterialName('Vaso Aluminio 1L', qty);
+            }
+        }
+    }
+  }
+
+  // 4. Ejecutar Updates en Batch (Paralelo)
+  if (updates.size > 0) {
+    const promises = Array.from(updates.entries()).map(async ([id, totalDeduct]) => {
+      const mat = materials.find((m: any) => m.id === id);
+      if (mat) {
+        const currentQty = Number(mat.quantity);
+        const newQty = Math.max(0, currentQty - totalDeduct);
+        
+        const { error: updateError } = await supabase
+          .from('raw_materials')
+          .update({ quantity: newQty })
+          .eq('id', id);
+          
+        if (!updateError) {
+          console.log(`[Stock] Descontado ${totalDeduct} de ${mat.name}. Nuevo stock: ${newQty}`);
+        } else {
+          console.error(`[Stock] Error actualizando ${mat.name}:`, updateError);
+        }
+      }
+    });
+
+    await Promise.all(promises);
+  }
 }
