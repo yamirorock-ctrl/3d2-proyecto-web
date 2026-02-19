@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { toast } from 'sonner';
-import { Product, ProductImage } from '../types';
+import { Product, ProductImage, RawMaterial } from '../types';
 import SmartImage from './SmartImage';
-import { uploadToSupabase } from '../services/supabaseService';
+import { uploadToSupabase, getMaterials } from '../services/supabaseService';
 import { syncProductToML } from '../services/mlService';
 import { suggestMLTitle } from '../services/geminiService';
 import { useAuth } from '../context/AuthContext';
@@ -107,6 +107,14 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
     const primary = primaryImg?.url ?? form.image;
     setPreviewSrc(primary ?? '');
   }, [form.image, form.images]);
+
+  // Cargar Materiales para Receta
+  const [availableMaterials, setAvailableMaterials] = useState<RawMaterial[]>([]);
+  useEffect(() => {
+    getMaterials().then(res => {
+      if (res.data) setAvailableMaterials(res.data);
+    });
+  }, []);
 
   const handleAddCategory = () => {
     const name = (newCategoryText || form.category || '').trim();
@@ -1055,13 +1063,11 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
                        onChange={e => setItemMaterial(e.target.value)}
                      >
                         <option value="">Seleccionar...</option>
-                        <option value="Polímero Mate">Polímero Mate</option>
-                        <option value="Bombillas">Bombillas</option>
-                        <option value="Vaso Aluminio 500cc">Vaso Aluminio 500cc</option>
-                        <option value="Vaso Aluminio 600cc">Vaso Aluminio 600cc</option>
-                        <option value="Vaso Aluminio 750cc">Vaso Aluminio 750cc</option>
-                        <option value="Vaso Aluminio 1L">Vaso Aluminio 1L</option>
-                        <option value="Caja">Caja</option>
+                        {availableMaterials
+                          .filter(m => m.category === 'Insumos' || m.category === 'Otros')
+                          .map(m => (
+                            <option key={m.id} value={m.name}>{m.name} (Stock: {m.quantity} {m.unit})</option>
+                        ))}
                      </select>
                    </div>
                    <div className="w-20">
@@ -1099,12 +1105,27 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
 
                 <div className="flex gap-2 items-end">
                    <div className="flex-1">
-                     <label className="text-xs text-slate-500">Color</label>
-                     <input type="text" placeholder="Ej: Blanco" className="w-full text-sm border rounded px-2 py-1.5" value={newColorDistName} onChange={e => setNewColorDistName(e.target.value)} />
+                     <label className="text-xs text-slate-500">Color / Insumo</label>
+                     <input 
+                        list="material-colors"
+                        type="text" 
+                        placeholder="Ej: Blanco (o selecciona de la lista)"
+                        className="w-full text-sm border rounded px-2 py-1.5"
+                        value={newColorDistName}
+                        onChange={e => setNewColorDistName(e.target.value)}
+                     />
+                     <datalist id="material-colors">
+                        {availableMaterials
+                           .filter(m => m.category === 'Filamento' || m.category === 'Madera')
+                           .map(m => (
+                              <option key={m.id} value={m.name} />
+                           ))
+                        }
+                     </datalist>
                    </div>
                    <div className="w-20">
-                     <label className="text-xs text-slate-500">%</label>
-                     <input type="number" min="0" max="100" className="w-full text-sm border rounded px-2 py-1.5" value={newColorDistPercent} onChange={e => setNewColorDistPercent(Number(e.target.value))} />
+                     <label className="text-xs text-slate-500">% Peso</label>
+                     <input type="number" min="1" max="100" className="w-full text-sm border rounded px-2 py-1.5" value={newColorDistPercent} onChange={e => setNewColorDistPercent(Number(e.target.value))} />
                    </div>
                    <button type="button" onClick={() => {
                         if (!newColorDistName) return;
