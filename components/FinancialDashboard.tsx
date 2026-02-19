@@ -4,7 +4,7 @@ import {
   TrendingUp, TrendingDown, DollarSign, Calendar, Plus, Trash2, 
   AlertCircle, CheckCircle, Save, X, Filter, Download, Package, Edit2 
 } from 'lucide-react';
-import { getExpenses, addExpense, deleteExpense, getMaterials, addMaterial, updateMaterial, deleteMaterial } from '../services/supabaseService';
+import { getExpenses, addExpense, updateExpense, deleteExpense, getMaterials, addMaterial, updateMaterial, deleteMaterial } from '../services/supabaseService';
 import { toast } from 'sonner';
 
 interface Props {
@@ -35,6 +35,7 @@ const FinancialDashboard: React.FC<Props> = ({ orders }) => {
   
   // Estado para formularios
   const [isAddingExpense, setIsAddingExpense] = useState(false);
+  const [editingExpenseId, setEditingExpenseId] = useState<string | null>(null);
   const [isAddingMaterial, setIsAddingMaterial] = useState(false);
   const [editingMaterialId, setEditingMaterialId] = useState<string | null>(null);
   
@@ -130,38 +131,46 @@ const FinancialDashboard: React.FC<Props> = ({ orders }) => {
       return;
     }
     try {
-      // 1. Guardar Gasto
-      const { error } = await addExpense(newExpense);
-      if (error) throw error;
+      if (editingExpenseId) {
+          // Actualizar Gasto Existente
+          const { error } = await updateExpense(editingExpenseId, newExpense);
+          if (error) throw error;
+          toast.success('Gasto actualizado');
+      } else {
+          // 1. Guardar Nuevo Gasto
+          const { error } = await addExpense(newExpense);
+          if (error) throw error;
 
-      // 2. Si se marcó "Pasar al Inventario", actualizar/crear material
-      if (addToInventory && newExpense.subcategory) {
-        // Buscar si ya existe el material con ese nombreexacto
-        const existingMaterial = materials.find(m => m.name === newExpense.subcategory);
-        
-        if (existingMaterial) {
-          // Actualizar Stock
-          await updateMaterial(existingMaterial.id, { 
-            quantity: Number(existingMaterial.quantity) + Number(quantityToAdd),
-            last_cost: (newExpense.amount || 0) / quantityToAdd
-          });
-          toast.success('Stock actualizado automáticamente');
-        } else {
-          // Crear Nuevo Material
-          await addMaterial({
-            name: newExpense.subcategory,
-            category: newExpense.category === 'Insumos' ? 'Insumos' : 'Otros', // Mapeo simple
-            quantity: quantityToAdd,
-            unit: 'unidades', // Default
-            min_threshold: 1,
-            last_cost: (newExpense.amount || 0) / quantityToAdd
-          });
-          toast.success('Nuevo insumo creado en inventario');
-        }
+          // 2. Si se marcó "Pasar al Inventario", actualizar/crear material
+          if (addToInventory && newExpense.subcategory) {
+            // Buscar si ya existe el material con ese nombreexacto
+            const existingMaterial = materials.find(m => m.name === newExpense.subcategory);
+            
+            if (existingMaterial) {
+              // Actualizar Stock
+              await updateMaterial(existingMaterial.id, { 
+                quantity: Number(existingMaterial.quantity) + Number(quantityToAdd),
+                last_cost: (newExpense.amount || 0) / quantityToAdd
+              });
+              toast.success('Stock actualizado automáticamente');
+            } else {
+              // Crear Nuevo Material
+              await addMaterial({
+                name: newExpense.subcategory,
+                category: newExpense.category === 'Insumos' ? 'Insumos' : 'Otros', // Mapeo simple
+                quantity: quantityToAdd,
+                unit: 'unidades', // Default
+                min_threshold: 1,
+                last_cost: (newExpense.amount || 0) / quantityToAdd
+              });
+              toast.success('Nuevo insumo creado en inventario');
+            }
+          }
+          toast.success('Gasto registrado');
       }
 
-      toast.success('Gasto registrado');
       setIsAddingExpense(false);
+      setEditingExpenseId(null);
       setNewExpense({ ...newExpense, amount: 0, description: '' }); // Reset parcial
       setAddToInventory(false);
       setQuantityToAdd(1);
@@ -170,6 +179,20 @@ const FinancialDashboard: React.FC<Props> = ({ orders }) => {
       toast.error('Error al guardar');
     }
   };
+
+  const startEditExpense = (e: Expense) => {
+      setNewExpense({
+          date: e.date,
+          category: e.category,
+          subcategory: e.subcategory,
+          amount: e.amount,
+          description: e.description || ''
+      });
+      setEditingExpenseId(e.id);
+      setIsAddingExpense(true);
+      setAddToInventory(false);
+  };
+
 
   const handleDeleteExpense = async (id: string) => {
     if (!confirm('¿Eliminar gasto?')) return;
@@ -349,9 +372,11 @@ const FinancialDashboard: React.FC<Props> = ({ orders }) => {
           <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
             <div className="flex justify-between items-center mb-4">
               <h3 className="font-bold text-slate-800 flex items-center gap-2">
-                <MinusCircleIcon className="text-rose-500" /> Registrar Gasto
+                <MinusCircleIcon className="text-rose-500" /> {editingExpenseId ? 'Editar Gasto' : 'Registrar Gasto'}
               </h3>
-              <button onClick={() => setIsAddingExpense(!isAddingExpense)} className="text-indigo-600 text-sm hover:underline">{isAddingExpense ? 'Cancelar' : 'Nuevo'}</button>
+              <button onClick={() => { setIsAddingExpense(!isAddingExpense); setEditingExpenseId(null); setNewExpense({ ...newExpense, amount: 0, description: '' }); }} className="text-indigo-600 text-sm hover:underline">
+                {isAddingExpense ? 'Cancelar' : 'Nuevo'}
+              </button>
             </div>
 
             {isAddingExpense ? (
@@ -371,7 +396,8 @@ const FinancialDashboard: React.FC<Props> = ({ orders }) => {
                 </select>
                 <input type="text" placeholder="Descripción..." value={newExpense.description || ''} onChange={e => setNewExpense({...newExpense, description: e.target.value})} className="w-full p-2 border rounded text-sm"/>
                 
-                {/* Opción Agregar a Stock */}
+                {/* Opción Agregar a Stock (Solo CREACIÓN) */}
+                {!editingExpenseId && (
                 <div className="flex items-center gap-2 bg-indigo-50 p-2 rounded border border-indigo-100">
                   <input 
                     type="checkbox" 
@@ -440,8 +466,9 @@ const FinancialDashboard: React.FC<Props> = ({ orders }) => {
                     </div>
                   )}
                 </div>
+                )}
 
-                <button onClick={handleAddExpense} className="w-full py-2 bg-rose-600 text-white rounded font-medium hover:bg-rose-700">Guardar Gasto</button>
+                <button onClick={handleAddExpense} className="w-full py-2 bg-rose-600 text-white rounded font-medium hover:bg-rose-700">{editingExpenseId ? 'Actualizar Gasto' : 'Guardar Gasto'}</button>
               </div>
             ) : (
               <div className="text-center p-4 border-2 border-dashed border-gray-200 rounded-lg text-slate-400 hover:border-rose-300 hover:bg-rose-50 cursor-pointer transition-all" onClick={() => setIsAddingExpense(true)}>
@@ -462,7 +489,8 @@ const FinancialDashboard: React.FC<Props> = ({ orders }) => {
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="font-bold text-rose-600">-${e.amount}</span>
-                      <button onClick={() => handleDeleteExpense(e.id)} className="text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"><Trash2 size={14}/></button>
+                      <button onClick={() => startEditExpense(e)} className="text-slate-300 hover:text-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity p-1"><Edit2 size={13}/></button>
+                      <button onClick={() => handleDeleteExpense(e.id)} className="text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity p-1"><Trash2 size={13}/></button>
                     </div>
                   </div>
                 ))}

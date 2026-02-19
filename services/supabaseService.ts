@@ -130,6 +130,14 @@ export async function addExpense(expense: any) {
   return { data, error };
 }
 
+export async function updateExpense(id: string, updates: Partial<any>) {
+  const client = getClient();
+  // Ensure amount is number if present
+  const cleanUpdates = updates.amount ? { ...updates, amount: Number(updates.amount) } : updates;
+  const { error } = await (client.from('expenses') as any).update(cleanUpdates).eq('id', id);
+  return { error };
+}
+
 export async function deleteExpense(id: string) {
   const client = getClient();
   const { error } = await (client.from('expenses') as any).delete().eq('id', id);
