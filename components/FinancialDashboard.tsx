@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Order, Expense, RawMaterial } from '../types';
 import { 
   TrendingUp, TrendingDown, DollarSign, Calendar, Plus, Trash2, 
-  AlertCircle, CheckCircle, Save, X, Filter, Download, Package 
+  AlertCircle, CheckCircle, Save, X, Filter, Download, Package, Edit2 
 } from 'lucide-react';
 import { getExpenses, addExpense, deleteExpense, getMaterials, addMaterial, updateMaterial, deleteMaterial } from '../services/supabaseService';
 import { toast } from 'sonner';
@@ -36,6 +36,7 @@ const FinancialDashboard: React.FC<Props> = ({ orders }) => {
   // Estado para formularios
   const [isAddingExpense, setIsAddingExpense] = useState(false);
   const [isAddingMaterial, setIsAddingMaterial] = useState(false);
+  const [editingMaterialId, setEditingMaterialId] = useState<string | null>(null);
   
   const [addToInventory, setAddToInventory] = useState(false);
   const [quantityToAdd, setQuantityToAdd] = useState(1);
@@ -180,15 +181,35 @@ const FinancialDashboard: React.FC<Props> = ({ orders }) => {
   const handleAddMaterial = async () => {
     if (!newMaterial.name) return toast.error('Nombre requerido');
     try {
-      const { error } = await addMaterial(newMaterial);
-      if (error) throw error;
-      toast.success('Insumo agregado');
+      if (editingMaterialId) {
+         const { error } = await updateMaterial(editingMaterialId, newMaterial);
+         if (error) throw error;
+         toast.success('Insumo actualizado');
+      } else {
+         const { error } = await addMaterial(newMaterial);
+         if (error) throw error;
+         toast.success('Insumo agregado');
+      }
       setIsAddingMaterial(false);
+      setEditingMaterialId(null);
       setNewMaterial({ name: '', category: 'Filamento', quantity: 0, unit: 'unidades', min_threshold: 1 });
       loadData();
     } catch (e) {
       toast.error('Error al guardar insumo');
     }
+  };
+
+  const startEditMaterial = (m: RawMaterial) => {
+      setNewMaterial({
+          name: m.name,
+          category: m.category,
+          quantity: m.quantity,
+          unit: m.unit,
+          min_threshold: m.min_threshold,
+          last_cost: m.last_cost
+      });
+      setEditingMaterialId(m.id);
+      setIsAddingMaterial(true);
   };
 
   const handleUpdateStock = async (id: string, current: number, delta: number) => {
@@ -466,8 +487,12 @@ const FinancialDashboard: React.FC<Props> = ({ orders }) => {
             </div>
 
             {/* Formulario Agregar Material (Modal/Inline) */}
+            {/* Formulario Agregar/Editar Material */}
             {isAddingMaterial && (
               <div className="p-4 bg-indigo-50 border-b border-indigo-100 animate-in fade-in">
+                <div className="flex justify-between items-center mb-2">
+                    <h4 className="text-sm font-bold text-indigo-800">{editingMaterialId ? 'Editar Insumo' : 'Nuevo Insumo'}</h4>
+                </div>
                 <div className="flex flex-wrap gap-2 items-end">
                   <div className="flex-1 min-w-[150px]">
                     <label className="text-xs text-indigo-800 font-bold">Nombre</label>
@@ -482,8 +507,8 @@ const FinancialDashboard: React.FC<Props> = ({ orders }) => {
                       <option value="Otros">Otros</option>
                     </select>
                   </div>
-                  <div className="w-24">
-                    <label className="text-xs text-indigo-800 font-bold">Cantidad</label>
+                  <div className="w-20">
+                    <label className="text-xs text-indigo-800 font-bold">Cant.</label>
                     <input type="number" value={newMaterial.quantity} onChange={e => setNewMaterial({...newMaterial, quantity: Number(e.target.value)})} className="w-full p-2 text-sm border rounded" />
                   </div>
                   <div className="w-24">
@@ -496,9 +521,13 @@ const FinancialDashboard: React.FC<Props> = ({ orders }) => {
                       <option value="litros">Litros</option>
                     </select>
                   </div>
+                   <div className="w-24">
+                    <label className="text-xs text-indigo-800 font-bold">Costo Unit.</label>
+                    <input type="number" placeholder="0.00" value={newMaterial.last_cost || ''} onChange={e => setNewMaterial({...newMaterial, last_cost: Number(e.target.value)})} className="w-full p-2 text-sm border rounded" />
+                  </div>
                   <div className="flex gap-2">
-                    <button onClick={handleAddMaterial} className="px-4 py-2 bg-indigo-600 text-white rounded text-sm hover:bg-indigo-700">Guardar</button>
-                    <button onClick={() => setIsAddingMaterial(false)} className="px-3 py-2 bg-white text-slate-600 border rounded text-sm hover:bg-gray-50">Cancelar</button>
+                    <button onClick={handleAddMaterial} className="px-4 py-2 bg-indigo-600 text-white rounded text-sm hover:bg-indigo-700">{editingMaterialId ? 'Actualizar' : 'Guardar'}</button>
+                    <button onClick={() => { setIsAddingMaterial(false); setEditingMaterialId(null); setNewMaterial({ name: '', category: 'Filamento', quantity: 0, unit: 'unidades', min_threshold: 1 }); }} className="px-3 py-2 bg-white text-slate-600 border rounded text-sm hover:bg-gray-50">Cancelar</button>
                   </div>
                 </div>
               </div>
@@ -540,8 +569,11 @@ const FinancialDashboard: React.FC<Props> = ({ orders }) => {
                       <td className="px-4 py-3 text-right font-medium text-slate-600">
                            {m.last_cost ? `$${m.last_cost.toLocaleString('es-AR')}` : '-'}
                       </td>
-                      <td className="px-4 py-3 text-right">
-                        <button onClick={() => handleDeleteMaterial(m.id)} className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded transition-colors">
+                      <td className="px-4 py-3 text-right flex items-center justify-end gap-1">
+                        <button onClick={() => startEditMaterial(m)} className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors" title="Editar">
+                           <Edit2 size={16} />
+                        </button>
+                        <button onClick={() => handleDeleteMaterial(m.id)} className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded transition-colors" title="Eliminar">
                           <Trash2 size={16} />
                         </button>
                       </td>
