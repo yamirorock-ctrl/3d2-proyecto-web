@@ -381,15 +381,16 @@ async function deductRawMaterials(items: OrderItem[]) {
   // 1. Obtener estado actual de materiales para saber IDs y Nombres
   const { data: materials, error } = await supabase
     .from('raw_materials')
-    .select('id, name, quantity');
+    .select('id, name, quantity, unit, category');
 
   if (error || !materials) return;
 
-  // 2. Obtener definiciones de productos para ver sus RECETAS (consumables)
+  // 2. Obtener definiciones de productos con sus RECETAS completas
   const productIds = items.map(i => i.product_id);
+  // Nota: Consultamos tanto camelCase como snake_case por si acaso, aunque en JSONB suele preservarse
   const { data: productDefinitions } = await supabase
     .from('products')
-    .select('id, consumables') // Asumimos que la columna existe (JSONB)
+    .select('id, name, weight, consumables, colorPercentage:color_percentage') 
     .in('id', productIds);
   
   // Mapa de productos para acceso rápido
@@ -397,54 +398,100 @@ async function deductRawMaterials(items: OrderItem[]) {
 
   const updates = new Map<string, number>(); // ID Material -> Cantidad a RESTAR
 
-  // Helper para sumar al mapa de actualizaciones
-  const addDeductionByMaterialName = (materialName: string, amount: number) => {
-    // Busca insensitive en la lista de materiales reales de la DB
-    const mat = materials.find((m: any) => m.name.toLowerCase() === materialName.toLowerCase());
-    if (mat) {
-      const current = updates.get(mat.id) || 0;
-      updates.set(mat.id, current + amount);
-    } else {
-        console.warn(`[Stock] No se encontró material en inventario con nombre: ${materialName}`);
+  // Helper para buscar material por nombre (Exacto > Parcial > Fallback)
+  const findMaterialIdByName = (searchName: string, categoryFilter?: string) => {
+    if (!searchName) return null;
+    const lowerSearch = searchName.toLowerCase().trim();
+    
+    // 1. Búsqueda Exacta
+    let mat = materials.find((m: any) => m.name.toLowerCase() === lowerSearch);
+    if (mat) return mat;
+
+    // 2. Búsqueda Parcial Intelligente (ej: "Rojo" -> "Grilon PLA Rojo")
+    // Filtramos por categoría si se provee (ej: 'Filamento')
+    const candidates = materials.filter((m: any) => {
+        if (categoryFilter && m.category !== categoryFilter) return false;
+        return m.name.toLowerCase().includes(lowerSearch);
+    });
+
+    if (candidates.length > 0) {
+        // Preferir el más corto que contenga la palabra (heurística simple) o el primero
+        return candidates[0];
     }
+
+    return null;
+  };
+
+  const addDeduction = (materialId: string, amount: number) => {
+      const current = updates.get(materialId) || 0;
+      updates.set(materialId, current + amount);
   };
 
   // 3. Analizar Items
   for (const item of items) {
     const qty = item.quantity;
-    const productDef = productMap.get(item.product_id); // Puede ser undefined si no se encontró
+    const productDef = productMap.get(item.product_id) as any; // Cast a any explícito para acceder a propiedades dinámicas
     
-    // ESTRATEGIA A: Usar Receta Configurada (Prioridad)
-    if (productDef && productDef.consumables && Array.isArray(productDef.consumables) && productDef.consumables.length > 0) {
-        console.log(`[Stock] Usando receta para producto ID ${item.product_id}`);
+    if (!productDef) continue;
+
+    console.log(`[Stock] Procesando receta para: ${productDef.name}`);
+
+    // --- A. CONSUMIBLES FIJOS (Cajas, Vasos, Accesorios) ---
+    if (productDef.consumables && Array.isArray(productDef.consumables)) {
         productDef.consumables.forEach((c: any) => {
             if (c.material && c.quantity) {
-                addDeductionByMaterialName(c.material, c.quantity * qty);
+                const mat = findMaterialIdByName(c.material);
+                if (mat) {
+                    addDeduction(mat.id, c.quantity * qty);
+                } else {
+                    console.warn(`[Stock] Consumible no encontrado: ${c.material}`);
+                }
             }
         });
-    } 
-    // ESTRATEGIA B: Lógica "Mágica" por Nombre (Fallback / Legacy)
-    else {
-        const name = item.name.toLowerCase();
-        
-        // REGLA: Mates
-        if (name.includes('mate')) {
-            addDeductionByMaterialName('Polímero Mate', qty);
-            addDeductionByMaterialName('Bombillas', qty);
-        }
+    }
 
-        // REGLA: Chops
-        if (name.includes('chop')) {
-            if (name.includes('500')) {
-                addDeductionByMaterialName('Vaso Aluminio 500cc', qty);
-            } else if (name.includes('600')) {
-                addDeductionByMaterialName('Vaso Aluminio 600cc', qty);
-            } else if (name.includes('750')) {
-                addDeductionByMaterialName('Vaso Aluminio 750cc', qty);
-            } else if (name.includes('1l') || name.includes('1 litro')) {
-                addDeductionByMaterialName('Vaso Aluminio 1L', qty);
+    // --- B. FILAMENTO (Color Dinámico) ---
+    // Requiere que el producto tenga peso definido y configuración de colores
+    if (productDef.weight && productDef.weight > 0 && productDef.colorPercentage && Array.isArray(productDef.colorPercentage)) {
+        const totalWeightGrams = productDef.weight * qty;
+
+        productDef.colorPercentage.forEach((cp: any) => {
+            const pct = cp.percentage || 100;
+            const originalColorName = cp.color;
+            let targetMaterialName = originalColorName;
+
+            // Lógica de Sustitución por Variante Elegida
+            // Si este componente representa una parte significativa (>40%) y el usuario eligió un color,
+            // intentamos usar el color elegido por el usuario en lugar del definido en la receta.
+            if (pct > 40 && item.selected_options?.color) {
+                const selectedColor = item.selected_options.color;
+                // Verificamos si existe un material con el nombre del color seleccionado
+                const variantMaterial = findMaterialIdByName(selectedColor, 'Filamento');
+                if (variantMaterial) {
+                    console.log(`[Stock] Sustituyendo ingrediente ${originalColorName} por variante elegida: ${variantMaterial.name}`);
+                    targetMaterialName = variantMaterial.name;
+                }
             }
-        }
+
+            const mat = findMaterialIdByName(targetMaterialName, 'Filamento');
+            if (mat) {
+                // Conversión de Unidades
+                // Si el stock está en 'kg', convertimos gramos a kg.
+                // Si está en 'g' o 'gramos', usamos directo.
+                let amountToDeduct = (totalWeightGrams * (pct / 100)); // en gramos
+                
+                if (mat.unit && (mat.unit.toLowerCase().includes('kg') || mat.unit.toLowerCase().includes('kilo'))) {
+                    amountToDeduct = amountToDeduct / 1000;
+                } else if (mat.unit && mat.unit.toLowerCase().includes('rollo')) {
+                     // Asumimos rollo de 1kg por defecto si no tenemos más info
+                     amountToDeduct = amountToDeduct / 1000;
+                }
+
+                addDeduction(mat.id, amountToDeduct);
+            } else {
+                 console.warn(`[Stock] Insumo de filamento no encontrado: ${targetMaterialName}`);
+            }
+        });
     }
   }
 
@@ -456,13 +503,16 @@ async function deductRawMaterials(items: OrderItem[]) {
         const currentQty = Number(mat.quantity);
         const newQty = Math.max(0, currentQty - totalDeduct);
         
+        // Redondear a 3 decimales para evitar problemas de punto flotante en kilos
+        const roundedNewQty = Math.round(newQty * 1000) / 1000;
+
         const { error: updateError } = await supabase
           .from('raw_materials')
-          .update({ quantity: newQty })
+          .update({ quantity: roundedNewQty })
           .eq('id', id);
           
         if (!updateError) {
-          console.log(`[Stock] Descontado ${totalDeduct} de ${mat.name}. Nuevo stock: ${newQty}`);
+          console.log(`[Stock] Descontado ${totalDeduct.toFixed(3)} ${mat.unit} de ${mat.name}. Nuevo stock: ${roundedNewQty}`);
         } else {
           console.error(`[Stock] Error actualizando ${mat.name}:`, updateError);
         }
