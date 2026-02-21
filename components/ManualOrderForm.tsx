@@ -19,6 +19,8 @@ export const ManualOrderForm: React.FC<Props> = ({ products, initialOrder, onClo
   
   // Estado del producto actual siendo agregado
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [isCustomProductMode, setIsCustomProductMode] = useState(false);
+  const [customNameItem, setCustomNameItem] = useState('');
   const [quantity, setQuantity] = useState(1);
   const [customPrice, setCustomPrice] = useState<string>(''); // Precio TOTAL del ítem actual (unitario * cantidad)
 
@@ -119,24 +121,26 @@ export const ManualOrderForm: React.FC<Props> = ({ products, initialOrder, onClo
   };
 
   const handleAddItem = () => {
-    if (!selectedProduct) return;
+    if (!selectedProduct && !isCustomProductMode) return;
+    if (isCustomProductMode && !customNameItem) return;
     
     // Calcular precio unitario REAL basado en el total ingresado
     const priceTotal = Number(customPrice);
     const unitPrice = quantity > 0 ? priceTotal / quantity : 0;
 
     const newItem: OrderItem = {
-      product_id: selectedProduct.id,
-      name: selectedProduct.name,
+      product_id: selectedProduct?.id || 0, // 0 o null para productos personalizados
+      name: isCustomProductMode ? `[ESPECIAL] ${customNameItem}` : selectedProduct!.name,
       price: unitPrice,
       quantity: quantity,
-      image: selectedProduct.image || selectedProduct.images?.[0]?.url || '',
+      image: selectedProduct?.image || selectedProduct?.images?.[0]?.url || 'https://via.placeholder.com/150?text=Personalizado',
     };
 
     setOrderItems([...orderItems, newItem]);
     
     // Resetear selección para agregar otro
     setSelectedProduct(null);
+    setCustomNameItem('');
     setQuantity(1);
     setCustomPrice('');
     toast.success('Producto agregado a la lista');
@@ -251,59 +255,124 @@ export const ManualOrderForm: React.FC<Props> = ({ products, initialOrder, onClo
               <Plus size={18} className="text-emerald-600"/> 1. Agregar Productos
             </h3>
             
-            {/* Buscador */}
-            <div className="space-y-2 relative">
-              <label className="block text-sm font-medium text-slate-700">Buscar Producto</label>
-              {!selectedProduct ? (
-                <div className="relative">
-                  <Search className="absolute left-3 top-2.5 text-slate-400" size={18} />
-                  <input
-                    type="text"
-                    placeholder="Buscar mate, cuadro..."
-                    className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 outline-hidden"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    autoFocus={orderItems.length === 0}
-                  />
-                  {searchTerm && (
-                    <div className="absolute top-full left-0 right-0 bg-white border rounded-lg shadow-xl mt-1 max-h-48 overflow-y-auto z-10">
-                      {filteredProducts.length === 0 ? (
-                        <div className="p-3 text-sm text-slate-500 text-center">No se encontraron productos</div>
-                      ) : (
-                        filteredProducts.map(p => (
-                          <button
-                            key={p.id}
-                            type="button"
-                            onClick={() => handleProductSelect(p)}
-                            className="w-full text-left px-4 py-2 hover:bg-emerald-50 flex items-center gap-3 border-b last:border-0 transition-colors"
-                          >
-                            <img src={p.image || p.images?.[0]?.url} alt="" className="w-8 h-8 rounded-sm object-cover bg-slate-100" />
-                            <div className="min-w-0 flex-1">
-                              <div className="font-medium text-slate-800 truncate">{p.name}</div>
-                              <div className="text-xs text-emerald-600 font-bold">${p.price}</div>
-                            </div>
-                          </button>
-                        ))
+            {/* Buscador o Producto Personalizado */}
+            <div className="space-y-4 relative">
+              <div className="flex justify-between items-center bg-slate-50 p-1 rounded-lg border border-slate-200">
+                <button 
+                  type="button" 
+                  onClick={() => { setIsCustomProductMode(false); setSelectedProduct(null); }}
+                  className={`flex-1 py-1 px-2 rounded-md transition-all text-xs font-bold ${!isCustomProductMode ? 'bg-white shadow-sm text-emerald-700' : 'text-slate-500'}`}
+                >
+                  Catálogo
+                </button>
+                <button 
+                  type="button" 
+                  onClick={() => { setIsCustomProductMode(true); setSelectedProduct(null); }}
+                  className={`flex-1 py-1 px-2 rounded-md transition-all text-xs font-bold ${isCustomProductMode ? 'bg-white shadow-sm text-blue-700' : 'text-slate-500'}`}
+                >
+                  Personalizado (Especial)
+                </button>
+              </div>
+
+              {!isCustomProductMode ? (
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-slate-700">Buscar en el Catálogo</label>
+                  {!selectedProduct ? (
+                    <div className="relative">
+                      <Search className="absolute left-3 top-2.5 text-slate-400" size={18} />
+                      <input
+                        type="text"
+                        placeholder="Buscar mate, cuadro..."
+                        className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 outline-hidden"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        autoFocus={orderItems.length === 0}
+                      />
+                      {searchTerm && (
+                        <div className="absolute top-full left-0 right-0 bg-white border rounded-lg shadow-xl mt-1 max-h-48 overflow-y-auto z-10">
+                          {filteredProducts.length === 0 ? (
+                            <div className="p-3 text-sm text-slate-500 text-center">No se encontraron productos</div>
+                          ) : (
+                            filteredProducts.map(p => (
+                              <button
+                                key={p.id}
+                                type="button"
+                                onClick={() => handleProductSelect(p)}
+                                className="w-full text-left px-4 py-2 hover:bg-emerald-50 flex items-center gap-3 border-b last:border-0 transition-colors"
+                              >
+                                <img src={p.image || p.images?.[0]?.url} alt="" className="w-8 h-8 rounded-sm object-cover bg-slate-100" />
+                                <div className="min-w-0 flex-1">
+                                  <div className="font-medium text-slate-800 truncate">{p.name}</div>
+                                  <div className="text-xs text-emerald-600 font-bold">${p.price}</div>
+                                </div>
+                              </button>
+                            ))
+                          )}
+                        </div>
                       )}
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-3 p-3 bg-emerald-50 border border-emerald-100 rounded-lg animate-in fade-in slide-in-from-top-1">
+                      <img src={selectedProduct.image || selectedProduct.images?.[0]?.url} alt="" className="w-12 h-12 rounded-md object-cover bg-white shadow-xs" />
+                      <div className="flex-1 min-w-0">
+                        <div className="font-bold text-slate-800 truncate">{selectedProduct.name}</div>
+                        <div className="text-xs text-emerald-600">Base: ${selectedProduct.price}</div>
+                      </div>
+                      <button type="button" onClick={() => setSelectedProduct(null)} className="text-slate-400 hover:text-red-500 p-1 bg-white rounded-full shadow-xs">
+                        <X size={16} />
+                      </button>
                     </div>
                   )}
                 </div>
               ) : (
-                <div className="flex items-center gap-3 p-3 bg-emerald-50 border border-emerald-100 rounded-lg animate-in fade-in slide-in-from-top-1">
-                  <img src={selectedProduct.image || selectedProduct.images?.[0]?.url} alt="" className="w-12 h-12 rounded-md object-cover bg-white shadow-xs" />
-                  <div className="flex-1 min-w-0">
-                    <div className="font-bold text-slate-800 truncate">{selectedProduct.name}</div>
-                    <div className="text-xs text-emerald-600">Base: ${selectedProduct.price}</div>
-                  </div>
-                  <button type="button" onClick={() => setSelectedProduct(null)} className="text-slate-400 hover:text-red-500 p-1 bg-white rounded-full shadow-xs">
-                    <X size={16} />
+                <div className="space-y-4 bg-blue-50/50 p-4 rounded-xl border border-blue-100 animate-in zoom-in-95 duration-200">
+                   <div>
+                    <label className="block text-xs font-bold text-blue-700 uppercase mb-1">Nombre del Producto Especial</label>
+                    <input 
+                      type="text" 
+                      placeholder="Ej: Llavero personalizado x50" 
+                      className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-hidden bg-white text-sm"
+                      value={customNameItem}
+                      onChange={(e) => setCustomNameItem(e.target.value)}
+                    />
+                   </div>
+                   <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs font-bold text-blue-700 uppercase mb-1">Cantidad</label>
+                        <input 
+                          type="number" 
+                          className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-hidden bg-white text-sm"
+                          value={quantity}
+                          onChange={(e) => setQuantity(Number(e.target.value))}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-blue-700 uppercase mb-1">Precio Total</label>
+                        <div className="relative">
+                          <DollarSign className="absolute left-2 top-2.5 text-blue-500" size={14} />
+                          <input 
+                            type="number" 
+                            className="w-full pl-6 pr-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-hidden bg-white text-sm font-bold"
+                            value={customPrice}
+                            onChange={(e) => setCustomPrice(e.target.value)}
+                          />
+                        </div>
+                      </div>
+                   </div>
+                   <button
+                    type="button"
+                    onClick={handleAddItem}
+                    disabled={!customNameItem}
+                    className="w-full py-2 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2 shadow-sm disabled:opacity-50"
+                  >
+                    <Plus size={18} /> Agregar Trabajo Especial
                   </button>
                 </div>
               )}
             </div>
 
-            {/* Controles de Cantidad y Precio (Solo visibles si hay producto seleccionado) */}
-            {selectedProduct && (
+            {/* Controles de Cantidad y Precio (Solo visibles si hay producto de CATÁLOGO seleccionado) */}
+            {selectedProduct && !isCustomProductMode && (
               <div className="bg-slate-50 p-4 rounded-xl space-y-4 animate-in fade-in slide-in-from-top-2 border border-slate-100">
                 <div className="grid grid-cols-2 gap-4">
                   <div>

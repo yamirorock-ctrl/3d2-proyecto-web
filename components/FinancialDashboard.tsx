@@ -11,6 +11,9 @@ interface Props {
   orders: Order[];
 }
 
+const FILAMENT_BRANDS = ['Grilon', 'Printalot', '3n3', 'Elegoo', 'GST3D', 'Extrules', 'Creality', 'Otros'];
+const FILAMENT_TYPES = ['PLA', 'PLA+', 'SILK', 'PETG', 'TPU', 'ABS', 'Carbono', 'ASA', 'Nylon', 'Otros'];
+
 // Categorías y Subcategorías predefinidas
 const EXPENSE_CATEGORIES = {
   'Filamento': ['PLA', 'PETG', 'TPU', 'ABS', 'FLEX', 'Otros'],
@@ -41,6 +44,21 @@ const FinancialDashboard: React.FC<Props> = ({ orders }) => {
   
   const [addToInventory, setAddToInventory] = useState(false);
   const [quantityToAdd, setQuantityToAdd] = useState(1);
+
+  // Estados para Filamentos estructurados
+  const [filBrand, setFilBrand] = useState('Grilon');
+  const [filType, setFilType] = useState('PLA');
+  const [filColor, setFilColor] = useState('');
+
+  // Sincronizar nombre de material filamento automáticamente
+  useEffect(() => {
+    if (newMaterial.category === 'Filamento' && !editingMaterialId) {
+      setNewMaterial(prev => ({
+        ...prev,
+        name: `${filBrand} ${filType} ${filColor}`.trim()
+      }));
+    }
+  }, [filBrand, filType, filColor]);
 
   const [newExpense, setNewExpense] = useState<Partial<Expense>>({
     date: new Date().toISOString().split('T')[0],
@@ -142,9 +160,21 @@ const FinancialDashboard: React.FC<Props> = ({ orders }) => {
           if (error) throw error;
 
           // 2. Si se marcó "Pasar al Inventario", actualizar/crear material
-          if (addToInventory && newExpense.subcategory) {
+          if (addToInventory) {
+            let materialName = newExpense.subcategory;
+            
+            // Si es filamento, usamos el nombre estructurado
+            if (newExpense.category === 'Filamento') {
+                materialName = `${filBrand} ${filType} ${filColor}`.trim();
+            }
+
+            if (!materialName) {
+                toast.error('Nombre de material inválido para el inventario');
+                return;
+            }
+
             // Buscar si ya existe el material con ese nombreexacto
-            const existingMaterial = materials.find(m => m.name === newExpense.subcategory);
+            const existingMaterial = materials.find(m => m.name === materialName);
             
             if (existingMaterial) {
               // Actualizar Stock
@@ -156,14 +186,14 @@ const FinancialDashboard: React.FC<Props> = ({ orders }) => {
             } else {
               // Crear Nuevo Material
               await addMaterial({
-                name: newExpense.subcategory,
-                category: newExpense.category === 'Insumos' ? 'Insumos' : 'Otros', // Mapeo simple
+                name: materialName,
+                category: newExpense.category === 'Filamento' ? 'Filamento' : (newExpense.category === 'Insumos' ? 'Insumos' : 'Otros'),
                 quantity: quantityToAdd,
-                unit: 'unidades', // Default
+                unit: newExpense.category === 'Filamento' ? 'kg' : 'unidades', // Filamentos suelen ser kg
                 min_threshold: 1,
                 last_cost: (newExpense.amount || 0) / quantityToAdd
               });
-              toast.success('Nuevo insumo creado en inventario');
+              toast.success(`Nuevo material '${materialName}' creado en inventario`);
             }
           }
           toast.success('Gasto registrado');
@@ -412,6 +442,40 @@ const FinancialDashboard: React.FC<Props> = ({ orders }) => {
                   
                   {addToInventory && (
                     <div className="mt-3 bg-slate-50 p-3 rounded-md border border-slate-200 animate-in slide-in-from-left-2">
+                       {newExpense.category === 'Filamento' && (
+                         <div className="grid grid-cols-2 gap-2 mb-3 bg-white p-2 rounded border border-indigo-100">
+                            <div className="col-span-2 text-[10px] font-bold text-indigo-600 uppercase mb-1 flex items-center gap-1">
+                               <Package size={10}/> Detalles del Filamento (Stock)
+                            </div>
+                            <div>
+                               <label className="text-[10px] font-bold text-slate-500 uppercase">Marca</label>
+                               <select value={filBrand} onChange={e => setFilBrand(e.target.value)} className="w-full p-1 text-xs border rounded bg-slate-50">
+                                  {FILAMENT_BRANDS.map(b => <option key={b} value={b}>{b}</option>)}
+                               </select>
+                            </div>
+                            <div>
+                               <label className="text-[10px] font-bold text-slate-500 uppercase">Tipo</label>
+                               <select value={filType} onChange={e => setFilType(e.target.value)} className="w-full p-1 text-xs border rounded bg-slate-50">
+                                  {FILAMENT_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+                               </select>
+                            </div>
+                            <div className="col-span-2">
+                               <label className="text-[10px] font-bold text-slate-500 uppercase">Color</label>
+                               <input 
+                                  list="color-suggestions"
+                                  type="text" 
+                                  placeholder="Ej: Rojo" 
+                                  className="w-full p-1 text-xs border rounded"
+                                  value={filColor}
+                                  onChange={e => setFilColor(e.target.value)}
+                               />
+                            </div>
+                            <div className="col-span-2 mt-1 border-t pt-1">
+                               <p className="text-[10px] text-slate-400">Se registrará como: <b className="text-indigo-600">{(filBrand + ' ' + filType + ' ' + filColor).trim() || '(Vacío)'}</b></p>
+                            </div>
+                         </div>
+                       )}
+
                        <div className="flex justify-between items-center mb-2">
                            <label className="text-xs font-bold text-slate-600">Cantidad Comprada:</label>
                            <div className="flex items-center gap-1">
@@ -422,7 +486,7 @@ const FinancialDashboard: React.FC<Props> = ({ orders }) => {
                                 className="w-20 p-1 text-sm border rounded text-center font-bold bg-white focus:ring-2 focus:ring-indigo-500"
                                 min="1"
                                />
-                               <span className="text-xs text-slate-400">unidades</span>
+                               <span className="text-xs text-slate-400">{newExpense.category === 'Filamento' ? 'kg' : 'unidades'}</span>
                            </div>
                        </div>
                        
@@ -436,7 +500,10 @@ const FinancialDashboard: React.FC<Props> = ({ orders }) => {
                                
                                {/* Comparación de Precio */}
                                {(() => {
-                                   const mat = materials.find(m => m.name === newExpense.subcategory);
+                                   const targetName = newExpense.category === 'Filamento' 
+                                      ? `${filBrand} ${filType} ${filColor}`.trim() 
+                                      : newExpense.subcategory;
+                                   const mat = materials.find(m => m.name === targetName);
                                    if (mat && mat.last_cost) {
                                        const current = (newExpense.amount || 0) / quantityToAdd;
                                        const diff = current - mat.last_cost;
@@ -523,9 +590,20 @@ const FinancialDashboard: React.FC<Props> = ({ orders }) => {
                 </div>
                 <div className="flex flex-wrap gap-2 items-end">
                   <div className="flex-1 min-w-[150px]">
-                    <label className="text-xs text-indigo-800 font-bold">Nombre</label>
-                    <input type="text" placeholder="Ej: Grilon PLA Blanco" value={newMaterial.name} onChange={e => setNewMaterial({...newMaterial, name: e.target.value})} className="w-full p-2 text-sm border rounded" />
+                    <label className="text-xs text-indigo-800 font-bold">Nombre / Identificador</label>
+                    <input 
+                      type="text" 
+                      placeholder="Ej: Grilon PLA Blanco" 
+                      value={newMaterial.name} 
+                      onChange={e => setNewMaterial({...newMaterial, name: e.target.value})} 
+                      className="w-full p-2 text-sm border rounded bg-white font-medium" 
+                      readOnly={newMaterial.category === 'Filamento' && !editingMaterialId}
+                    />
+                    {newMaterial.category === 'Filamento' && !editingMaterialId && (
+                      <p className="text-[10px] text-slate-400 mt-1 italic">Nombre generado automáticamente</p>
+                    )}
                   </div>
+                  
                   <div className="w-32">
                     <label className="text-xs text-indigo-800 font-bold">Categoría</label>
                     <select value={newMaterial.category} onChange={e => setNewMaterial({...newMaterial, category: e.target.value as any})} className="w-full p-2 text-sm border rounded">
@@ -535,6 +613,42 @@ const FinancialDashboard: React.FC<Props> = ({ orders }) => {
                       <option value="Otros">Otros</option>
                     </select>
                   </div>
+
+                  {newMaterial.category === 'Filamento' && (
+                    <>
+                      <div className="w-28">
+                        <label className="text-xs text-indigo-800 font-bold">Marca</label>
+                        <select value={filBrand} onChange={e => setFilBrand(e.target.value)} className="w-full p-2 text-sm border rounded bg-white">
+                          {FILAMENT_BRANDS.map(b => <option key={b} value={b}>{b}</option>)}
+                        </select>
+                      </div>
+                      <div className="w-24">
+                        <label className="text-xs text-indigo-800 font-bold">Tipo</label>
+                        <select value={filType} onChange={e => setFilType(e.target.value)} className="w-full p-2 text-sm border rounded bg-white">
+                          {FILAMENT_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+                        </select>
+                      </div>
+                      <div className="w-28">
+                        <label className="text-xs text-indigo-800 font-bold">Color</label>
+                        <input 
+                          list="color-suggestions"
+                          type="text" 
+                          placeholder="Ej: Rojo" 
+                          value={filColor} 
+                          onChange={e => setFilColor(e.target.value)} 
+                          className="w-full p-2 text-sm border rounded" 
+                        />
+                        <datalist id="color-suggestions">
+                          <option value="Blanco" /><option value="Negro" /><option value="Gris" />
+                          <option value="Rojo" /><option value="Azul" /><option value="Verde" />
+                          <option value="Amarillo" /><option value="Naranja" /><option value="Violeta" />
+                          <option value="Rosa" /><option value="Piel" /><option value="Cobre" />
+                          <option value="Oro" /><option value="Plata" /><option value="Bronce" />
+                        </datalist>
+                      </div>
+                    </>
+                  )}
+
                   <div className="w-20">
                     <label className="text-xs text-indigo-800 font-bold">Cant.</label>
                     <input type="number" value={newMaterial.quantity} onChange={e => setNewMaterial({...newMaterial, quantity: Number(e.target.value)})} className="w-full p-2 text-sm border rounded" />
@@ -549,12 +663,12 @@ const FinancialDashboard: React.FC<Props> = ({ orders }) => {
                       <option value="litros">Litros</option>
                     </select>
                   </div>
-                   <div className="w-24">
+                  <div className="w-24">
                     <label className="text-xs text-indigo-800 font-bold">Costo Unit.</label>
                     <input type="number" placeholder="0.00" value={newMaterial.last_cost || ''} onChange={e => setNewMaterial({...newMaterial, last_cost: Number(e.target.value)})} className="w-full p-2 text-sm border rounded" />
                   </div>
                   <div className="flex gap-2">
-                    <button onClick={handleAddMaterial} className="px-4 py-2 bg-indigo-600 text-white rounded text-sm hover:bg-indigo-700">{editingMaterialId ? 'Actualizar' : 'Guardar'}</button>
+                    <button onClick={handleAddMaterial} className="px-4 py-2 bg-indigo-600 text-white rounded text-sm hover:bg-indigo-700 font-bold">{editingMaterialId ? 'Actualizar' : 'Guardar'}</button>
                     <button onClick={() => { setIsAddingMaterial(false); setEditingMaterialId(null); setNewMaterial({ name: '', category: 'Filamento', quantity: 0, unit: 'unidades', min_threshold: 1 }); }} className="px-3 py-2 bg-white text-slate-600 border rounded text-sm hover:bg-gray-50">Cancelar</button>
                   </div>
                 </div>
@@ -598,23 +712,25 @@ const FinancialDashboard: React.FC<Props> = ({ orders }) => {
                            {m.last_cost ? `$${m.last_cost.toLocaleString('es-AR')}` : '-'}
                       </td>
                       <td className="px-4 py-3 text-right flex items-center justify-end gap-1">
-                        <button onClick={() => startEditMaterial(m)} className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors" title="Editar">
-                           <Edit2 size={16} />
+                        <button onClick={() => startEditMaterial(m)} className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors">
+                          <Edit2 size={16} />
                         </button>
-                        <button onClick={() => handleDeleteMaterial(m.id)} className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded transition-colors" title="Eliminar">
+                        <button onClick={() => handleDeleteMaterial(m.id)} className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
                           <Trash2 size={16} />
                         </button>
                       </td>
                     </tr>
                   ))}
-                  {materials.length === 0 && (
+                </tbody>
+                {materials.length === 0 && (
+                  <tbody className="divide-y divide-gray-100">
                     <tr>
-                      <td colSpan={4} className="p-8 text-center text-slate-400">
+                      <td colSpan={5} className="p-8 text-center text-slate-400">
                         No hay insumos cargados. ¡Agrega tu primer material!
                       </td>
                     </tr>
-                  )}
-                </tbody>
+                  </tbody>
+                )}
               </table>
             </div>
           </div>
