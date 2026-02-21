@@ -1,10 +1,9 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { toast } from 'sonner';
-import { Product, Order, OrderItem, ShippingMethod } from '../types';
+import { Product, Order, OrderItem, ShippingMethod, OrderStatus, Payment } from '../types';
 import { createOrder, updateOrder } from '../services/orderService';
 import { updateProductStock } from '../services/productService';
-import { Search, Calculator, Check, Plus, X, User, Phone, FileText, ShoppingCart, DollarSign, Trash2, Edit } from 'lucide-react';
+import { Search, Calculator, Check, Plus, X, User, Phone, FileText, ShoppingCart, DollarSign, Trash2, Edit, AlertCircle } from 'lucide-react';
 
 interface Props {
   products: Product[];
@@ -34,6 +33,7 @@ export const ManualOrderForm: React.FC<Props> = ({ products, initialOrder, onClo
 
   // Estados para Pagos y Fechas (Gestión de Señas)
   const [paymentAmount, setPaymentAmount] = useState<string>(''); // Monto que paga AHORA
+  const [payMethod, setPayMethod] = useState<Payment['method']>('efectivo');
   const [deliveryDate, setDeliveryDate] = useState<string>(''); // Fecha prometida
 
   // Cargar datos si es edición
@@ -200,6 +200,19 @@ export const ManualOrderForm: React.FC<Props> = ({ products, initialOrder, onClo
         // === MODO EDICIÓN ===
         const result = await updateOrder(initialOrder.id, commonData);
         if (result.error) throw result.error;
+        
+        // Registrar pago si se ingresó un monto
+        if (pay > 0) {
+          const { addPayment } = await import('../services/orderService');
+          await addPayment({
+            order_id: initialOrder.id,
+            amount: pay,
+            method: payMethod,
+            date: new Date().toISOString(),
+            notes: 'Pago registrado en edición'
+          });
+        }
+        
         toast.success('¡Orden actualizada correctamente!');
         // NOTA: No descontamos stock en edición para evitar duplicados complejos.
       } else {
@@ -207,6 +220,18 @@ export const ManualOrderForm: React.FC<Props> = ({ products, initialOrder, onClo
         const result = await createOrder(commonData);
         if (result.error) throw result.error;
         
+        // Registrar pago inicial
+        if (pay > 0 && result.data) {
+          const { addPayment } = await import('../services/orderService');
+          await addPayment({
+            order_id: result.data.id,
+            amount: pay,
+            method: payMethod,
+            date: new Date().toISOString(),
+            notes: 'Pago inicial'
+          });
+        }
+
         // Stock solo se descuenta en creación
         for (const item of orderItems) {
           if (item.product_id) {
@@ -489,7 +514,7 @@ export const ManualOrderForm: React.FC<Props> = ({ products, initialOrder, onClo
                       <span className="text-lg font-black text-blue-900">${orderTotal.toLocaleString('es-AR')}</span>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
+                   <div className="grid grid-cols-2 gap-4">
                       {/* Campo Pago / Seña */}
                       <div>
                           <label className="block text-xs font-bold text-blue-700 uppercase mb-1">Pagó / Seña</label>
@@ -505,8 +530,23 @@ export const ManualOrderForm: React.FC<Props> = ({ products, initialOrder, onClo
                           </div>
                       </div>
 
-                      {/* Campo Fecha Entrega */}
+                      {/* Medio de Pago */}
                       <div>
+                          <label className="block text-xs font-bold text-blue-700 uppercase mb-1">Medio</label>
+                          <select 
+                            value={payMethod} 
+                            onChange={e => setPayMethod(e.target.value as any)} 
+                            className="w-full px-3 py-2 border border-blue-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-hidden text-sm font-medium text-slate-700 bg-white"
+                          >
+                            <option value="efectivo">Efectivo</option>
+                            <option value="transferencia">Transf.</option>
+                            <option value="mercadopago">MP</option>
+                            <option value="otro">Otro</option>
+                          </select>
+                      </div>
+
+                      {/* Campo Fecha Entrega */}
+                      <div className="col-span-2">
                           <label className="block text-xs font-bold text-blue-700 uppercase mb-1">Fecha Entrega</label>
                           <input 
                               type="date" 

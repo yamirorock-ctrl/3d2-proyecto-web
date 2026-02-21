@@ -32,6 +32,7 @@ const AdminPage: React.FC<Props> = ({ products, onAdd, onEdit, onDelete }) => {
 
   const [customOrders, setCustomOrders] = useState<CustomOrder[]>([]);
   const [salesOrders, setSalesOrders] = useState<Order[]>([]);
+  const [payments, setPayments] = useState<any[]>([]); // New state for payments
   const [isPriceToolOpen, setIsPriceToolOpen] = useState(false);
   const [editingOrder, setEditingOrder] = useState<Order | null>(null);
   const [showSettings, setShowSettings] = useState(false);
@@ -67,31 +68,39 @@ const AdminPage: React.FC<Props> = ({ products, onAdd, onEdit, onDelete }) => {
       setSalesOrders(sales);
     } catch (e) {}
 
-    // fetch sales orders from Supabase
+    // fetch sales orders and payments from Supabase
     (async () => {
       try {
-        const { getAllOrders } = await import('../services/orderService');
-        const { data: orders } = await getAllOrders();
-        if (Array.isArray(orders)) {
-          setSalesOrders(orders);
-          try { localStorage.setItem('orders', JSON.stringify(orders)); } catch {}
+        const { getAllOrders, getPayments } = await import('../services/orderService');
+        const [ordersRes, paymentsRes] = await Promise.all([getAllOrders(), getPayments()]);
+        
+        if (Array.isArray(ordersRes.data)) {
+          setSalesOrders(ordersRes.data);
+          try { localStorage.setItem('orders', JSON.stringify(ordersRes.data)); } catch {}
+        }
+        if (Array.isArray(paymentsRes.data)) {
+          setPayments(paymentsRes.data);
         }
       } catch (err) {
-        console.warn('[AdminPage] No se pudieron cargar órdenes desde Supabase:', err);
+        console.warn('[AdminPage] No se pudieron cargar datos desde Supabase:', err);
       }
     })();
   }, []);
 
   const refreshSalesOrders = async () => {
     try {
-      const { getAllOrders } = await import('../services/orderService');
-      const { data: orders } = await getAllOrders();
-      if (Array.isArray(orders)) {
-        setSalesOrders(orders);
-        try { localStorage.setItem('orders', JSON.stringify(orders)); } catch {}
+      const { getAllOrders, getPayments } = await import('../services/orderService');
+      const [ordersRes, paymentsRes] = await Promise.all([getAllOrders(), getPayments()]);
+      
+      if (Array.isArray(ordersRes.data)) {
+        setSalesOrders(ordersRes.data);
+        try { localStorage.setItem('orders', JSON.stringify(ordersRes.data)); } catch {}
+      }
+      if (Array.isArray(paymentsRes.data)) {
+        setPayments(paymentsRes.data);
       }
     } catch (err) {
-      console.warn('[AdminPage] No se pudieron cargar órdenes desde Supabase:', err);
+      console.warn('[AdminPage] No se pudieron cargar datos desde Supabase:', err);
     }
   };
 
@@ -217,6 +226,52 @@ const AdminPage: React.FC<Props> = ({ products, onAdd, onEdit, onDelete }) => {
     const filtered = salesOrders.filter(o => o.id !== orderId);
     setSalesOrders(filtered);
     localStorage.setItem('orders', JSON.stringify(filtered));
+  };
+
+  const handleRecordPayment = async (orderId: string, amount: number, method: any) => {
+    try {
+      const { addPayment, getOrderById, updateOrder } = await import('../services/orderService');
+      
+      // 1. Agregar el pago a la tabla de pagos
+      const { error: payError } = await addPayment({
+        order_id: orderId,
+        amount,
+        method,
+        date: new Date().toISOString(),
+        notes: 'Pago manual desde dashboard'
+      });
+
+      if (payError) throw payError;
+
+      // 2. Actualizar la nota de la orden para reflejar la nueva deuda
+      const { data: order } = await getOrderById(orderId);
+      if (order) {
+        let currentNotes = order.notes || '';
+        const debtMatch = currentNotes.match(/RESTA:\s*\$([\d\.,\s]+)/i);
+        
+        if (debtMatch) {
+          const oldDebtClean = debtMatch[1].replace(/\./g, '').replace(',', '.').replace(/\s/g, '');
+          const oldDebt = parseFloat(oldDebtClean) || 0;
+          const newDebt = Math.max(0, oldDebt - amount);
+          
+          let newNotes = currentNotes.replace(debtMatch[0], `RESTA: $${newDebt.toLocaleString('es-AR')}`);
+          
+          // Si la deuda llega a 0, opcionalmente actualizar estado a paid
+          const updates: any = { notes: newNotes };
+          if (newDebt === 0 && order.status === 'pending') {
+            updates.status = 'paid';
+          }
+          
+          await updateOrder(orderId, updates);
+        }
+      }
+
+      toast.success('Pago registrado correctamente');
+      refreshSalesOrders();
+    } catch (err) {
+      console.error('Error recording payment:', err);
+      toast.error('Error al registrar el pago');
+    }
   };
 
   const handleExportBackup = () => {
@@ -687,11 +742,13 @@ const AdminPage: React.FC<Props> = ({ products, onAdd, onEdit, onDelete }) => {
       {activeTab === 'sales' && (
         <SalesDashboard 
           orders={salesOrders} 
+          payments={payments}
           onUpdateStatus={handleUpdateSaleStatus}
           onEdit={(order) => { setEditingOrder(order); setIsManualOrderOpen(true); }}
           onDelete={handleDeleteSale}
           onRefresh={refreshSalesOrders}
           onPatchOrder={handlePatchOrder}
+          onRecordPayment={handleRecordPayment}
         />
       )}
 

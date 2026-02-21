@@ -1,5 +1,5 @@
 import { getClient } from './supabaseService';
-import { Order, OrderItem, OrderStatus, ShippingMethod, ShippingConfig } from '../types';
+import { Order, OrderItem, OrderStatus, ShippingMethod, ShippingConfig, Payment } from '../types';
 import { PostgrestError } from '@supabase/supabase-js';
 import { sendSaleNotificationEmail } from './emailService';
 
@@ -522,3 +522,53 @@ async function deductRawMaterials(items: OrderItem[]) {
     await Promise.all(promises);
   }
 }
+
+/**
+ * ===== PAYMENTS =====
+ */
+
+export async function getPayments(): Promise<{ data: Payment[] | null, error: PostgrestError | null }> {
+  const { data, error } = await supabase
+    .from('payments')
+    .select('*')
+    .order('date', { ascending: false });
+
+  if (error) return handleSupabaseError(error, 'getPayments');
+  return { data: data || [], error: null };
+}
+
+export async function getOrderPayments(orderId: string): Promise<{ data: Payment[] | null, error: PostgrestError | null }> {
+  const { data, error } = await supabase
+    .from('payments')
+    .select('*')
+    .eq('order_id', orderId)
+    .order('date', { ascending: false });
+
+  if (error) return handleSupabaseError(error, 'getOrderPayments');
+  return { data: data || [], error: null };
+}
+
+export async function addPayment(payment: Omit<Payment, 'id' | 'created_at'>): Promise<{ data: Payment | null, error: PostgrestError | null }> {
+  const { data, error } = await supabase
+    .from('payments')
+    .insert([payment])
+    .select()
+    .single();
+
+  if (error) return handleSupabaseError(error, 'addPayment');
+  return { data, error: null };
+}
+
+export async function deletePayment(paymentId: string): Promise<boolean> {
+  const { error } = await supabase
+    .from('payments')
+    .delete()
+    .eq('id', paymentId);
+
+  if (error) {
+    console.error('Error al eliminar pago:', error);
+    return false;
+  }
+  return true;
+}
+

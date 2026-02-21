@@ -1,21 +1,26 @@
 import React, { useState, useMemo } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { Order } from '../types';
-import { TrendingUp, Package, DollarSign, Clock, Download, Calendar, CheckCircle, Loader, XCircle, Trash2, RefreshCw, Truck, Edit, AlertCircle } from 'lucide-react';
+import { Order, Payment, OrderStatus } from '../types';
+import { TrendingUp, Package, DollarSign, Clock, Download, Calendar, CheckCircle, Loader, XCircle, Trash2, RefreshCw, Truck, Edit, AlertCircle, Plus, Wallet, CreditCard, Banknote, History } from 'lucide-react';
 
 interface Props {
   orders: Order[];
-  onUpdateStatus?: (orderId: string, newStatus: Order['status']) => void;
+  payments?: Payment[];
+  onUpdateStatus?: (orderId: string, newStatus: OrderStatus) => void;
   onEdit?: (order: Order) => void;
   onDelete?: (orderId: string) => void;
+  onRecordPayment?: (orderId: string, amount: number, method: Payment['method']) => void;
   onRefresh?: () => void;
   onPatchOrder?: (orderId: string, updates: Partial<Order>) => void;
 }
 
 type DateFilter = 'today' | 'week' | 'month' | 'all';
 
-const SalesDashboard: React.FC<Props> = ({ orders, onUpdateStatus, onEdit, onDelete, onRefresh, onPatchOrder }) => {
+const SalesDashboard: React.FC<Props> = ({ orders, payments, onUpdateStatus, onEdit, onDelete, onRecordPayment, onRefresh, onPatchOrder }) => {
   const [dateFilter, setDateFilter] = useState<DateFilter>('all');
+  const [recordingPaymentId, setRecordingPaymentId] = useState<string | null>(null);
+  const [newPayAmount, setNewPayAmount] = useState<string>('');
+  const [newPayMethod, setNewPayMethod] = useState<Payment['method']>('efectivo');
 
   const filteredOrders = useMemo(() => {
     const now = new Date();
@@ -36,16 +41,35 @@ const SalesDashboard: React.FC<Props> = ({ orders, onUpdateStatus, onEdit, onDel
   }, [orders, dateFilter]);
 
   const metrics = useMemo(() => {
-    // 1. Filtrar órdenes canceladas para KPIs monetarios/conteo real
+    // 1. Filtrar órdenes canceladas
     const activeOrders = filteredOrders.filter(o => o.status !== 'cancelled');
 
-    // 2. Calcular Ingresos Reales (Total - Deuda)
-    let totalRealIncome = 0;
-    activeOrders.forEach(o => {
-      const { debt } = getExtraInfo(o.notes);
-      const paid = (o.total || 0) - debt;
-      totalRealIncome += Math.max(0, paid); // Asegurar que no sea negativo
+    // 2. Calcular Ingresos Reales por FECHA DE PAGO (Timeline real)
+    // Buscamos pagos que ocurrieron en el rango de fechas seleccionado
+    const now = new Date();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const weekStart = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    const filteredPayments = (payments || []).filter(p => {
+      const pDate = new Date(p.date);
+      switch (dateFilter) {
+        case 'today': return pDate >= todayStart;
+        case 'week': return pDate >= weekStart;
+        case 'month': return pDate >= monthStart;
+        default: return true;
+      }
     });
+
+    const totalRealIncome = filteredPayments.reduce((sum, p) => sum + (p.amount || 0), 0);
+
+    // 3. Desglose por Medio de Pago
+    const byMethod = {
+      efectivo: filteredPayments.filter(p => p.method === 'efectivo').reduce((sum, p) => sum + p.amount, 0),
+      transferencia: filteredPayments.filter(p => p.method === 'transferencia').reduce((sum, p) => sum + p.amount, 0),
+      mercadopago: filteredPayments.filter(p => p.method === 'mercadopago').reduce((sum, p) => sum + p.amount, 0),
+      otro: filteredPayments.filter(p => p.method === 'otro').reduce((sum, p) => sum + p.amount, 0),
+    };
 
     const completed = activeOrders.filter(o => ['paid','delivered','completed'].includes(o.status as any)).length;
     const pending = activeOrders.filter(o => ['pending','to_coordinate'].includes(o.status as any)).length;
@@ -54,7 +78,7 @@ const SalesDashboard: React.FC<Props> = ({ orders, onUpdateStatus, onEdit, onDel
     // Deuda Total (Para información visual)
     const totalDebt = activeOrders.reduce((sum, o) => sum + getExtraInfo(o.notes).debt, 0);
 
-    // Productos más vendidos (Usando ventas reales o cantidad)
+    // Productos más vendidos (Ranking por cantidad)
     const productCount: Record<string, { count: number; total: number; name: string }> = {};
     activeOrders.forEach(order => {
       order.items.forEach(item => {
@@ -62,19 +86,15 @@ const SalesDashboard: React.FC<Props> = ({ orders, onUpdateStatus, onEdit, onDel
           productCount[item.name] = { count: 0, total: 0, name: item.name };
         }
         productCount[item.name].count += item.quantity;
-        
-        // Atribuir ingreso proporcional a este producto basado en lo cobrado de la orden
-        // (Simplificación: si la orden está paga al 50%, este producto aportó 50% de su valor al ingreso real)
-        const orderWeight = order.total > 0 ? (order.total - getExtraInfo(order.notes).debt) / order.total : 0;
-        productCount[item.name].total += (item.price * item.quantity) * orderWeight;
+        productCount[item.name].total += item.price * item.quantity;
       });
     });
     const topProducts = Object.values(productCount)
       .sort((a, b) => b.total - a.total)
       .slice(0, 5);
 
-    return { total: totalRealIncome, totalDebt, completed, pending, processing, topProducts };
-  }, [filteredOrders]);
+    return { total: totalRealIncome, totalDebt, byMethod, completed, pending, processing, topProducts };
+  }, [filteredOrders, payments, dateFilter]);
 
   const handleExportCSV = () => {
     const headers = ['ID', 'Fecha', 'Cliente', 'Email', 'Teléfono', 'Total', 'Método Pago', 'Estado', 'Productos', 'Notas/Deuda'];
@@ -230,13 +250,45 @@ const SalesDashboard: React.FC<Props> = ({ orders, onUpdateStatus, onEdit, onDel
           <p className="text-2xl sm:text-3xl font-bold">{metrics.processing}</p>
         </div>
 
-        <div className="bg-linear-to-br from-purple-500 to-purple-600 rounded-xl p-4 sm:p-6 text-white shadow-lg">
+        <div className="bg-purple-500 rounded-xl p-4 sm:p-6 text-white shadow-lg">
           <div className="flex items-center justify-between mb-2">
             <Calendar size={20} className="opacity-80 sm:w-6 sm:h-6" />
           </div>
           <p className="text-xs sm:text-sm opacity-90 mb-1">Pendientes</p>
           <p className="text-2xl sm:text-3xl font-bold">{metrics.pending}</p>
         </div>
+      </div>
+
+      {/* Desglose de Caja por Medio de Pago */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex items-center gap-3">
+             <div className="p-2 bg-emerald-100 text-emerald-600 rounded-lg"><Banknote size={20}/></div>
+             <div>
+                <p className="text-[10px] uppercase font-bold text-slate-400">Efectivo</p>
+                <p className="text-lg font-bold text-slate-700">${metrics.byMethod.efectivo.toLocaleString('es-AR')}</p>
+             </div>
+          </div>
+          <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex items-center gap-3">
+             <div className="p-2 bg-blue-100 text-blue-600 rounded-lg"><Wallet size={20}/></div>
+             <div>
+                <p className="text-[10px] uppercase font-bold text-slate-400">Transferencia</p>
+                <p className="text-lg font-bold text-slate-700">${metrics.byMethod.transferencia.toLocaleString('es-AR')}</p>
+             </div>
+          </div>
+          <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex items-center gap-3">
+             <div className="p-2 bg-yellow-100 text-yellow-600 rounded-lg"><CreditCard size={20}/></div>
+             <div>
+                <p className="text-[10px] uppercase font-bold text-slate-400">MercadoPago</p>
+                <p className="text-lg font-bold text-slate-700">${metrics.byMethod.mercadopago.toLocaleString('es-AR')}</p>
+             </div>
+          </div>
+          <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex items-center gap-3">
+             <div className="p-2 bg-slate-100 text-slate-600 rounded-lg"><Plus size={20}/></div>
+             <div>
+                <p className="text-[10px] uppercase font-bold text-slate-400">Otros / Varios</p>
+                <p className="text-lg font-bold text-slate-700">${metrics.byMethod.otro.toLocaleString('es-AR')}</p>
+             </div>
+          </div>
       </div>
 
       {/* Gráfico de Ventas por Producto (Top 5) */}
@@ -384,14 +436,97 @@ const SalesDashboard: React.FC<Props> = ({ orders, onUpdateStatus, onEdit, onDel
 
                     {/* DEUDA EN ROJO */}
                     {debt > 0 && (
-                      <div className="bg-red-50 border border-red-200 p-2 rounded-lg mb-3 flex items-center justify-between animate-pulse">
-                         <div className="flex items-center gap-2 text-red-700 font-bold text-sm">
-                           <AlertCircle size={16} />
-                           DEUDA PENDIENTE:
+                      <div className="bg-red-50 border border-red-200 p-3 rounded-lg mb-3 animate-in fade-in slide-in-from-top-1">
+                         <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center gap-2 text-red-700 font-bold text-sm">
+                              <AlertCircle size={16} />
+                              DEUDA PENDIENTE:
+                            </div>
+                            <div className="text-red-700 font-extrabold text-lg">
+                              ${debt.toLocaleString('es-AR')}
+                            </div>
                          </div>
-                         <div className="text-red-700 font-extrabold text-lg">
-                           ${debt.toLocaleString('es-AR')}
-                         </div>
+                         
+                         {/* Botón para registrar pago rápido */}
+                         {onRecordPayment && recordingPaymentId !== order.id && (
+                           <button 
+                             onClick={() => {
+                               setRecordingPaymentId(order.id);
+                               setNewPayAmount(debt.toString());
+                             }}
+                             className="w-full py-1.5 bg-white border border-red-200 text-red-600 rounded text-xs font-bold hover:bg-red-50 transition-colors flex items-center justify-center gap-1"
+                           >
+                             <Plus size={14}/> Registrar Pago de esta orden
+                           </button>
+                         )}
+
+                         {recordingPaymentId === order.id && (
+                           <div className="bg-white p-3 rounded border border-red-100 shadow-sm mt-2 space-y-3">
+                              <div className="flex items-center gap-2">
+                                <label className="text-[10px] font-bold text-slate-400 uppercase">Monto a Cobrar</label>
+                                <input 
+                                  type="number" 
+                                  value={newPayAmount} 
+                                  onChange={e => setNewPayAmount(e.target.value)}
+                                  className="flex-1 p-1.5 text-sm border rounded font-bold text-slate-700" 
+                                />
+                              </div>
+                              <div className="flex gap-2">
+                                {(['efectivo', 'transferencia', 'mercadopago'] as const).map(m => (
+                                  <button
+                                    key={m}
+                                    onClick={() => setNewPayMethod(m)}
+                                    className={`flex-1 py-1.5 text-[10px] font-bold rounded border transition-all ${
+                                      newPayMethod === m ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-white border-slate-200 text-slate-500'
+                                    }`}
+                                  >
+                                    {m === 'efectivo' && 'Efectivo'}
+                                    {m === 'transferencia' && 'Transf.'}
+                                    {m === 'mercadopago' && 'MP'}
+                                  </button>
+                                ))}
+                              </div>
+                              <div className="flex gap-2 mt-2">
+                                <button 
+                                  onClick={() => {
+                                    if (Number(newPayAmount) > 0) {
+                                      onRecordPayment(order.id, Number(newPayAmount), newPayMethod);
+                                      setRecordingPaymentId(null);
+                                    }
+                                  }}
+                                  className="flex-1 py-2 bg-green-600 text-white rounded text-xs font-bold hover:bg-green-700"
+                                >
+                                  Confirmar Pago
+                                </button>
+                                <button 
+                                  onClick={() => setRecordingPaymentId(null)}
+                                  className="px-3 py-2 bg-slate-100 text-slate-500 rounded text-xs font-bold"
+                                >
+                                  Cerrar
+                                </button>
+                              </div>
+                           </div>
+                         )}
+                      </div>
+                    )}
+
+                    {/* Timeline de Pagos - NUEVO */}
+                    {payments && payments.filter(p => p.order_id === order.id).length > 0 && (
+                      <div className="mb-3">
+                        <p className="text-[10px] font-bold text-slate-400 uppercase mb-2 flex items-center gap-1">
+                          <History size={10}/> Historial de Pagos
+                        </p>
+                        <div className="space-y-1">
+                          {payments.filter(p => p.order_id === order.id).map(p => (
+                            <div key={p.id} className="flex items-center justify-between bg-slate-50 p-2 rounded text-xs border border-dashed border-slate-200">
+                               <div className="flex items-center gap-2">
+                                  <span className="text-slate-400">{new Date(p.date).toLocaleDateString('es-AR')}</span>
+                                  <span className="font-bold text-indigo-600 bg-indigo-50 px-1.5 rounded uppercase text-[9px]">{p.method}</span>
+                               </div>
+                               <b className="text-emerald-600 font-mono">+${p.amount.toLocaleString('es-AR')}</b>
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     )}
 

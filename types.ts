@@ -204,3 +204,13 @@ export interface SocialQueueItem {
   created_at?: string;
   updated_at?: string;
 }
+
+export interface Payment {
+  id: string;
+  order_id: string;
+  amount: number;
+  method: 'efectivo' | 'transferencia' | 'mercadopago' | 'otro';
+  date: string; // ISO String
+  notes?: string;
+  created_at?: string;
+}
