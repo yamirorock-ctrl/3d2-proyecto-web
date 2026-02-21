@@ -36,27 +36,44 @@ const SalesDashboard: React.FC<Props> = ({ orders, onUpdateStatus, onEdit, onDel
   }, [orders, dateFilter]);
 
   const metrics = useMemo(() => {
-    const total = filteredOrders.reduce((sum, o) => sum + (o.total || 0), 0);
-    const completed = filteredOrders.filter(o => ['paid','delivered','completed'].includes(o.status as any)).length;
-    const pending = filteredOrders.filter(o => ['pending','to_coordinate'].includes(o.status as any)).length;
-    const processing = filteredOrders.filter(o => ['preparing','payment_pending','processing','shipped'].includes(o.status as any)).length;
+    // 1. Filtrar órdenes canceladas para KPIs monetarios/conteo real
+    const activeOrders = filteredOrders.filter(o => o.status !== 'cancelled');
+
+    // 2. Calcular Ingresos Reales (Total - Deuda)
+    let totalRealIncome = 0;
+    activeOrders.forEach(o => {
+      const { debt } = getExtraInfo(o.notes);
+      const paid = (o.total || 0) - debt;
+      totalRealIncome += Math.max(0, paid); // Asegurar que no sea negativo
+    });
+
+    const completed = activeOrders.filter(o => ['paid','delivered','completed'].includes(o.status as any)).length;
+    const pending = activeOrders.filter(o => ['pending','to_coordinate'].includes(o.status as any)).length;
+    const processing = activeOrders.filter(o => ['preparing','payment_pending','processing','shipped'].includes(o.status as any)).length;
     
-    // Productos más vendidos
+    // Deuda Total (Para información visual)
+    const totalDebt = activeOrders.reduce((sum, o) => sum + getExtraInfo(o.notes).debt, 0);
+
+    // Productos más vendidos (Usando ventas reales o cantidad)
     const productCount: Record<string, { count: number; total: number; name: string }> = {};
-    filteredOrders.forEach(order => {
+    activeOrders.forEach(order => {
       order.items.forEach(item => {
         if (!productCount[item.name]) {
           productCount[item.name] = { count: 0, total: 0, name: item.name };
         }
         productCount[item.name].count += item.quantity;
-        productCount[item.name].total += item.price * item.quantity;
+        
+        // Atribuir ingreso proporcional a este producto basado en lo cobrado de la orden
+        // (Simplificación: si la orden está paga al 50%, este producto aportó 50% de su valor al ingreso real)
+        const orderWeight = order.total > 0 ? (order.total - getExtraInfo(order.notes).debt) / order.total : 0;
+        productCount[item.name].total += (item.price * item.quantity) * orderWeight;
       });
     });
     const topProducts = Object.values(productCount)
       .sort((a, b) => b.total - a.total)
       .slice(0, 5);
 
-    return { total, completed, pending, processing, topProducts };
+    return { total: totalRealIncome, totalDebt, completed, pending, processing, topProducts };
   }, [filteredOrders]);
 
   const handleExportCSV = () => {
@@ -84,14 +101,24 @@ const SalesDashboard: React.FC<Props> = ({ orders, onUpdateStatus, onEdit, onDel
     URL.revokeObjectURL(url);
   };
 
-  // Helper para parsear info extra de notas
+  // Helper para parsear info extra de notas de forma robusta
   const getExtraInfo = (notes?: string) => {
     if (!notes) return { debt: 0, delivery: null };
-    const debtMatch = notes.match(/RESTA: \$(\d+)/);
+    
+    // Regex mejorada para capturar montos con puntos, comas y espacios opcionales
+    const debtMatch = notes.match(/RESTA:\s*\$([\d\.,\s]+)/i);
     const deliveryMatch = notes.match(/ENTREGA: (\d{1,2})\/(\d{1,2})\/(\d{4})/);
+    
+    let debt = 0;
+    if (debtMatch) {
+       // Limpiar caracteres no numéricos excepto el punto decimal
+       const cleanNumber = debtMatch[1].replace(/\./g, '').replace(',', '.').replace(/\s/g, '');
+       debt = parseFloat(cleanNumber) || 0;
+    }
+
     return {
-      debt: debtMatch ? parseInt(debtMatch[1]) : 0,
-      delivery: deliveryMatch ? `${deliveryMatch[1]}/${deliveryMatch[2]}` : null // Solo día/mes para display corto
+      debt,
+      delivery: deliveryMatch ? `${deliveryMatch[1]}/${deliveryMatch[2]}` : null
     };
   };
 
@@ -177,8 +204,14 @@ const SalesDashboard: React.FC<Props> = ({ orders, onUpdateStatus, onEdit, onDel
             <DollarSign size={20} className="opacity-80 sm:w-6 sm:h-6" />
             <TrendingUp size={16} className="opacity-60 sm:w-5 sm:h-5" />
           </div>
-          <p className="text-xs sm:text-sm opacity-90 mb-1">Total Vendido</p>
-          <p className="text-2xl sm:text-3xl font-bold">${metrics.total.toFixed(2)}</p>
+          <p className="text-xs sm:text-sm opacity-90 mb-1 font-bold">Total Cobrado (Caja Real)</p>
+          <p className="text-2xl sm:text-3xl font-bold">${metrics.total.toLocaleString('es-AR')}</p>
+          {metrics.totalDebt > 0 && (
+            <div className="text-[10px] sm:text-xs bg-black/20 px-2 py-0.5 rounded mt-2 inline-flex items-center gap-1 border border-white/10">
+              <AlertCircle size={10} className="text-yellow-300" />
+              <span>Pendiente: ${metrics.totalDebt.toLocaleString('es-AR')}</span>
+            </div>
+          )}
         </div>
 
         <div className="bg-linear-to-br from-green-500 to-green-600 rounded-xl p-4 sm:p-6 text-white shadow-lg">

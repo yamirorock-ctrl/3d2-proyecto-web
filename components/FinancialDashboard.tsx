@@ -115,10 +115,10 @@ const FinancialDashboard: React.FC<Props> = ({ orders }) => {
   const getDebt = (notes?: string | null) => {
     if (!notes) return 0;
     // Busca variaciones de RESTA: $5000, RESTA: $ 5.000, etc.
-    const match = notes.match(/RESTA:\s*\$([\d\.,]+)/i);
+    const match = notes.match(/RESTA:\s*\$([\d\.,\s]+)/i);
     if (match) {
        // Limpiar puntos y comas para parsear número
-       const cleanNumber = match[1].replace(/\./g, '').replace(',', '.');
+       const cleanNumber = match[1].replace(/\./g, '').replace(',', '.').replace(/\s/g, '');
        return parseFloat(cleanNumber) || 0;
     }
     return 0;
