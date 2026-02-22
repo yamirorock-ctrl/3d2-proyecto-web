@@ -1106,22 +1106,19 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
                 <div className="flex gap-2 items-end">
                    <div className="flex-1">
                      <label className="text-xs text-slate-500">Color / Insumo</label>
-                     <input 
-                        list="material-colors"
-                        type="text" 
-                        placeholder="Ej: Blanco (o selecciona de la lista)"
-                        className="w-full text-sm border rounded px-2 py-1.5"
-                        value={newColorDistName}
-                        onChange={e => setNewColorDistName(e.target.value)}
-                     />
-                     <datalist id="material-colors">
-                        {availableMaterials
-                           .filter(m => m.category === 'Filamento' || m.category === 'Madera')
-                           .map(m => (
-                              <option key={m.id} value={m.name} />
-                           ))
-                        }
-                     </datalist>
+                      <select 
+                         className="w-full text-sm border rounded px-2 py-1.5 bg-white"
+                         value={newColorDistName}
+                         onChange={e => setNewColorDistName(e.target.value)}
+                      >
+                         <option value="">Seleccionar material...</option>
+                         {availableMaterials
+                            .filter(m => m.category === 'Filamento' || m.category === 'Madera')
+                            .map(m => (
+                               <option key={m.id} value={m.name}>{m.name} (Stock: {m.quantity} {m.unit})</option>
+                            ))
+                         }
+                      </select>
                    </div>
                    <div className="w-20">
                      <label className="text-xs text-slate-500">% Peso</label>
