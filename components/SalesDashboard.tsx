@@ -22,6 +22,27 @@ const SalesDashboard: React.FC<Props> = ({ orders, payments, onUpdateStatus, onE
   const [newPayAmount, setNewPayAmount] = useState<string>('');
   const [newPayMethod, setNewPayMethod] = useState<Payment['method']>('efectivo');
 
+  // Helper para parsear info extra de notas de forma robusta
+  const getExtraInfo = (notes?: string | null) => {
+    if (!notes) return { debt: 0, delivery: null };
+    
+    // Regex mejorada para capturar montos con puntos, comas y espacios opcionales
+    const debtMatch = notes.match(/RESTA:\s*\$([\d\.,\s]+)/i);
+    const deliveryMatch = notes.match(/ENTREGA: (\d{1,2})\/(\d{1,2})\/(\d{4})/);
+    
+    let debt = 0;
+    if (debtMatch) {
+       // Limpiar caracteres no numéricos excepto el punto decimal
+       const cleanNumber = debtMatch[1].replace(/\./g, '').replace(',', '.').replace(/\s/g, '');
+       debt = parseFloat(cleanNumber) || 0;
+    }
+
+    return {
+      debt,
+      delivery: deliveryMatch ? `${deliveryMatch[1]}/${deliveryMatch[2]}` : null
+    };
+  };
+
   const filteredOrders = useMemo(() => {
     const now = new Date();
     const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -119,27 +140,6 @@ const SalesDashboard: React.FC<Props> = ({ orders, payments, onUpdateStatus, onE
     a.download = `ventas-${dateFilter}-${Date.now()}.csv`;
     a.click();
     URL.revokeObjectURL(url);
-  };
-
-  // Helper para parsear info extra de notas de forma robusta
-  const getExtraInfo = (notes?: string) => {
-    if (!notes) return { debt: 0, delivery: null };
-    
-    // Regex mejorada para capturar montos con puntos, comas y espacios opcionales
-    const debtMatch = notes.match(/RESTA:\s*\$([\d\.,\s]+)/i);
-    const deliveryMatch = notes.match(/ENTREGA: (\d{1,2})\/(\d{1,2})\/(\d{4})/);
-    
-    let debt = 0;
-    if (debtMatch) {
-       // Limpiar caracteres no numéricos excepto el punto decimal
-       const cleanNumber = debtMatch[1].replace(/\./g, '').replace(',', '.').replace(/\s/g, '');
-       debt = parseFloat(cleanNumber) || 0;
-    }
-
-    return {
-      debt,
-      delivery: deliveryMatch ? `${deliveryMatch[1]}/${deliveryMatch[2]}` : null
-    };
   };
 
   const handleStatusClick = (order: Order, nextStatus: string) => {
