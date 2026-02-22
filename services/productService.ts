@@ -32,6 +32,7 @@ export async function getAllProducts(): Promise<Product[]> {
     wholesaleImage: p.wholesale_image,
     wholesaleDescription: p.wholesale_description,
     customizationOptions: p.customization_options,
+    colorPercentage: p.color_percentage,
     // Cleanup snake_case keys if desired, though usually harmless to keep
   }));
 
@@ -89,6 +90,7 @@ function sanitizeProductForUpsert(product: Partial<Product>): Partial<Product> {
   mapAndDelete('wholesaleImage', 'wholesale_image');
   mapAndDelete('wholesaleDescription', 'wholesale_description');
   mapAndDelete('customizationOptions', 'customization_options');
+  mapAndDelete('colorPercentage', 'color_percentage');
   
   // Handle saleType if present (deprecated but might be passed)
   mapAndDelete('saleType', 'sale_type');
