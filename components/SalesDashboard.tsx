@@ -82,15 +82,44 @@ const SalesDashboard: React.FC<Props> = ({ orders, payments, onUpdateStatus, onE
       }
     });
 
-    const totalRealIncome = filteredPayments.reduce((sum, p) => sum + (p.amount || 0), 0);
+    const totalRealIncomeFromPayments = filteredPayments.reduce((sum, p) => sum + (p.amount || 0), 0);
 
-    // 3. Desglose por Medio de Pago
+    // 3. FALLBACK: Sumar ingresos de órdenes que NO tienen pagos registrados en la nueva tabla (Legacy)
+    // Esto evita que el dashboard se vea en $0 si el usuario tiene mucha historia en notas.
+    let legacyIncome = 0;
+    activeOrders.forEach(o => {
+      const hasExplicitPayments = (payments || []).some(p => p.order_id === o.id);
+      if (!hasExplicitPayments) {
+        // Verificar si la ORDEN entra en el rango de fecha seleccionado
+        const ts = (o as any).timestamp || (o as any).created_at;
+        const oDate = ts ? new Date(ts) : new Date(0);
+        let inRange = false;
+        switch (dateFilter) {
+          case 'today': inRange = oDate >= todayStart; break;
+          case 'week': inRange = oDate >= weekStart; break;
+          case 'month': inRange = oDate >= monthStart; break;
+          default: inRange = true;
+        }
+
+        if (inRange) {
+          const { debt } = getExtraInfo(o.notes);
+          legacyIncome += Math.max(0, (o.total || 0) - debt);
+        }
+      }
+    });
+
+    const totalRealIncome = totalRealIncomeFromPayments + legacyIncome;
+
+    // 4. Desglose por Medio de Pago (Solo de pagos explícitos)
     const byMethod = {
       efectivo: filteredPayments.filter(p => p.method === 'efectivo').reduce((sum, p) => sum + p.amount, 0),
       transferencia: filteredPayments.filter(p => p.method === 'transferencia').reduce((sum, p) => sum + p.amount, 0),
       mercadopago: filteredPayments.filter(p => p.method === 'mercadopago').reduce((sum, p) => sum + p.amount, 0),
       otro: filteredPayments.filter(p => p.method === 'otro').reduce((sum, p) => sum + p.amount, 0),
     };
+    
+    // Si hay ingresos legacy, los movemos a "otro" o un campo especial para que el total coincida
+    byMethod.otro += legacyIncome;
 
     const completed = activeOrders.filter(o => ['paid','delivered','completed'].includes(o.status as any)).length;
     const pending = activeOrders.filter(o => ['pending','to_coordinate'].includes(o.status as any)).length;
