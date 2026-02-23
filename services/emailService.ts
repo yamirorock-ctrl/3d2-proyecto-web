@@ -62,7 +62,7 @@ export async function sendSaleNotificationEmail(
       console.log('📧 Notificación de venta enviada');
       return true;
     }
-    console.error('❌ Error enviando notificación de venta:', result.error);
+    console.error('❌ Error enviando notificación de venta:', result.error, result.details || '');
     return false;
   } catch (err) {
     console.error('❌ Error de red (Notificación venta):', err);
