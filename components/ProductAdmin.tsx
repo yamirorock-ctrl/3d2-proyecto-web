@@ -709,16 +709,30 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
             </div>
           </div>
 
-          <div className="mt-3">
-            <label className="block text-sm font-medium text-slate-700">Peso (g)</label>
-            <input
-              type="number"
-              min={0}
-              value={form.weight ?? ''}
-              onChange={e => handleChange('weight', e.target.value ? Number(e.target.value) : undefined)}
-              className="mt-1 block w-full rounded-md border-gray-200"
-              placeholder="Opcional. 3D: usar valor del slicer; Láser: se estima si falta"
-            />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-3">
+            <div>
+              <label className="block text-sm font-medium text-slate-700">Peso (g)</label>
+              <input
+                type="number"
+                min={0}
+                value={form.weight ?? ''}
+                onChange={e => handleChange('weight', e.target.value ? Number(e.target.value) : undefined)}
+                className="mt-1 block w-full rounded-md border-gray-200"
+                placeholder="Opcional. 3D: usar valor del slicer"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700">Tiempo Impresión (hs)</label>
+              <input
+                type="number"
+                step="0.1"
+                min={0}
+                value={form.printingTime ?? ''}
+                onChange={e => handleChange('printingTime', e.target.value ? Number(e.target.value) : undefined)}
+                className="mt-1 block w-full rounded-md border-gray-200"
+                placeholder="Ej: 5.5"
+              />
+            </div>
           </div>
 
           {/* Sección de Configuración de Venta Unitaria */}

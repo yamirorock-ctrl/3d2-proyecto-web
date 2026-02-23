@@ -1,14 +1,18 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Order, Expense, RawMaterial } from '../types';
+import { Order, Expense, RawMaterial, Product } from '../types';
 import { 
   TrendingUp, TrendingDown, DollarSign, Calendar, Plus, Trash2, 
-  AlertCircle, CheckCircle, Save, X, Filter, Download, Package, Edit2 
+  AlertCircle, CheckCircle, Save, X, Filter, Download, Package, Edit2,
+  Settings, Clock
 } from 'lucide-react';
+import SmartImage from './SmartImage';
 import { getExpenses, addExpense, updateExpense, deleteExpense, getMaterials, addMaterial, updateMaterial, deleteMaterial } from '../services/supabaseService';
 import { toast } from 'sonner';
 
 interface Props {
   orders: Order[];
+  products: Product[];
+  onEditProduct: (p: Product) => void;
 }
 
 const FILAMENT_BRANDS = ['Grilon', 'Printalot', '3n3', 'Elegoo', 'GST3D', 'Extrules', 'Creality', 'Otros'];
@@ -29,7 +33,7 @@ const EXPENSE_CATEGORIES = {
   'Otros': ['Varios']
 };
 
-const FinancialDashboard: React.FC<Props> = ({ orders }) => {
+const FinancialDashboard: React.FC<Props> = ({ orders, products, onEditProduct }) => {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [materials, setMaterials] = useState<RawMaterial[]>([]);
   const [loading, setLoading] = useState(true);
@@ -41,6 +45,13 @@ const FinancialDashboard: React.FC<Props> = ({ orders }) => {
   const [editingExpenseId, setEditingExpenseId] = useState<string | null>(null);
   const [isAddingMaterial, setIsAddingMaterial] = useState(false);
   const [editingMaterialId, setEditingMaterialId] = useState<string | null>(null);
+  
+  const [activeView, setActiveView] = useState<'manager' | 'calculator'>('manager');
+  const [costConfig, setCostConfig] = useState({
+    kwhPrice: 175,
+    machineHourCost: 200,
+    kwhConsumption: 0.12,
+  });
   
   const [addToInventory, setAddToInventory] = useState(false);
   const [quantityToAdd, setQuantityToAdd] = useState(1);
@@ -332,14 +343,27 @@ const FinancialDashboard: React.FC<Props> = ({ orders }) => {
       
       {/* 1. Header y Filtros */}
       <div className="flex flex-col sm:flex-row justify-between items-center gap-4 bg-white p-4 rounded-xl shadow-sm border border-gray-100 sticky top-0 z-10">
-        <div>
+        <div className="flex flex-col">
           <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
             <DollarSign className="text-emerald-600" /> Finanzas & Stock
           </h2>
-          <p className="text-sm text-slate-500">
+          <div className="flex gap-4 mt-2">
+              <button 
+                onClick={() => setActiveView('manager')}
+                className={`text-xs font-bold uppercase tracking-wider pb-1 border-b-2 transition-all ${activeView === 'manager' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-400'}`}
+              >
+                Gestión General
+              </button>
+              <button 
+                onClick={() => setActiveView('calculator')}
+                className={`text-xs font-bold uppercase tracking-wider pb-1 border-b-2 transition-all ${activeView === 'calculator' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-400'}`}
+              >
+                Calculadora Escandallo
+              </button>
+          </div>
+        </div>  <p className="text-sm text-slate-500">
             {months[selectedMonth]} {selectedYear}
           </p>
-        </div>
         
         <div className="flex items-center gap-2">
           <select 
@@ -367,6 +391,8 @@ const FinancialDashboard: React.FC<Props> = ({ orders }) => {
         </div>
       </div>
 
+      {activeView === 'manager' && (
+      <>
       {/* 2. Tarjetas de Finanzas (KPIs) */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="p-6 rounded-xl bg-linear-to-br from-emerald-500 to-emerald-600 text-white shadow-lg relative overflow-hidden">
@@ -737,6 +763,195 @@ const FinancialDashboard: React.FC<Props> = ({ orders }) => {
         </div>
 
       </div>
+      </>
+      )}
+
+      {activeView === 'calculator' && (
+        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+          {/* Configuración de Costos Globales */}
+          <div className="bg-white p-6 rounded-xl border border-indigo-100 shadow-md">
+            <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
+              <Settings className="text-indigo-600" /> Configuración de Costos Base (Argentina)
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="p-4 bg-blue-50 rounded-lg border border-blue-100">
+                <label className="block text-xs font-bold text-blue-800 uppercase mb-2">Precio kWh (Edesur + Imp)</label>
+                <div className="flex items-center gap-2">
+                  <span className="text-lg font-bold text-blue-600">$</span>
+                  <input 
+                    type="number" 
+                    value={costConfig.kwhPrice} 
+                    onChange={e => setCostConfig({...costConfig, kwhPrice: Number(e.target.value)})}
+                    className="w-full bg-white border rounded-md p-2 font-mono text-lg"
+                  />
+                </div>
+                <p className="text-[10px] text-blue-400 mt-1 italic">Factor real con impuestos: ~$175</p>
+              </div>
+
+              <div className="p-4 bg-purple-50 rounded-lg border border-purple-100">
+                <label className="block text-xs font-bold text-purple-800 uppercase mb-2">Amortización / Hora Máquina</label>
+                <div className="flex items-center gap-2">
+                  <span className="text-lg font-bold text-purple-600">$</span>
+                  <input 
+                    type="number" 
+                    value={costConfig.machineHourCost} 
+                    onChange={e => setCostConfig({...costConfig, machineHourCost: Number(e.target.value)})}
+                    className="w-full bg-white border rounded-md p-2 font-mono text-lg"
+                  />
+                </div>
+                <p className="text-[10px] text-purple-400 mt-1 italic">Depreciación, repuestos y ahorro</p>
+              </div>
+
+              <div className="p-4 bg-emerald-50 rounded-lg border border-emerald-100">
+                <label className="block text-xs font-bold text-emerald-800 uppercase mb-2">Consumo Máquina (kW/h)</label>
+                <div className="flex items-center gap-2">
+                  <input 
+                    type="number" 
+                    step="0.01"
+                    value={costConfig.kwhConsumption} 
+                    onChange={e => setCostConfig({...costConfig, kwhConsumption: Number(e.target.value)})}
+                    className="w-full bg-white border rounded-md p-2 font-mono text-lg"
+                  />
+                  <span className="text-sm font-bold text-emerald-600">kW</span>
+                </div>
+                <p className="text-[10px] text-emerald-400 mt-1 italic">Promedio: 0.12 - 0.15 kW</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Tabla de Escandallo de Productos */}
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+            <div className="flex justify-between items-center p-5 border-b bg-gray-50">
+               <div>
+                  <h3 className="font-bold text-slate-800">Rentabilidad por Producto</h3>
+                  <p className="text-xs text-slate-500">¿Cuánto te deja cada venta realmente?</p>
+               </div>
+               <div className="flex items-center gap-2 bg-indigo-100 px-3 py-1.5 rounded-full text-indigo-700 text-xs font-bold">
+                  <TrendingUp size={14}/> {products.length} Productos Analizados
+               </div>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-slate-100 text-slate-500 text-[10px] uppercase font-bold tracking-wider">
+                  <tr>
+                    <th className="px-4 py-3 text-left">Producto</th>
+                    <th className="px-4 py-3 text-center">Peso / Tiempo</th>
+                    <th className="px-4 py-3 text-right">Costo Fab.</th>
+                    <th className="px-4 py-3 text-right">Precio Venta</th>
+                    <th className="px-4 py-3 text-right">Ganancia</th>
+                    <th className="px-4 py-3 text-center">Margen</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {products.map(p => {
+                    // CÁLCULO DE COSTOS
+                    
+                    // 1. Costo Filamento / Plástico
+                    let materialCost = 0;
+                    if (p.colorPercentage && Array.isArray(p.colorPercentage)) {
+                        p.colorPercentage.forEach(cp => {
+                            const mat = materials.find(m => m.name.toLowerCase() === cp.color.toLowerCase());
+                            const pricePerGram = mat && mat.last_cost ? (mat.unit === 'kg' || mat.unit === 'rollos' ? mat.last_cost / 1000 : mat.last_cost) : 0;
+                            
+                            let grams = 0;
+                            if (cp.grams) grams = cp.grams;
+                            else if (cp.percentage && p.weight) grams = (p.weight * cp.percentage) / 100;
+                            
+                            materialCost += grams * pricePerGram;
+                        });
+                    }
+
+                    // 2. Costo Insumos Fijos
+                    let fixedInputsCost = 0;
+                    if (p.consumables && Array.isArray(p.consumables)) {
+                        p.consumables.forEach(c => {
+                            const mat = materials.find(m => m.name.toLowerCase() === c.material.toLowerCase());
+                            if (mat && mat.last_cost) {
+                                fixedInputsCost += mat.last_cost * c.quantity;
+                            }
+                        });
+                    }
+
+                    // 3. Costo Operativo (Luz + Amortización)
+                    const time = p.printingTime || 0;
+                    const electricityCost = time * costConfig.kwhConsumption * costConfig.kwhPrice;
+                    const wearCost = time * costConfig.machineHourCost;
+
+                    const totalCost = materialCost + fixedInputsCost + electricityCost + wearCost;
+                    const profit = p.price - totalCost;
+                    const margin = p.price > 0 ? (profit / p.price) * 100 : 0;
+
+                    return (
+                      <tr key={p.id} className="hover:bg-slate-50 transition-colors">
+                        <td className="px-4 py-4">
+                          <div className="flex items-center gap-3">
+                            <SmartImage src={p.images?.[0]?.url || p.image} alt={p.name} className="w-10 h-10 object-cover rounded shadow-sm" />
+                            <div>
+                                <p className="font-bold text-slate-800">{p.name}</p>
+                                <p className="text-[10px] text-slate-400 uppercase font-medium">{p.category}</p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-4 py-4 text-center">
+                          <div className="flex flex-col items-center">
+                              <span className="text-xs font-bold text-slate-600 bg-slate-100 px-2 rounded">{p.weight || 0}g</span>
+                              <span className="text-[10px] text-indigo-500 font-bold mt-1 flex items-center gap-1">
+                                <Clock size={10}/> {p.printingTime || 0} hs
+                              </span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-4 text-right">
+                          <div className="flex flex-col items-end">
+                            <span className="font-mono font-bold text-slate-700">${totalCost.toLocaleString('es-AR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</span>
+                            <div className="flex gap-1 text-[8px] text-slate-400 uppercase font-bold">
+                                {materialCost > 0 && <span title="Mat." className="bg-rose-50 px-1 rounded">M</span>}
+                                {fixedInputsCost > 0 && <span title="Ins." className="bg-blue-50 px-1 rounded">I</span>}
+                                {time > 0 && <span title="Op." className="bg-amber-50 px-1 rounded">O</span>}
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-4 py-4 text-right">
+                          <div className="inline-flex items-center gap-1 bg-white border border-gray-200 px-2 py-1 rounded font-bold text-slate-800 shadow-sm">
+                            <span className="text-slate-400 text-[10px]">$</span>
+                            {p.price.toLocaleString('es-AR')}
+                            <button onClick={() => onEditProduct(p)} className="p-1 hover:text-indigo-600">
+                                <Edit2 size={12}/>
+                            </button>
+                          </div>
+                        </td>
+                        <td className="px-4 py-4 text-right">
+                          <span className={`font-bold ${profit > 0 ? 'text-emerald-600' : 'text-red-500'}`}>
+                            ${profit.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                          </span>
+                        </td>
+                        <td className="px-4 py-4 text-center">
+                          <div className="flex flex-col items-center">
+                            <div className="w-16 bg-gray-100 h-1.5 rounded-full overflow-hidden mb-1">
+                                <div 
+                                    className={`h-full rounded-full transition-all duration-1000 ${margin > 60 ? 'bg-emerald-500' : margin > 30 ? 'bg-amber-400' : 'bg-red-500'}`}
+                                    style={{ width: `${Math.min(100, Math.max(0, margin))}%` }}
+                                />
+                            </div>
+                            <span className={`text-[10px] font-bold ${margin > 60 ? 'text-emerald-600' : margin > 30 ? 'text-amber-500' : 'text-red-600'}`}>
+                                {margin.toFixed(0)}%
+                            </span>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+            {products.length === 0 && (
+                <div className="p-12 text-center text-slate-400 italic">
+                    No hay productos cargados para analizar.
+                </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

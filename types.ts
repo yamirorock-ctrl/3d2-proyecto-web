@@ -78,6 +78,7 @@ export interface Product {
     percentage?: number; // 0-100 (Opcional si se usa grams)
     grams?: number; // Gramos exactos (Opcional si se usa percentage)
   }[];
+  printingTime?: number; // Horas de impresión
 }
 
 export interface CartItem extends Product {

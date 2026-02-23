@@ -770,7 +770,7 @@ const AdminPage: React.FC<Props> = ({ products, onAdd, onEdit, onDelete }) => {
 
       {/* Finances Tab */}
       {activeTab === 'finances' && (
-        <FinancialDashboard orders={salesOrders} />
+        <FinancialDashboard orders={salesOrders} products={products} onEditProduct={onEdit} />
       )}
 
 
