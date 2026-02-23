@@ -538,13 +538,19 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
                   onChange={(e)=>setNewImgUrl(e.target.value)}
                   className="block w-full rounded-md border border-gray-300 px-3 py-2"
                 />
-                <input
-                  type="text"
-                  placeholder="Color (opcional)"
+                <select 
+                  className="block w-40 rounded-md border border-gray-300 px-3 py-2 bg-white text-sm"
                   value={newImgColor}
                   onChange={(e)=>setNewImgColor(e.target.value)}
-                  className="block w-40 rounded-md border border-gray-300 px-3 py-2"
-                />
+                >
+                  <option value="">Color (opcional)</option>
+                  {availableMaterials
+                    .filter(m => m.category === 'Filamento' || m.category === 'Madera')
+                    .map(m => (
+                      <option key={m.id} value={m.name}>{m.name}</option>
+                    ))
+                  }
+                </select>
                 <button type="button" onClick={addImageByUrl} className="px-4 py-2 rounded-md bg-indigo-600 text-white text-sm whitespace-nowrap hover:bg-indigo-700">Agregar</button>
               </div>
               <div className="text-xs text-slate-400">O sube una imagen desde tu equipo (se guardará en Supabase):</div>
@@ -939,31 +945,28 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
                 <div>
                    <label className="block text-xs font-medium text-purple-800 mb-1">Colores Disponibles</label>
                    <div className="flex gap-2 mb-2">
-                      <input 
-                        type="text" 
-                        value={newColorInput}
-                        onChange={e => setNewColorInput(e.target.value)}
-                        className="flex-1 rounded-md border-purple-200 text-sm focus:border-purple-400 focus:ring-purple-400"
-                        placeholder="Ej: Rojo Oscuro"
-                        onKeyDown={e => {
-                            if (e.key === 'Enter') {
-                                e.preventDefault();
-                                if (newColorInput.trim()) {
-                                    setAvailColors(p => [...p, newColorInput.trim()]);
-                                    setNewColorInput('');
-                                }
-                            }
-                        }}
-                      />
+                       <select 
+                         className="flex-1 rounded-md border-purple-200 text-sm focus:border-purple-400 focus:ring-purple-400 bg-white"
+                         value={newColorInput}
+                         onChange={e => setNewColorInput(e.target.value)}
+                       >
+                         <option value="">Seleccionar del inventario...</option>
+                         {availableMaterials
+                            .filter(m => m.category === 'Filamento' || m.category === 'Madera')
+                            .map(m => (
+                               <option key={m.id} value={m.name}>{m.name}</option>
+                            ))
+                         }
+                       </select>
                       <button 
-                        type="button"
-                        onClick={() => {
-                            if (newColorInput.trim()) {
-                                setAvailColors(p => [...p, newColorInput.trim()]);
-                                setNewColorInput('');
-                            }
-                        }}
-                        className="bg-purple-600 text-white px-3 text-sm rounded-md"
+                         type="button"
+                         onClick={() => {
+                             if (newColorInput && !availColors.includes(newColorInput)) {
+                                 setAvailColors(p => [...p, newColorInput]);
+                                 setNewColorInput('');
+                             }
+                         }}
+                         className="bg-purple-600 text-white px-3 text-sm rounded-md"
                       >
                         +
                       </button>

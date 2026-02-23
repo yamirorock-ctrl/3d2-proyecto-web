@@ -452,43 +452,43 @@ async function deductRawMaterials(items: OrderItem[]) {
     }
 
     // --- B. FILAMENTO (Color Dinámico) ---
-    // Requiere que el producto tenga peso definido y configuración de colores
-    if (productDef.weight && productDef.weight > 0 && productDef.colorPercentage && Array.isArray(productDef.colorPercentage)) {
-        const totalWeightGrams = productDef.weight * qty;
-
+    // Requiere configuración de colores/materiales
+    if (productDef.colorPercentage && Array.isArray(productDef.colorPercentage)) {
         productDef.colorPercentage.forEach((cp: any) => {
-            const pct = cp.percentage || 100;
             const originalColorName = cp.color;
             let targetMaterialName = originalColorName;
-
+            
             // Lógica de Sustitución por Variante Elegida
-            // Si este componente representa una parte significativa (>40%) y el usuario eligió un color,
-            // intentamos usar el color elegido por el usuario en lugar del definido en la receta.
-            if (pct > 40 && item.selected_options?.color) {
-                const selectedColor = item.selected_options.color;
-                // Verificamos si existe un material con el nombre del color seleccionado
-                const variantMaterial = findMaterialIdByName(selectedColor, 'Filamento');
-                if (variantMaterial) {
-                    console.log(`[Stock] Sustituyendo ingrediente ${originalColorName} por variante elegida: ${variantMaterial.name}`);
-                    targetMaterialName = variantMaterial.name;
-                }
+            // Si el usuario eligió un color, y este componente de la receta es predominante (>40%)
+            // o es la base de filamento, intentamos usar el color elegido.
+            const isPredominant = (cp.percentage || 0) > 40 || (productDef.colorPercentage.length === 1);
+            if (isPredominant && item.selected_options?.color) {
+                targetMaterialName = item.selected_options.color;
+                console.log(`[Stock] Usando color seleccionado por cliente: ${targetMaterialName}`);
             }
 
             const mat = findMaterialIdByName(targetMaterialName, 'Filamento');
             if (mat) {
-                // Conversión de Unidades
-                // Si el stock está en 'kg', convertimos gramos a kg.
-                // Si está en 'g' o 'gramos', usamos directo.
-                let amountToDeduct = (totalWeightGrams * (pct / 100)); // en gramos
+                // Cálculo de cantidad a descontar
+                let amountToDeduct = 0;
                 
-                if (mat.unit && (mat.unit.toLowerCase().includes('kg') || mat.unit.toLowerCase().includes('kilo'))) {
-                    amountToDeduct = amountToDeduct / 1000;
-                } else if (mat.unit && mat.unit.toLowerCase().includes('rollo')) {
-                     // Asumimos rollo de 1kg por defecto si no tenemos más info
-                     amountToDeduct = amountToDeduct / 1000;
+                if (cp.grams) {
+                    // Si tenemos los gramos exactos, los usamos (convertidos a la unidad del inventario)
+                    amountToDeduct = cp.grams * qty;
+                } else if (cp.percentage && productDef.weight > 0) {
+                    // Si no, usamos el porcentaje sobre el peso total
+                    amountToDeduct = (productDef.weight * qty) * (cp.percentage / 100);
                 }
 
-                addDeduction(mat.id, amountToDeduct);
+                if (amountToDeduct > 0) {
+                    // Conversión de Unidades
+                    if (mat.unit && (mat.unit.toLowerCase().includes('kg') || mat.unit.toLowerCase().includes('kilo'))) {
+                        amountToDeduct = amountToDeduct / 1000;
+                    } else if (mat.unit && mat.unit.toLowerCase().includes('rollo')) {
+                        amountToDeduct = amountToDeduct / 1000;
+                    }
+                    addDeduction(mat.id, amountToDeduct);
+                }
             } else {
                  console.warn(`[Stock] Insumo de filamento no encontrado: ${targetMaterialName}`);
             }
