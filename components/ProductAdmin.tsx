@@ -80,6 +80,8 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
   const [itemQuantity, setItemQuantity] = useState(1);
   const [newColorDistName, setNewColorDistName] = useState('');
   const [newColorDistPercent, setNewColorDistPercent] = useState(10);
+  const [newColorDistGrams, setNewColorDistGrams] = useState(0);
+  const [colorDistMode, setColorDistMode] = useState<'percent' | 'grams'>('percent');
 
   // Category mode + localCats sync
   useEffect(() => {
@@ -1096,8 +1098,15 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
                 <div className="space-y-2 mb-3">
                   {(form.colorPercentage || []).map((c, idx) => (
                      <div key={idx} className="flex justify-between items-center bg-white p-2 border rounded shadow-xs">
-                        <span className="text-sm font-medium text-slate-800">{c.color} ({c.percentage}%)</span>
-                        <span className="text-xs text-slate-400">~{form.weight > 0 ? ((form.weight * c.percentage) / 100).toFixed(1) : '?'}g</span>
+                        <div className="flex flex-col">
+                           <span className="text-sm font-medium text-slate-800">{c.color}</span>
+                           <span className="text-[10px] text-slate-500">
+                             {c.grams ? `${c.grams}g (Exacto)` : `${c.percentage}% (Relativo)`}
+                           </span>
+                        </div>
+                        <span className="text-xs text-slate-400">
+                          {c.grams ? `${c.grams}g` : (form.weight > 0 ? `~${((form.weight * (c.percentage||0)) / 100).toFixed(1)}g` : '? g')}
+                        </span>
                         <button type="button" onClick={() => setForm(prev => ({...prev, colorPercentage: prev.colorPercentage?.filter((_,i)=>i!==idx)}))} className="text-red-500 hover:text-red-700 text-xs">Eliminar</button>
                      </div>
                   ))}
@@ -1115,20 +1124,40 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
                          {availableMaterials
                             .filter(m => m.category === 'Filamento' || m.category === 'Madera')
                             .map(m => (
-                               <option key={m.id} value={m.name}>{m.name} (Stock: {m.quantity} {m.unit})</option>
+                               <option key={m.id} value={m.name}>{m.name}</option>
                             ))
                          }
                       </select>
                    </div>
-                   <div className="w-20">
-                     <label className="text-xs text-slate-500">% Peso</label>
-                     <input type="number" min="1" max="100" className="w-full text-sm border rounded px-2 py-1.5" value={newColorDistPercent} onChange={e => setNewColorDistPercent(Number(e.target.value))} />
+                   <div className="w-24">
+                      <div className="flex justify-between items-center mb-1">
+                        <label className="text-xs text-slate-500">{colorDistMode === 'percent' ? '% Peso' : 'Gramos'}</label>
+                        <button 
+                          type="button" 
+                          onClick={() => setColorDistMode(prev => prev === 'percent' ? 'grams' : 'percent')}
+                          className="text-[9px] bg-slate-200 px-1 rounded hover:bg-slate-300 font-bold text-slate-600"
+                        >
+                          {colorDistMode === 'percent' ? 'USAR G' : 'USAR %'}
+                        </button>
+                      </div>
+                      {colorDistMode === 'percent' ? (
+                        <input type="number" min="1" max="100" className="w-full text-sm border rounded px-2 py-1.5" value={newColorDistPercent} onChange={e => setNewColorDistPercent(Number(e.target.value))} />
+                      ) : (
+                        <input type="number" min="0" step="0.1" className="w-full text-sm border rounded px-2 py-1.5" value={newColorDistGrams} onChange={e => setNewColorDistGrams(Number(e.target.value))} />
+                      )}
                    </div>
                    <button type="button" onClick={() => {
                         if (!newColorDistName) return;
-                        setForm(prev => ({...prev, colorPercentage: [...(prev.colorPercentage||[]), {color: newColorDistName, percentage: newColorDistPercent}]}));
+                        const newItem: any = { color: newColorDistName };
+                        if (colorDistMode === 'percent') {
+                          newItem.percentage = newColorDistPercent;
+                        } else {
+                          newItem.grams = newColorDistGrams;
+                        }
+                        setForm(prev => ({...prev, colorPercentage: [...(prev.colorPercentage||[]), newItem]}));
                         setNewColorDistName('');
                         setNewColorDistPercent(10);
+                        setNewColorDistGrams(0);
                    }} className="px-3 py-1.5 bg-rose-200 hover:bg-rose-300 text-rose-800 text-sm rounded transition-colors">Agregar</button>
                 </div>
              </div>

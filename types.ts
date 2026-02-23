@@ -75,7 +75,8 @@ export interface Product {
   // Distribución de Color (Estimación de Filamento)
   colorPercentage?: {
     color: string; // 'Blanco', 'Rojo', etc.
-    percentage: number; // 0-100
+    percentage?: number; // 0-100 (Opcional si se usa grams)
+    grams?: number; // Gramos exactos (Opcional si se usa percentage)
   }[];
 }
 
