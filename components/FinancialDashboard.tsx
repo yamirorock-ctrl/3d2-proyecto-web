@@ -33,6 +33,13 @@ const EXPENSE_CATEGORIES = {
   'Otros': ['Varios']
 };
 
+// Icono Helper
+const MinusCircleIcon = ({ className }: { className?: string }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <circle cx="12" cy="12" r="10"/><path d="M8 12h8"/>
+  </svg>
+);
+
 const FinancialDashboard: React.FC<Props> = ({ orders, products, onEditProduct }) => {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [materials, setMaterials] = useState<RawMaterial[]>([]);
@@ -51,6 +58,7 @@ const FinancialDashboard: React.FC<Props> = ({ orders, products, onEditProduct }
     kwhPrice: 175,
     machineHourCost: 200,
     kwhConsumption: 0.12,
+    genericFilamentPrice: 21000,
   });
   
   const [addToInventory, setAddToInventory] = useState(false);
@@ -835,6 +843,20 @@ const FinancialDashboard: React.FC<Props> = ({ orders, products, onEditProduct }
                 </div>
                 <p className="text-[10px] text-emerald-400 mt-1 italic">Promedio: 0.12 - 0.15 kW</p>
               </div>
+
+              <div className="p-4 bg-orange-50 rounded-lg border border-orange-100">
+                <label className="block text-xs font-bold text-orange-800 uppercase mb-2">Costo PETG/PLA Promedio (kg)</label>
+                <div className="flex items-center gap-2">
+                  <span className="text-lg font-bold text-orange-600">$</span>
+                  <input 
+                    type="number" 
+                    value={costConfig.genericFilamentPrice} 
+                    onChange={e => setCostConfig({...costConfig, genericFilamentPrice: Number(e.target.value)})}
+                    className="w-full bg-white border rounded-md p-2 font-mono text-lg"
+                  />
+                </div>
+                <p className="text-[10px] text-orange-400 mt-1 italic">Válido si no hay precio o usás cualquier marca</p>
+              </div>
             </div>
           </div>
 
@@ -888,6 +910,26 @@ const FinancialDashboard: React.FC<Props> = ({ orders, products, onEditProduct }
                                     pricePerGram = mat.last_cost / 1000;
                                 } else {
                                     pricePerGram = mat.last_cost;
+                                }
+                            }
+
+                            // FALLBACK: Si no hay precio para este material específico, buscamos uno del mismo tipo o usamos el genérico
+                            if (pricePerGram === 0) {
+                                // Buscamos cualquier material que contenga el tipo (PETG, PLA) y tenga precio
+                                const matType = cp.color.toUpperCase().includes('PETG') ? 'PETG' : cp.color.toUpperCase().includes('PLA') ? 'PLA' : null;
+                                if (matType) {
+                                    const similarMat = materials.find(m => m.name.toUpperCase().includes(matType) && m.last_cost);
+                                    if (similarMat && similarMat.last_cost) {
+                                        const unit = similarMat.unit?.toLowerCase() || '';
+                                        pricePerGram = (['kg', 'rollos', 'unid'].some(u => unit.includes(u)) && similarMat.last_cost > 1000) 
+                                            ? similarMat.last_cost / 1000 
+                                            : similarMat.last_cost;
+                                    }
+                                }
+                                
+                                // Si sigue siendo 0, usamos el costo genérico configurado arriba
+                                if (pricePerGram === 0) {
+                                    pricePerGram = costConfig.genericFilamentPrice / 1000;
                                 }
                             }
                             
@@ -1000,12 +1042,5 @@ const FinancialDashboard: React.FC<Props> = ({ orders, products, onEditProduct }
     </div>
   );
 };
-
-// Icono Helper
-const MinusCircleIcon = ({ className }: { className?: string }) => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-    <circle cx="12" cy="12" r="10"/><path d="M8 12h8"/>
-  </svg>
-);
 
 export default FinancialDashboard;
