@@ -139,10 +139,22 @@ const FinancialDashboard: React.FC<Props> = ({ orders, products, onEditProduct }
   const financials = useMemo(() => {
     let salesTotal = 0; // Lo facturado total
     let debtTotal = 0;  // Lo que falta cobrar
+    let totalHours = 0; // Total de horas máquina del mes
     
     monthlyOrders.forEach(o => {
         salesTotal += (o.total || 0);
         debtTotal += getDebt(o.notes);
+
+        // Calcular horas máquina consumidas por esta orden
+        if (o.items && Array.isArray(o.items)) {
+          o.items.forEach(item => {
+            // Buscamos el producto por ID (numeric o string)
+            const prod = products.find(p => p.id.toString() === item.product_id?.toString());
+            if (prod && prod.printingTime) {
+                totalHours += prod.printingTime * (item.quantity || 1);
+            }
+          });
+        }
     });
 
     const income = salesTotal - debtTotal; // Ingreso Real (Caja)
@@ -150,8 +162,8 @@ const FinancialDashboard: React.FC<Props> = ({ orders, products, onEditProduct }
     const profit = income - outcome;
     const margin = income > 0 ? ((profit / income) * 100) : 0;
 
-    return { salesTotal, debtTotal, income, outcome, profit, margin };
-  }, [monthlyOrders, monthlyExpenses]);
+    return { salesTotal, debtTotal, income, outcome, profit, margin, totalHours };
+  }, [monthlyOrders, monthlyExpenses, products]);
 
   // Handlers Gastos
   const handleAddExpense = async () => {
@@ -394,7 +406,7 @@ const FinancialDashboard: React.FC<Props> = ({ orders, products, onEditProduct }
       {activeView === 'manager' && (
       <>
       {/* 2. Tarjetas de Finanzas (KPIs) */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="p-6 rounded-xl bg-linear-to-br from-emerald-500 to-emerald-600 text-white shadow-lg relative overflow-hidden">
           <div className="absolute top-0 right-0 p-4 opacity-20"><TrendingUp size={48} /></div>
           <p className="text-emerald-100 text-sm font-medium mb-1">Ingresos (Caja Real)</p>
@@ -418,6 +430,13 @@ const FinancialDashboard: React.FC<Props> = ({ orders, products, onEditProduct }
           <p className="text-indigo-100 text-sm font-medium mb-1">Ganancia Neta</p>
           <h3 className="text-3xl font-bold">${financials.profit.toLocaleString('es-AR')}</h3>
           <span className="text-xs bg-white/20 px-2 py-0.5 rounded mt-2 inline-block">Margen: {financials.margin.toFixed(1)}%</span>
+        </div>
+
+        <div className="p-6 rounded-xl bg-linear-to-br from-indigo-700 to-purple-800 text-white shadow-lg relative overflow-hidden">
+          <div className="absolute top-0 right-0 p-4 opacity-20"><Clock size={48} /></div>
+          <p className="text-indigo-100 text-sm font-medium mb-1">Carga de Trabajo</p>
+          <h3 className="text-3xl font-bold">{Math.round(financials.totalHours)} <span className="text-lg font-normal">hs</span></h3>
+          <span className="text-xs bg-black/20 px-2 py-0.5 rounded mt-2 inline-block">Producidas este mes</span>
         </div>
       </div>
 
