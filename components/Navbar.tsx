@@ -70,7 +70,7 @@ const Navbar: React.FC<NavbarProps> = ({ cartCount, onOpenCart, onGoHome, onOpen
                   <img 
                     src="/LOGO.jpg" 
                     alt="3D2 Logo" 
-                    className="h-full w-full object-contain p-1"
+                    className="w-[140%] h-[140%] object-contain transition-transform duration-500 group-hover:scale-110"
                   />
                </div>
             </div>

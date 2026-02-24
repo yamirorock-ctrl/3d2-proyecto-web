@@ -65,7 +65,7 @@ const Home: React.FC = () => {
           <div className="absolute right-8 top-1/2 -translate-y-1/2 z-10 hidden lg:block">
             <div className="relative w-72 h-72 animate-float">
                <div className="absolute -inset-4 border border-cyan-500/20 rounded-full animate-pulse-cyan"></div>
-               <div className="w-full h-full rounded-3xl bg-white shadow-[0_0_40px_rgba(0,243,255,0.2)] flex items-center justify-center p-8 group overflow-hidden">
+               <div className="w-full h-full rounded-3xl bg-white shadow-[0_0_40px_rgba(0,243,255,0.2)] flex items-center justify-center p-4 group overflow-hidden">
                   <div className="absolute inset-0 bg-linear-to-tr from-cyan-500/10 to-magenta-500/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
                   <img 
                     src="/LOGO.jpg" 
