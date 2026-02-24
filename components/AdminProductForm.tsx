@@ -17,13 +17,14 @@ const AdminProductForm: React.FC<AdminProductFormProps> = ({ initial = {} as Par
   const [height, setHeight] = useState(initial.dimensions?.height || 0);
   const [length, setLength] = useState(initial.dimensions?.length || 0);
   const [weight, setWeight] = useState(initial.weight || 0);
+  const [printingTime, setPrintingTime] = useState(initial.printingTime || 0);
 
   // Estados para Recetas y Colores
   const [consumables, setConsumables] = useState<{material: string, quantity: number}[]>(initial.consumables || []);
   const [itemMaterial, setItemMaterial] = useState('');
   const [itemQuantity, setItemQuantity] = useState(1);
 
-  const [colors, setColors] = useState<{color: string, percentage: number}[]>(initial.colorPercentage || []);
+  const [colors, setColors] = useState<{color: string, percentage?: number, grams?: number}[]>(initial.colorPercentage || []);
   const [newColorName, setNewColorName] = useState('');
   const [newColorPercent, setNewColorPercent] = useState(10);
 
@@ -79,6 +80,7 @@ const AdminProductForm: React.FC<AdminProductFormProps> = ({ initial = {} as Par
       technology,
       dimensions: { width, height, length },
       weight: weight > 0 ? weight : undefined,
+      printingTime: printingTime > 0 ? printingTime : undefined,
       consumables,
       colorPercentage: colors,
     } as Product;
@@ -136,9 +138,15 @@ const AdminProductForm: React.FC<AdminProductFormProps> = ({ initial = {} as Par
         </div>
       </div>
 
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">Peso (g)</label>
-        <input type="number" min={0} className="w-full border rounded px-3 py-2" value={weight} onChange={e=>setWeight(Number(e.target.value))} placeholder="Opcional" />
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Peso (g)</label>
+          <input type="number" min={0} className="w-full border rounded px-3 py-2" value={weight} onChange={e=>setWeight(Number(e.target.value))} placeholder="Opcional" />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Tiempo Impresión (hs)</label>
+          <input type="number" step="0.1" min={0} className="w-full border rounded px-3 py-2" value={printingTime} onChange={e=>setPrintingTime(Number(e.target.value))} placeholder="Opcional" />
+        </div>
       </div>
 
       {/* SECCIÓN DE CONSUMIBLES (RECETA) */}
