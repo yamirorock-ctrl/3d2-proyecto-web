@@ -871,11 +871,26 @@ const FinancialDashboard: React.FC<Props> = ({ orders, products, onEditProduct }
                     if (p.colorPercentage && Array.isArray(p.colorPercentage)) {
                         p.colorPercentage.forEach(cp => {
                             const mat = materials.find(m => m.name.toLowerCase() === cp.color.toLowerCase());
-                            const pricePerGram = mat && mat.last_cost ? (mat.unit === 'kg' || mat.unit === 'rollos' ? mat.last_cost / 1000 : mat.last_cost) : 0;
+                            
+                            // Lógica de precio por gramo más robusta
+                            let pricePerGram = 0;
+                            if (mat && mat.last_cost) {
+                                const unit = mat.unit?.toLowerCase() || '';
+                                if (['kg', 'kilos', 'kilogramos', 'rollos', 'bobina', 'bobinas'].some(u => unit.includes(u))) {
+                                    pricePerGram = mat.last_cost / 1000;
+                                } else {
+                                    pricePerGram = mat.last_cost;
+                                }
+                            }
                             
                             let grams = 0;
-                            if (cp.grams) grams = cp.grams;
-                            else if (cp.percentage && p.weight) grams = (p.weight * cp.percentage) / 100;
+                            if (cp.grams) {
+                                grams = cp.grams;
+                            } else if (cp.percentage) {
+                                // Priorizamos netWeight si existe para el cálculo de filamento
+                                const baseWeight = p.netWeight || p.weight || 0;
+                                grams = (baseWeight * cp.percentage) / 100;
+                            }
                             
                             materialCost += grams * pricePerGram;
                         });

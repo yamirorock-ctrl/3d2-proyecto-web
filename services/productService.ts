@@ -34,6 +34,7 @@ export async function getAllProducts(): Promise<Product[]> {
     customizationOptions: p.customization_options,
     colorPercentage: p.color_percentage,
     printingTime: p.printing_time,
+    netWeight: p.net_weight,
     // Cleanup snake_case keys if desired, though usually harmless to keep
   }));
 
@@ -93,6 +94,7 @@ function sanitizeProductForUpsert(product: Partial<Product>): Partial<Product> {
   mapAndDelete('customizationOptions', 'customization_options');
   mapAndDelete('colorPercentage', 'color_percentage');
   mapAndDelete('printingTime', 'printing_time');
+  mapAndDelete('netWeight', 'net_weight');
   
   // Handle saleType if present (deprecated but might be passed)
   mapAndDelete('saleType', 'sale_type');

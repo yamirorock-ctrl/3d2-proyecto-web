@@ -21,7 +21,8 @@ export interface Product {
     height: number; // cm
     length: number; // cm
   };
-  weight?: number; // gramos
+  weight?: number; // gramos (Para envío/ML)
+  netWeight?: number; // gramos (Neto/Materia Prima)
   
   // MercadoLibre / Identificación
   brand?: string;
