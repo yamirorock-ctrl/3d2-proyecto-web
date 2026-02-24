@@ -64,17 +64,17 @@ const Home: React.FC = () => {
           
           {/* Animated 3D Logo Chip - Refined for Gaming */}
           <div className="absolute right-8 top-1/2 -translate-y-1/2 z-10 hidden lg:block">
-            <div className="relative w-72 h-72 animate-float">
+            <div className="relative w-96 h-96 animate-float">
                {/* Cyber Frame */}
                <div className="absolute -inset-4 border border-cyan-500/20 rounded-full animate-ping [animation-duration:3s]"></div>
                <div className="absolute -inset-8 border border-magenta-500/10 rounded-full animate-ping [animation-duration:5s]"></div>
                
-               <div className="w-full h-full rounded-2xl bg-slate-900/80 backdrop-blur-xl border border-white/10 shadow-[0_0_40px_rgba(0,243,255,0.2)] flex items-center justify-center p-8 group overflow-hidden">
+               <div className="w-full h-full rounded-2xl bg-white shadow-[0_0_60px_rgba(0,243,255,0.3)] flex items-center justify-center p-6 group overflow-hidden">
                   <div className="absolute inset-0 bg-linear-to-tr from-cyan-500/10 to-magenta-500/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
                   <img 
                     src="/LOGO.jpg" 
                     alt="3D² Logo" 
-                    className="w-full h-full object-contain drop-shadow-[0_0_15px_rgba(255,255,255,0.5)] transition-transform duration-500 group-hover:scale-110"
+                    className="w-[120%] h-[120%] object-contain transition-transform duration-700 group-hover:scale-105"
                   />
                 </div>
             </div>
@@ -101,17 +101,17 @@ const Home: React.FC = () => {
                 onClick={() => setSelectedCategory('__all__')}
                 className="group relative px-8 py-4 bg-cyan-500 text-black rounded-xl font-black hover:bg-cyan-400 transition-all shadow-[0_0_20px_rgba(0,243,255,0.4)] overflow-hidden"
               >
-                <span className="relative z-10 flex items-center gap-2">
-                  EXPLORAR DATA <span className="text-xl">›</span>
+                <span className="relative z-10 flex items-center gap-2 uppercase tracking-widest text-[11px]">
+                  Explorar Catálogo <span className="text-xl">›</span>
                 </span>
                 <div className="absolute inset-0 bg-white/20 -translate-x-full group-hover:translate-x-full transition-transform duration-500"></div>
               </button>
               
               <button 
                 onClick={() => setSelectedCategory('Personalizados')}
-                className="px-8 py-4 bg-white/5 backdrop-blur-xl text-white border border-white/20 rounded-xl font-bold hover:bg-white/10 hover:border-magenta-500/50 transition-all shadow-xl"
+                className="px-8 py-4 bg-white/5 backdrop-blur-xl text-white border border-white/20 rounded-xl font-black hover:bg-white/10 hover:border-magenta-500/50 transition-all shadow-xl uppercase tracking-widest text-[11px]"
               >
-                ORDE ESPECIAL
+                ORDEN ESPECIAL
               </button>
             </div>
           </div>
@@ -135,7 +135,7 @@ const Home: React.FC = () => {
                   : 'bg-white/5 border-white/10 text-slate-400 hover:text-white hover:border-white/30'
                 }`}
               >
-                TOP TRENDING
+                DESTACADOS
               </button>
               
               <button 
@@ -146,7 +146,7 @@ const Home: React.FC = () => {
                   : 'bg-white/5 border-white/10 text-slate-400 hover:text-white hover:border-white/30'
                 }`}
               >
-                ALL DATA
+                TODO EL SISTEMA
               </button>
 
               {availableCategories.map((cat: string) => (

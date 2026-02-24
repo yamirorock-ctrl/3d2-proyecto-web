@@ -81,8 +81,8 @@ const Navbar: React.FC<NavbarProps> = ({ cartCount, onOpenCart, onGoHome, onOpen
             <div className="relative h-12 w-12 flex items-center justify-center shrink-0">
                <div className="absolute -inset-2 bg-linear-to-tr from-cyan-400 via-blue-500 to-magenta-500 rounded-full blur-md opacity-20 group-hover:opacity-60 transition-opacity duration-500"></div>
                <div className="absolute -inset-[2px] rounded-full bg-linear-to-r from-cyan-500 via-blue-600 to-magenta-600 animate-[spin_4s_linear_infinite] opacity-50 group-hover:opacity-100 transition-opacity"></div>
-               <div className="relative h-full w-full rounded-full bg-slate-900 z-10 flex items-center justify-center border border-white/10 overflow-hidden">
-                  <img src="/LOGO.jpg" alt="3D2 Logo" className="h-full w-full object-contain p-1.5 transition-transform duration-500 group-hover:scale-110" />
+               <div className="relative h-full w-full rounded-xl bg-white z-10 flex items-center justify-center border border-white/10 overflow-hidden">
+                  <img src="/LOGO.jpg" alt="3D2 Logo" className="h-full w-full object-contain p-1 transition-transform duration-500 group-hover:scale-110" />
                </div>
             </div>
             <div className="flex flex-col justify-center">
@@ -98,14 +98,14 @@ const Navbar: React.FC<NavbarProps> = ({ cartCount, onOpenCart, onGoHome, onOpen
           {/* Desktop Menu */}
           <div className="hidden md:flex items-center space-x-10 text-[11px] font-black uppercase tracking-[0.15em]">
             <button onClick={()=>{onGoHome(); onCategorySelect?.('Destacados');}} className="text-slate-400 hover:text-cyan-400 transition-all relative group/link">INICIO<span className="absolute -bottom-1 left-0 w-0 h-[2px] bg-cyan-500 transition-all group-hover/link:w-full"></span></button>
-            <button onClick={()=>{onGoHome(); onCategorySelect?.('3D');}} className="text-slate-400 hover:text-cyan-400 transition-all relative group/link">3D PRINT<span className="absolute -bottom-1 left-0 w-0 h-[2px] bg-cyan-500 transition-all group-hover/link:w-full"></span></button>
-            <button onClick={()=>{onGoHome(); onCategorySelect?.('Láser');}} className="text-slate-400 hover:text-cyan-400 transition-all relative group/link">LASER CUT<span className="absolute -bottom-1 left-0 w-0 h-[2px] bg-cyan-500 transition-all group-hover/link:w-full"></span></button>
-            <button onClick={()=>{onGoHome(); onCategorySelect?.('Personalizados');}} className="text-magenta-400 hover:text-magenta-300 transition-all relative group/link">CUSTOM<span className="absolute -bottom-1 left-0 w-0 h-[2px] bg-magenta-500 transition-all group-hover/link:w-full shadow-[0_0_10px_rgba(255,0,255,0.5)]"></span></button>
+            <button onClick={()=>{onGoHome(); onCategorySelect?.('3D');}} className="text-slate-400 hover:text-cyan-400 transition-all relative group/link">IMPRESIÓN 3D<span className="absolute -bottom-1 left-0 w-0 h-[2px] bg-cyan-500 transition-all group-hover/link:w-full"></span></button>
+            <button onClick={()=>{onGoHome(); onCategorySelect?.('Láser');}} className="text-slate-400 hover:text-cyan-400 transition-all relative group/link">CORTE LÁSER<span className="absolute -bottom-1 left-0 w-0 h-[2px] bg-cyan-500 transition-all group-hover/link:w-full"></span></button>
+            <button onClick={()=>{onGoHome(); onCategorySelect?.('Personalizados');}} className="text-magenta-400 hover:text-magenta-300 transition-all relative group/link">PERSONALIZADOS<span className="absolute -bottom-1 left-0 w-0 h-[2px] bg-magenta-500 transition-all group-hover/link:w-full shadow-[0_0_10px_rgba(255,0,255,0.5)]"></span></button>
             <button type="button" onClick={()=>setShowSearch(s=>!s)} className="p-2 text-slate-400 hover:text-cyan-400 transition-all" title="Búsqueda de Datos"><Search size={18} /></button>
             {displayUser && (
               <div className="flex items-center gap-4 border-l border-white/10 pl-6">
                 <span className="font-mono text-cyan-500/70 lowercase">{displayUser}</span>
-                <button onClick={() => { logout(); if(onLogoutUser) onLogoutUser(); }} className="text-slate-500 hover:text-red-400 transition-colors uppercase text-[9px]">X DISCONNECT</button>
+                <button onClick={() => { logout(); if(onLogoutUser) onLogoutUser(); }} className="text-slate-500 hover:text-red-400 transition-colors uppercase text-[9px]">X DESCONECTAR</button>
               </div>
             )}
           </div>
@@ -113,10 +113,10 @@ const Navbar: React.FC<NavbarProps> = ({ cartCount, onOpenCart, onGoHome, onOpen
           {/* Actions */}
           <div className="flex items-center gap-4">
             {onOpenAdmin && isAdmin && (
-              <button onClick={onOpenAdmin} className="hidden md:inline-flex items-center gap-2 px-4 py-2 bg-amber-500/10 text-amber-500 border border-amber-500/30 rounded-lg hover:bg-amber-500/20 transition-all text-[10px] font-black uppercase tracking-widest">CORE ACCESS</button>
+              <button onClick={onOpenAdmin} className="hidden md:inline-flex items-center gap-2 px-4 py-2 bg-amber-500/10 text-amber-500 border border-amber-500/30 rounded-lg hover:bg-amber-500/20 transition-all text-[10px] font-black uppercase tracking-widest">ADMIN</button>
             )}
             <button onClick={() => navigate('/order-tracking')} className="hidden md:inline-flex items-center gap-2 px-4 py-2 bg-white/5 text-slate-300 border border-white/10 rounded-lg hover:bg-white/10 transition-all text-[10px] font-black uppercase tracking-widest group">
-              <Package size={16} className="group-hover:text-cyan-400" /><span>STATUS</span>
+              <Package size={16} className="group-hover:text-cyan-400" /><span>MI PEDIDO</span>
             </button>
             <button onClick={onOpenCart} className="relative p-3 bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 rounded-xl hover:bg-cyan-500/20 hover:shadow-[0_0_15px_rgba(0,243,255,0.2)] transition-all group">
               <ShoppingCart size={22} strokeWidth={2.5} className="group-hover:scale-110 transition-transform" />

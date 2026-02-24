@@ -305,7 +305,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart }) => {
             <div className="absolute inset-0 bg-white/20 -translate-x-full group-hover/btn:translate-x-full transition-transform duration-500"></div>
             <Plus size={16} strokeWidth={3} className="relative z-10" />
             <span className="relative z-10">
-                {product.stock === 0 ? 'LOG OUT' : 'SISTEMA > ADD'}
+                {product.stock === 0 ? 'SIN STOCK' : 'AÑADIR'}
             </span>
           </button>
         </div>

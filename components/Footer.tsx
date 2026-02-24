@@ -98,17 +98,17 @@ const Footer: React.FC = () => {
                 </a>
             </div>
             <p className="mt-6 text-[10px] font-mono text-slate-600 uppercase tracking-widest">
-                ENVIOS A TODO EL PAÍS // SECURE_SHIPPING: ACTIVE
+                ENVIOS A TODO EL PAÍS // SISTEMA DE ENVÍO: ACTIVO
             </p>
           </div>
         </div>
 
         <div className="border-t border-white/5 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
           <p className="text-[10px] font-mono text-slate-500 uppercase tracking-widest">
-            © {new Date().getFullYear()} 3D2_LABS. ALL RIGHTS RESERVED.
+            © {new Date().getFullYear()} 3D2_LABS. TODOS LOS DERECHOS RESERVADOS.
           </p>
           <div className="text-[9px] font-mono text-cyan-500/40 uppercase tracking-widest">
-            v2.6.0 // PROTOCOL_BY: CREART
+            v2.6.0 // PROTOCOLO POR: CREART
           </div>
         </div>
       </div>
