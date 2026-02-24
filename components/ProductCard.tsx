@@ -28,7 +28,7 @@ const ImageCarousel: React.FC<{
   images: ProductImage[];
   productName: string;
   active: number;
-  setActive: React.Dispatch<React.SetStateAction<number>>;
+  setActive: (index: number) => void;
   onImageClick: () => void;
 }> = ({ images, productName, active, setActive, onImageClick }) => {
   const handleInteraction = (e: React.MouseEvent, action: () => void) => {
@@ -37,8 +37,8 @@ const ImageCarousel: React.FC<{
     action();
   };
 
-  const prev = () => setActive((a) => (a - 1 + images.length) % images.length);
-  const next = () => setActive((a) => (a + 1) % images.length);
+  const prev = () => setActive(active === 0 ? images.length - 1 : active - 1);
+  const next = () => setActive(active === images.length - 1 ? 0 : active + 1);
 
   return (
     <div 
@@ -149,12 +149,12 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart }) => {
 
   return (
     <>
-      <div className={`group glass-card rounded-2xl transition-all duration-500 overflow-hidden flex flex-col h-full border border-white/5 hover:border-cyan-500/50 ${
-          selectedSaleType === 'pack' ? 'shadow-[0_0_20px_rgba(99,102,241,0.15)]' :
-          selectedSaleType === 'mayorista' ? 'shadow-[0_0_20px_rgba(245,158,11,0.15)]' :
-          'hover:shadow-[0_0_30px_rgba(0,243,255,0.1)]'
+      <div className={`group bg-white rounded-2xl border transition-all duration-300 overflow-hidden flex flex-col h-full ${
+          selectedSaleType === 'pack' ? 'border-indigo-400 shadow-indigo-100 hover:shadow-indigo-200' :
+          selectedSaleType === 'mayorista' ? 'border-amber-400 shadow-amber-100 hover:shadow-amber-200' :
+          'border-gray-100 shadow-sm hover:shadow-xl'
       }`}>
-        <div className="relative overflow-hidden">
+        <div className="relative">
           <ImageCarousel 
               images={images} 
               productName={product.name} 
@@ -163,51 +163,48 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart }) => {
               onImageClick={() => setIsModalOpen(true)}
           />
           
-          {/* Scanline Overlay Effect */}
-          <div className="absolute inset-0 pointer-events-none bg-linear-to-b from-transparent via-white/5 to-transparent h-1 opacity-20 animate-pulse -top-full group-hover:top-full transition-all duration-[2s]"></div>
-
           {/* Badges de Tipo de Venta sobre la imagen */}
           {selectedSaleType === 'pack' && (
-             <div className="absolute top-12 left-3 bg-indigo-600/90 text-white px-3 py-1 rounded-lg font-black text-[10px] uppercase shadow-lg backdrop-blur-md pointer-events-none z-10 animate-fade-in border border-indigo-400/30">
+             <div className="absolute top-12 left-3 bg-indigo-600/90 text-white px-3 py-1 rounded-lg font-bold text-sm shadow-md backdrop-blur-sm pointer-events-none z-10 animate-fade-in">
                PACK x{unitsPerPack}
              </div>
           )}
           {selectedSaleType === 'mayorista' && (
-             <div className="absolute top-12 left-3 bg-amber-600/90 text-white px-3 py-1 rounded-lg font-black text-[10px] uppercase shadow-lg backdrop-blur-md pointer-events-none z-10 animate-fade-in border border-amber-400/30">
+             <div className="absolute top-12 left-3 bg-amber-600/90 text-white px-3 py-1 rounded-lg font-bold text-sm shadow-md backdrop-blur-sm pointer-events-none z-10 animate-fade-in">
                MAYORISTA x{wholesaleUnits}
              </div>
           )}
 
           <div className="absolute top-3 left-3">
-            <span className="px-3 py-1 bg-black/60 backdrop-blur-xl text-[10px] font-black uppercase tracking-widest rounded-md text-cyan-400 border border-cyan-500/30 shadow-[0_0_10px_rgba(0,243,255,0.2)]">
+            <span className="px-3 py-1 bg-white/90 backdrop-blur text-xs font-bold uppercase tracking-wider rounded-full text-slate-800 shadow-sm">
               {product.category}
             </span>
           </div>
           {product.featured && (
             <div className="absolute top-3 right-3">
-              <span className="px-2.5 py-1 bg-yellow-400 text-black text-[10px] font-black uppercase rounded-sm shadow-[0_0_10px_rgba(250,204,21,0.5)] flex items-center gap-1">
-                <Star size={10} fill="currentColor" />
-                LEGENDARY
+              <span className="px-2.5 py-1 bg-yellow-300/90 text-yellow-900 text-xs font-bold rounded-full shadow-sm flex items-center gap-1">
+                <Star size={12} className="text-yellow-900" />
+                Destacado
               </span>
             </div>
           )}
           {(product.customizationOptions?.models?.length || product.customizationOptions?.colors?.length) ? (
             <div className="absolute top-3 left-3 mt-8">
-               <span className="px-2.5 py-1 bg-magenta-500/20 backdrop-blur-md text-magenta-400 text-[9px] font-black uppercase tracking-widest rounded-sm shadow-sm border border-magenta-500/30">
-                  MODIFICABLE
+               <span className="px-2.5 py-1 bg-purple-100/90 backdrop-blur text-purple-700 text-[10px] font-bold uppercase tracking-wider rounded-lg shadow-sm border border-purple-200">
+                  Personalizable
                </span>
             </div>
           ) : null}
         </div>
 
         {images.length > 1 && (
-          <div className="px-4 pt-3 pb-1 flex gap-2 items-center overflow-x-auto no-scrollbar">
+          <div className="px-4 pt-2 pb-1 flex gap-2 items-center overflow-x-auto scrollbar-hide">
             {images.map((img, idx) => (
               <button
                 key={idx}
                 title={img.color || `Variante ${idx+1}`}
                 onClick={(e) => handleThumbnailClick(e, idx)}
-                className={`h-10 w-10 shrink-0 rounded-lg border transition-all ${idx===active ? 'border-cyan-500 shadow-[0_0_10px_rgba(0,243,255,0.3)] bg-cyan-500/10' : 'border-white/10 hover:border-white/30 bg-white/5'} overflow-hidden p-0.5 flex items-center justify-center`}
+                className={`h-8 w-8 shrink-0 rounded-lg border ${idx===active ? 'border-indigo-500' : 'border-gray-200'} overflow-hidden bg-white p-0.5 flex items-center justify-center`}
               >
                 <SmartImage src={img.url} storageKey={img.storageKey} alt={img.color || `var-${idx+1}`} className="max-h-full max-w-full object-contain" showError />
               </button>
@@ -216,9 +213,9 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart }) => {
         )}
         
         <div className={`p-5 flex flex-col grow ${images.length > 1 ? 'pt-3' : ''}`}>
-          <div className="flex justify-between items-start mb-3">
+          <div className="flex justify-between items-start mb-2">
             <h3 
-              className="text-base font-bold text-white leading-snug overflow-hidden text-ellipsis display-webkit-box webkit-line-clamp-2 webkit-box-orient-vertical hover:text-cyan-400 cursor-pointer transition-colors"
+              className="text-lg font-bold text-slate-900 overflow-hidden text-ellipsis display-webkit-box webkit-line-clamp-2 webkit-box-orient-vertical hover:text-indigo-600 cursor-pointer transition-colors"
               style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}
               onClick={() => setIsModalOpen(true)}
               title={product.name}
@@ -228,44 +225,41 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart }) => {
             >
               {product.name}
             </h3>
-            <div className="flex flex-col items-end shrink-0 ml-3">
-                <span className="text-xl font-black text-white glow-cyan">
-                  {selectedSaleType === 'unidad' && `$${product.price.toLocaleString()}`}
-                  {selectedSaleType === 'pack' && `$${packPrice.toLocaleString()}`}
-                  {selectedSaleType === 'mayorista' && `$${wholesalePrice.toLocaleString()}`}
-                </span>
-                <span className="text-[10px] text-slate-500 font-bold uppercase tracking-tighter">ARS / CRÉDITOS</span>
-            </div>
+            <span className="text-lg font-bold text-cyan-600 ml-2 shrink-0 glow-cyan transition-all">
+              {selectedSaleType === 'unidad' && `$${product.price}`}
+              {selectedSaleType === 'pack' && `$${packPrice}`}
+              {selectedSaleType === 'mayorista' && `$${wholesalePrice}`}
+            </span>
           </div>
           
-          <div className="mb-4">
+          <div className="mb-2">
             <StockIndicator stock={product.stock} />
           </div>
           
           {/* Info de tipo de venta y selector */}
-          <div className="mb-4">
+          <div className="mb-2">
             <div className="flex flex-wrap gap-2 items-center">
-              <span className={`inline-block px-2 py-1 text-[10px] font-black uppercase tracking-wider rounded border ${
-                  selectedSaleType === 'unidad' ? 'bg-white/5 text-slate-400 border-white/10' : 
-                  selectedSaleType === 'pack' ? 'bg-indigo-500/20 text-indigo-400 border-indigo-500/30' : 
-                  'bg-amber-500/20 text-amber-400 border-amber-500/30'
+              <span className={`inline-block px-2 py-1 text-xs font-medium rounded ${
+                  selectedSaleType === 'unidad' ? 'bg-slate-100 text-slate-700' : 
+                  selectedSaleType === 'pack' ? 'bg-indigo-100 text-indigo-700' : 
+                  'bg-amber-100 text-amber-800'
               }`}>
-                {selectedSaleType === 'unidad' && 'SOLO UNA'}
-                {selectedSaleType === 'pack' && `LOTE x${unitsPerPack}`}
-                {selectedSaleType === 'mayorista' && `WHOLESALE x${wholesaleUnits}`}
+                {selectedSaleType === 'unidad' && 'Unidad'}
+                {selectedSaleType === 'pack' && `Pack x${unitsPerPack}`}
+                {selectedSaleType === 'mayorista' && `Mayorista x${wholesaleUnits}`}
               </span>
               
               {availableSaleTypes.length > 1 && (
                 <select 
-                  className="text-[10px] font-bold uppercase tracking-widest border border-white/10 rounded px-2 py-1 bg-slate-900 text-slate-300 focus:ring-1 focus:ring-cyan-500 focus:border-cyan-500 outline-none cursor-pointer" 
+                  className="text-xs border border-gray-300 rounded px-2 py-1 bg-white focus:ring-2 focus:ring-indigo-500 outline-none" 
                   value={selectedSaleType} 
                   onChange={e => setSelectedSaleType(e.target.value as any)}
                 >
                   {availableSaleTypes.map(type => (
                     <option key={type} value={type}>
-                      {type === 'unidad' ? 'ESTÁNDAR' : 
-                       type === 'pack' ? `PACK` : 
-                       'MAYORISTA'}
+                      {type === 'unidad' ? 'Unidad' : 
+                       type === 'pack' ? `Pack` : 
+                       'Mayorista'}
                     </option>
                   ))}
                 </select>
@@ -273,40 +267,55 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart }) => {
             </div>
           </div>
 
-          <p className="text-sm text-slate-400 mb-6 line-clamp-3 grow cursor-pointer hover:text-slate-200 transition-colors leading-relaxed" onClick={() => setIsModalOpen(true)}>
+          {/* Mostrar detalles según tipo de venta seleccionado */}
+          {selectedSaleType === 'pack' && (
+            <div className="mb-2 text-xs text-slate-700 bg-indigo-50 p-2 rounded border border-indigo-100 animate-fade-in">
+               🔥 <b>Pack Ahorro:</b> Llevando {unitsPerPack} pagas <b>${packPrice}</b> (Cada uno queda en ${Math.round(packPrice/unitsPerPack)})
+            </div>
+          )}
+          {selectedSaleType === 'mayorista' && (
+            <div className="mb-2 text-xs text-amber-900 bg-amber-50 p-2 rounded border border-amber-100 animate-fade-in">
+              <div>📦 <b>Lote Mayorista (Crudo):</b> {wholesaleUnits} unidades.</div>
+              <div>Precio Lote: <b>${wholesalePrice}</b> (Unidad: ${Math.round(wholesalePrice/wholesaleUnits)})</div>
+              <div className="text-amber-700/80 mt-1 italic">Nota: Se entrega sin pintar/lijar.</div>
+              {wholesaleImage && <SmartImage src={wholesaleImage} className="mt-2 w-full h-24 object-cover rounded" />}
+            </div>
+          )}
+
+          <p className="text-sm text-slate-500 mb-4 line-clamp-3 grow cursor-pointer hover:text-slate-700" onClick={() => setIsModalOpen(true)}>
             {product.description}
           </p>
 
-          {/* Dimensiones y peso - Tech Style */}
+          {/* Dimensiones y peso */}
           {(product.dimensions || product.weight) && (
-            <div className="mb-5 flex items-center gap-4 text-[10px] font-mono text-slate-500 border-t border-white/5 pt-4">
+            <div className="mb-3 text-xs text-slate-600">
               {product.dimensions && (
-                <div className="flex items-center gap-1">
-                  <span className="text-cyan-500 opacity-50">SIZE:</span>
-                  <span>{product.dimensions.width}×{product.dimensions.height}×{product.dimensions.length}cm</span>
-                </div>
+                <>
+                  <span>Dim: {product.dimensions.width}×{product.dimensions.height}×{product.dimensions.length}cm</span>
+                  {product.technology === 'Láser' && product.dimensions.height && (
+                    <span className="ml-2">({Math.round(product.dimensions.height * 10)}mm)</span>
+                  )}
+                </>
               )}
+              {/* Ocultamos peso para no saturar, o lo dejamos si es necesario para el usuario */}
             </div>
           )}
           
           <button 
             onClick={handleAddToCart}
             disabled={product.stock === 0}
-            className={`w-full py-4 px-4 font-black uppercase tracking-[0.2em] text-xs rounded-xl flex items-center justify-center gap-2 transition-all duration-300 active:scale-95 group/btn overflow-hidden relative ${
+            className={`w-full py-3 px-4 font-black uppercase tracking-widest text-xs rounded-xl flex items-center justify-center gap-2 transition-all duration-200 ease-out active:scale-95 ${
               product.stock === 0
-                ? 'bg-white/5 text-slate-600 cursor-not-allowed grayscale'
+                ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                 : selectedSaleType === 'mayorista' 
-                   ? 'bg-amber-500 text-black hover:bg-amber-400 shadow-[0_0_20px_rgba(245,158,11,0.4)]'
+                   ? 'bg-amber-500 text-white hover:bg-amber-600 shadow-lg shadow-amber-200'
                    : selectedSaleType === 'pack'
-                      ? 'bg-indigo-600 text-white hover:bg-indigo-500 shadow-[0_0_20px_rgba(79,70,229,0.4)]'
-                      : 'bg-cyan-500 text-black hover:bg-cyan-400 shadow-[0_0_20px_rgba(0,243,255,0.4)]'
+                      ? 'bg-magenta-600 text-white hover:bg-magenta-700 shadow-lg shadow-magenta-200'
+                      : 'bg-cyan-500 text-black hover:bg-cyan-400 shadow-neon-cyan'
             }`}
           >
-            <div className="absolute inset-0 bg-white/20 -translate-x-full group-hover/btn:translate-x-full transition-transform duration-500"></div>
-            <Plus size={16} strokeWidth={3} className="relative z-10" />
-            <span className="relative z-10">
-                {product.stock === 0 ? 'SIN STOCK' : 'AÑADIR'}
-            </span>
+            <Plus size={18} />
+            {product.stock === 0 ? 'Sin Stock' : 'Añadir al Carrito'}
           </button>
         </div>
       </div>

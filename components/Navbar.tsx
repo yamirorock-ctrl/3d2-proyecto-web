@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Package, ShoppingCart, Menu, X } from 'lucide-react';
+import { Search, Package } from 'lucide-react';
+import { ShoppingCart, Menu, X } from 'lucide-react';
+import SmartImage from './SmartImage';
 import { useAuth } from '../context/AuthContext';
 
 interface NavbarProps {
@@ -12,16 +14,20 @@ interface NavbarProps {
   currentUser?: string | null;
   onLogoutUser?: () => void;
   onCategorySelect?: (category: string) => void;
-  onSearch?: (query: string) => void;
+  onSearch?: (query: string) => void; // búsqueda de productos
 }
 
-const Navbar: React.FC<NavbarProps> = ({ cartCount, onOpenCart, onGoHome, onOpenAdmin, onLogoutUser, onCategorySelect, onSearch }) => {
+const Navbar: React.FC<NavbarProps> = ({ cartCount, onOpenCart, onGoHome, onOpenAdmin, onRegister, onLogoutUser, onCategorySelect, onSearch }) => {
   const { user, isAdmin, logout } = useAuth();
-  const displayUser = user ? user.email : null;
+  // Use context user if available, otherwise fallback to prop or null.
+  // Actually, we should rely on context.
+  const displayUser = user ? user.email : null; // or null if we want to rely on props. But migrating to context is better.
+
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [showSearch, setShowSearch] = useState(false);
   const navigate = useNavigate();
+  // Leer el secreto desde env; fallback a 'modozen' si falta
   const ADMIN_SECRET = ((import.meta as any).env?.VITE_ADMIN_SECRET || 'modozen').trim();
 
   const issueAdminEntry = (secret: string) => {
@@ -35,29 +41,86 @@ const Navbar: React.FC<NavbarProps> = ({ cartCount, onOpenCart, onGoHome, onOpen
       sessionStorage.setItem('admin_entry_token', token);
       sessionStorage.setItem('admin_entry_ts', String(ts));
     } catch {}
+    // Forzamos la redirección real para evitar problemas de ruteo
     window.location.href = '/admin/login';
   };
+  // Logo local servido desde /public respetando la base de Vite
+  // Usar logo JPG absoluto desde /public
+  const logoUrl = `/LOGO.jpg`;
 
   return (
-    <nav className="sticky top-0 z-40 w-full transition-all duration-500">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-xl border-b border-white/5"></div>
-      
-      {/* Search Bar Secret Mode Animation */}
-      <div className={`absolute top-0 left-0 w-full h-full bg-cyan-500/10 flex items-center justify-center transition-all duration-500 z-50 ${showSearch ? 'opacity-100' : 'opacity-0 pointer-events-none -translate-y-full'}`}>
-          <div className="relative w-full max-w-xl mx-4">
-              <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-cyan-400" size={20} />
-              <input
+    <nav className="sticky top-0 z-40 w-full bg-white/95 backdrop-blur-md border-b border-gray-100 shadow-sm">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex justify-between items-center h-24">
+          {/* Logo Section */}
+          <div 
+            className="flex items-center cursor-pointer group gap-4" 
+            onClick={onGoHome}
+          >
+            {/* Logo Container with Neon Effect */}
+            <div className="relative h-12 w-12 flex items-center justify-center shrink-0">
+               {/* Static Glow Layer (Background Blur) */}
+               <div className="absolute -inset-2 bg-linear-to-tr from-cyan-400 via-indigo-500 to-purple-600 rounded-full blur-md opacity-40 group-hover:opacity-75 transition-opacity duration-500"></div>
+               
+               {/* Spinning Neon Border Layer */}
+               <div className="absolute -inset-[2px] rounded-full bg-linear-to-r from-cyan-400 via-blue-500 to-magenta-600 animate-[spin_3s_linear_infinite] shadow-neon-cyan"></div>
+               
+               {/* Inner Circle with Image */}
+               <div className="relative h-full w-full rounded-full bg-white z-10 flex items-center justify-center border-2 border-white overflow-hidden">
+                  <img 
+                    src="/LOGO.jpg" 
+                    alt="3D2 Logo" 
+                    className="h-full w-full object-contain p-1"
+                  />
+               </div>
+            </div>
+
+            <div className="flex flex-col justify-center">
+              <h1 className="text-2xl font-black tracking-wider text-slate-900 leading-none group-hover:glow-cyan transition-all">
+                3D2
+              </h1>
+              <span className="text-xs font-semibold text-cyan-500 tracking-widest uppercase">
+                Print & Laser
+              </span>
+            </div>
+          </div>
+
+          {/* Desktop Menu */}
+          <div className="hidden md:flex space-x-8 text-sm font-medium text-slate-600">
+            <button onClick={()=>{onGoHome(); onCategorySelect?.('Destacados');}} className="hover:text-cyan-500 transition-colors font-black uppercase tracking-widest text-[11px]">Inicio</button>
+            <button onClick={()=>{onGoHome(); onCategorySelect?.('3D');}} className="hover:text-cyan-500 transition-colors font-black uppercase tracking-widest text-[11px]">Impresión 3D</button>
+            <button onClick={()=>{onGoHome(); onCategorySelect?.('Láser');}} className="hover:text-cyan-500 transition-colors font-black uppercase tracking-widest text-[11px]">Corte Láser</button>
+            <button onClick={()=>{onGoHome(); onCategorySelect?.('Personalizados');}} className="hover:text-magenta-500 transition-colors font-black uppercase tracking-widest text-[11px] glow-magenta">Personalizados</button>
+            {/* Icono de búsqueda secreto */}
+            <div className="relative flex items-center">
+              <button
+                type="button"
+                onClick={()=>setShowSearch(s=>!s)}
+                className="p-2 rounded-md hover:bg-slate-100 transition-colors"
+                title="Buscar"
+                aria-label="Buscar productos"
+              >
+                <Search size={18} className="text-slate-600" />
+              </button>
+              {showSearch && (
+                <input
                   autoFocus
                   value={search}
                   onChange={(e)=>setSearch(e.target.value)}
+                  // onBlur={()=>{ if(!search) setShowSearch(false); }}
                   onKeyDown={(e)=>{
                     if (e.key === 'Enter') {
-                      e.preventDefault();
+                      e.preventDefault(); // Evitar submit
                       const s = search.trim().toLowerCase();
                       if ((ADMIN_SECRET && s === ADMIN_SECRET.toLowerCase()) || s === 'modozen') {
+                        console.log('Modo Zen activado');
                         issueAdminEntry(ADMIN_SECRET || 'modozen');
+                        setSearch('');
+                        setShowSearch(false);
                       } else {
-                        if (search.trim() && onSearch) onSearch(search.trim());
+                        if (search.trim() && onSearch) {
+                          onSearch(search.trim());
+                        }
                         setSearch('');
                         setShowSearch(false);
                       }
@@ -65,47 +128,15 @@ const Navbar: React.FC<NavbarProps> = ({ cartCount, onOpenCart, onGoHome, onOpen
                       setShowSearch(false);
                     }
                   }}
-                  placeholder="BUSCAR EN EL SISTEMA..."
-                  className="w-full bg-slate-900/90 border-2 border-cyan-500/50 rounded-2xl py-5 px-16 text-white text-lg font-black tracking-widest uppercase placeholder:text-cyan-500/30 focus:outline-none focus:border-cyan-400 shadow-[0_0_30px_rgba(0,243,255,0.2)]"
+                  placeholder="Buscar..."
+                  className="ml-2 rounded-md border border-gray-200 px-3 py-2 text-sm w-44 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
-                <button onClick={() => setShowSearch(false)} className="absolute right-6 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white transition-colors">
-                    <X size={20} />
-                </button>
-          </div>
-      </div>
-
-      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-24">
-          {/* Logo Section */}
-          <div className="flex items-center cursor-pointer group gap-4" onClick={onGoHome}>
-            <div className="relative h-12 w-12 flex items-center justify-center shrink-0">
-               <div className="absolute -inset-2 bg-linear-to-tr from-cyan-400 via-blue-500 to-magenta-500 rounded-full blur-md opacity-20 group-hover:opacity-60 transition-opacity duration-500"></div>
-               <div className="absolute -inset-[2px] rounded-full bg-linear-to-r from-cyan-500 via-blue-600 to-magenta-600 animate-[spin_4s_linear_infinite] opacity-50 group-hover:opacity-100 transition-opacity"></div>
-               <div className="relative h-full w-full rounded-xl bg-white z-10 flex items-center justify-center border border-white/10 overflow-hidden">
-                  <img src="/LOGO.jpg" alt="3D2 Logo" className="h-full w-full object-contain p-1 transition-transform duration-500 group-hover:scale-110" />
-               </div>
+              )}
             </div>
-            <div className="flex flex-col justify-center">
-              <h1 className="text-2xl font-black tracking-widest text-white leading-none group-hover:glow-cyan transition-all">
-                3D<span className="text-cyan-400">2</span>
-              </h1>
-              <span className="text-[10px] font-black text-slate-500 tracking-[0.2em] uppercase group-hover:text-cyan-500/80 transition-all">
-                PRINT & LABS
-              </span>
-            </div>
-          </div>
-
-          {/* Desktop Menu */}
-          <div className="hidden md:flex items-center space-x-10 text-[11px] font-black uppercase tracking-[0.15em]">
-            <button onClick={()=>{onGoHome(); onCategorySelect?.('Destacados');}} className="text-slate-400 hover:text-cyan-400 transition-all relative group/link">INICIO<span className="absolute -bottom-1 left-0 w-0 h-[2px] bg-cyan-500 transition-all group-hover/link:w-full"></span></button>
-            <button onClick={()=>{onGoHome(); onCategorySelect?.('3D');}} className="text-slate-400 hover:text-cyan-400 transition-all relative group/link">IMPRESIÓN 3D<span className="absolute -bottom-1 left-0 w-0 h-[2px] bg-cyan-500 transition-all group-hover/link:w-full"></span></button>
-            <button onClick={()=>{onGoHome(); onCategorySelect?.('Láser');}} className="text-slate-400 hover:text-cyan-400 transition-all relative group/link">CORTE LÁSER<span className="absolute -bottom-1 left-0 w-0 h-[2px] bg-cyan-500 transition-all group-hover/link:w-full"></span></button>
-            <button onClick={()=>{onGoHome(); onCategorySelect?.('Personalizados');}} className="text-magenta-400 hover:text-magenta-300 transition-all relative group/link">PERSONALIZADOS<span className="absolute -bottom-1 left-0 w-0 h-[2px] bg-magenta-500 transition-all group-hover/link:w-full shadow-[0_0_10px_rgba(255,0,255,0.5)]"></span></button>
-            <button type="button" onClick={()=>setShowSearch(s=>!s)} className="p-2 text-slate-400 hover:text-cyan-400 transition-all" title="Búsqueda de Datos"><Search size={18} /></button>
             {displayUser && (
-              <div className="flex items-center gap-4 border-l border-white/10 pl-6">
-                <span className="font-mono text-cyan-500/70 lowercase">{displayUser}</span>
-                <button onClick={() => { logout(); if(onLogoutUser) onLogoutUser(); }} className="text-slate-500 hover:text-red-400 transition-colors uppercase text-[9px]">X DESCONECTAR</button>
+              <div className="flex items-center gap-3">
+                <span className="text-sm font-medium text-slate-700">Hola, {displayUser}</span>
+                <button onClick={() => { logout(); if(onLogoutUser) onLogoutUser(); }} className="text-sm text-slate-500">Cerrar</button>
               </div>
             )}
           </div>
@@ -113,16 +144,35 @@ const Navbar: React.FC<NavbarProps> = ({ cartCount, onOpenCart, onGoHome, onOpen
           {/* Actions */}
           <div className="flex items-center gap-4">
             {onOpenAdmin && isAdmin && (
-              <button onClick={onOpenAdmin} className="hidden md:inline-flex items-center gap-2 px-4 py-2 bg-amber-500/10 text-amber-500 border border-amber-500/30 rounded-lg hover:bg-amber-500/20 transition-all text-[10px] font-black uppercase tracking-widest">ADMIN</button>
+              <button onClick={onOpenAdmin} title="Admin" className="hidden md:inline-flex items-center gap-2 px-3 py-2 bg-amber-50 text-amber-700 rounded-lg hover:bg-amber-100">
+                Admin
+              </button>
             )}
-            <button onClick={() => navigate('/order-tracking')} className="hidden md:inline-flex items-center gap-2 px-4 py-2 bg-white/5 text-slate-300 border border-white/10 rounded-lg hover:bg-white/10 transition-all text-[10px] font-black uppercase tracking-widest group">
-              <Package size={16} className="group-hover:text-cyan-400" /><span>MI PEDIDO</span>
+            <button
+              onClick={() => navigate('/order-tracking')}
+              title="Seguir Pedido"
+              className="hidden md:inline-flex items-center gap-2 px-3 py-2 text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
+            >
+              <Package size={18} />
+              <span className="text-sm">Seguir Pedido</span>
             </button>
-            <button onClick={onOpenCart} className="relative p-3 bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 rounded-xl hover:bg-cyan-500/20 hover:shadow-[0_0_15px_rgba(0,243,255,0.2)] transition-all group">
-              <ShoppingCart size={22} strokeWidth={2.5} className="group-hover:scale-110 transition-transform" />
-              {cartCount > 0 && <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center bg-magenta-500 text-white text-[10px] font-black rounded-sm shadow-[0_0_10px_rgba(255,0,255,0.5)]">{cartCount}</span>}
+            <button
+              onClick={onOpenCart}
+              className="relative p-2 text-slate-900 hover:bg-slate-100 rounded-full transition-all group"
+            >
+              <ShoppingCart size={24} strokeWidth={2} className="group-hover:text-indigo-600 transition-colors" />
+              {cartCount > 0 && (
+                <span className="absolute top-0 right-0 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white transform translate-x-1/4 -translate-y-1/4 bg-indigo-600 rounded-full shadow-sm">
+                  {cartCount}
+                </span>
+              )}
             </button>
-            <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="md:hidden p-2 text-white bg-white/5 rounded-lg border border-white/10"><Menu size={24} /></button>
+            <button 
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              className="md:hidden p-2 text-slate-900 hover:bg-slate-100 rounded-lg transition-colors"
+            >
+              <Menu size={24} />
+            </button>
           </div>
         </div>
       </div>
@@ -130,35 +180,124 @@ const Navbar: React.FC<NavbarProps> = ({ cartCount, onOpenCart, onGoHome, onOpen
       {/* Mobile Menu Overlay */}
       {isMobileMenuOpen && (
         <div className="fixed inset-0 z-50 md:hidden">
-          <div className="absolute inset-0 bg-black/80 backdrop-blur-md" onClick={() => setIsMobileMenuOpen(false)} />
-          <div className="absolute inset-y-0 right-0 w-[80%] max-sm bg-slate-900 shadow-2xl flex flex-col h-full animate-fade-in border-l border-white/10">
-             <div className="flex items-center justify-between p-6 border-b border-white/10 bg-black/20">
-                <h2 className="text-sm font-black text-cyan-500 uppercase tracking-widest">Navegación</h2>
-                <button onClick={() => setIsMobileMenuOpen(false)} className="p-2 text-slate-500 hover:text-white transition-colors"><X size={24} /></button>
+          {/* Backdrop */}
+          <div 
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            onClick={() => setIsMobileMenuOpen(false)}
+          />
+          
+          {/* Sidebar */}
+          <div className="absolute inset-y-0 right-0 w-[80%] max-w-sm bg-white shadow-2xl flex flex-col h-full animate-fade-in">
+             {/* Header */}
+             <div className="flex items-center justify-between p-4 border-b border-gray-100 bg-slate-50/50">
+                <h2 className="text-lg font-bold text-slate-900">Navegación</h2>
+                <button 
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="p-2 hover:bg-red-50 hover:text-red-600 rounded-full transition-colors"
+                  aria-label="Cerrar menú"
+                >
+                  <X size={24} />
+                </button>
              </div>
-             <div className="p-6 border-b border-white/5">
-               <div className="relative flex items-center bg-white/5 rounded-xl border border-white/10 focus-within:border-cyan-500 transition-all">
-                  <Search size={18} className="absolute left-4 text-slate-500" />
-                  <input placeholder="BUSCAR..." value={search} onChange={(e)=>setSearch(e.target.value)} onKeyDown={(e)=>{if (e.key === 'Enter') {e.preventDefault(); const s = search.trim().toLowerCase(); if ((ADMIN_SECRET && s === ADMIN_SECRET.toLowerCase()) || s === 'modozen') {issueAdminEntry(ADMIN_SECRET || 'modozen'); return;} if (search.trim() && onSearch) onSearch(search.trim()); setSearch(''); setIsMobileMenuOpen(false);}}} className="w-full bg-transparent pl-12 pr-4 py-4 text-sm text-white outline-none placeholder:text-slate-600 font-bold uppercase tracking-widest" />
+
+             {/* Search */}
+             <div className="p-4 border-b border-gray-100">
+               <div className="relative flex items-center bg-gray-50 rounded-lg border border-gray-200 focus-within:ring-2 focus-within:ring-indigo-500 focus-within:border-indigo-500 transition-all">
+                  <Search size={18} className="absolute left-3 text-slate-400" />
+                  <input
+                    placeholder="Buscar productos..."
+                    value={search}
+                    onChange={(e)=>setSearch(e.target.value)}
+                    onKeyDown={(e)=>{
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        // Secret Admin Entry
+                        const s = search.trim().toLowerCase();
+                        if ((ADMIN_SECRET && s === ADMIN_SECRET.toLowerCase()) || s === 'modozen') {
+                          const ts = Date.now();
+                          const minute = Math.floor(ts / 60000);
+                          const raw = ADMIN_SECRET + ':' + minute;
+                          const token = btoa(unescape(encodeURIComponent(raw))).replace(/=+$/,'');
+                          try {
+                            sessionStorage.setItem('admin_entry_token', token);
+                            sessionStorage.setItem('admin_entry_ts', String(ts));
+                          } catch {}
+                          window.location.href = '/admin/login'; // Force reload/redirect
+                          setSearch('');
+                          setIsMobileMenuOpen(false);
+                          return;
+                        }
+                        
+                        if (search.trim() && onSearch) {
+                          onSearch(search.trim());
+                        }
+                        setSearch('');
+                        setIsMobileMenuOpen(false);
+                      }
+                    }}
+                    className="w-full bg-transparent pl-10 pr-4 py-2.5 text-sm text-slate-900 outline-none placeholder:text-slate-400"
+                  />
                </div>
              </div>
-             <div className="flex-1 overflow-y-auto p-6 space-y-2">
-                <button onClick={() => { onGoHome(); onCategorySelect?.('Destacados'); setIsMobileMenuOpen(false); }} className="w-full text-left px-5 py-4 text-slate-300 hover:bg-cyan-500/10 hover:text-cyan-400 rounded-xl transition-all font-black uppercase tracking-widest text-[11px] flex items-center gap-4 border border-transparent hover:border-cyan-500/20"><span className="w-1 h-1 rounded-full bg-cyan-500 shadow-[0_0_10px_rgba(0,243,255,1)]"></span>INICIO</button>
-                <button onClick={() => { onGoHome(); onCategorySelect?.('3D'); setIsMobileMenuOpen(false); }} className="w-full text-left px-5 py-4 text-slate-300 hover:bg-white/5 hover:text-white rounded-xl transition-all font-black uppercase tracking-widest text-[11px] flex items-center gap-4 border border-transparent hover:border-white/10"><span className="w-1 h-1 rounded-full bg-slate-500"></span>3D PRINT</button>
-                <button onClick={() => { onGoHome(); onCategorySelect?.('Láser'); setIsMobileMenuOpen(false); }} className="w-full text-left px-5 py-4 text-slate-300 hover:bg-white/5 hover:text-white rounded-xl transition-all font-black uppercase tracking-widest text-[11px] flex items-center gap-4 border border-transparent hover:border-white/10"><span className="w-1 h-1 rounded-full bg-slate-500"></span>LASER CUT</button>
-                <button onClick={() => { onGoHome(); onCategorySelect?.('Personalizados'); setIsMobileMenuOpen(false); }} className="w-full text-left px-5 py-4 text-magenta-400 hover:bg-magenta-500/10 hover:text-magenta-300 rounded-xl transition-all font-black uppercase tracking-widest text-[11px] flex items-center gap-4 border border-transparent hover:border-magenta-500/20"><span className="w-1 h-1 rounded-full bg-magenta-500 shadow-[0_0_10px_rgba(255,0,255,1)]"></span>CUSTOM</button>
+
+             {/* Links */}
+             <div className="flex-1 overflow-y-auto p-4 space-y-1">
+                <button 
+                   onClick={() => { onGoHome(); onCategorySelect?.('Destacados'); setIsMobileMenuOpen(false); }}
+                   className="w-full text-left px-4 py-3.5 text-slate-700 hover:bg-indigo-50 hover:text-indigo-700 rounded-xl transition-all font-medium flex items-center gap-3"
+                >
+                  <span className="w-1.5 h-1.5 rounded-full bg-slate-300"></span>
+                  Inicio
+                </button>
+                <button 
+                   onClick={() => { onGoHome(); onCategorySelect?.('3D'); setIsMobileMenuOpen(false); }}
+                   className="w-full text-left px-4 py-3.5 text-slate-700 hover:bg-indigo-50 hover:text-indigo-700 rounded-xl transition-all font-medium flex items-center gap-3"
+                >
+                  <span className="w-1.5 h-1.5 rounded-full bg-indigo-300"></span>
+                  Impresión 3D
+                </button>
+                <button 
+                   onClick={() => { onGoHome(); onCategorySelect?.('Láser'); setIsMobileMenuOpen(false); }}
+                   className="w-full text-left px-4 py-3.5 text-slate-700 hover:bg-indigo-50 hover:text-indigo-700 rounded-xl transition-all font-medium flex items-center gap-3"
+                >
+                  <span className="w-1.5 h-1.5 rounded-full bg-purple-300"></span>
+                  Corte Láser
+                </button>
+                <button 
+                   onClick={() => { onGoHome(); onCategorySelect?.('Personalizados'); setIsMobileMenuOpen(false); }}
+                   className="w-full text-left px-4 py-3.5 text-slate-700 hover:bg-indigo-50 hover:text-indigo-700 rounded-xl transition-all font-medium flex items-center gap-3"
+                >
+                   <span className="w-1.5 h-1.5 rounded-full bg-pink-300"></span>
+                  Personalizados
+                </button>
+
                 {displayUser && (
-                  <div className="mt-10 pt-10 border-t border-white/5">
-                     <div className="px-5 mb-4"><span className="text-[10px] font-black text-slate-600 uppercase tracking-[0.2em]">IDENTIFICACIÓN</span></div>
-                     <div className="px-5 py-3 text-xs text-cyan-500/80 bg-cyan-500/5 rounded-lg border border-cyan-500/10 mb-4 font-mono truncate">{displayUser}</div>
-                      <button onClick={() => { logout(); setIsMobileMenuOpen(false); }} className="w-full text-left px-5 py-4 text-red-500 hover:bg-red-500/10 rounded-xl transition-all font-black uppercase tracking-widest text-[10px] flex items-center gap-3">DESCONECTAR</button>
+                  <div className="mt-6 pt-6 border-t border-gray-100">
+                     <div className="px-4 mb-2">
+                        <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Cuenta</span>
+                     </div>
+                     <div className="px-4 py-2 text-sm text-slate-900 bg-slate-50 rounded-lg mx-2 border border-slate-100 mb-2">
+                        {displayUser}
+                     </div>
+                      <button 
+                         onClick={() => { logout(); if(onLogoutUser) onLogoutUser(); setIsMobileMenuOpen(false); }}
+                         className="w-full text-left px-4 py-3 text-red-600 hover:bg-red-50 rounded-xl transition-all font-medium flex items-center gap-2"
+                       >
+                         Cerrar Sesión
+                       </button>
                   </div>
                 )}
-                {onOpenAdmin && isAdmin && (
-                  <div className="mt-4 pt-4 border-t border-white/5">
-                    <button onClick={() => { onOpenAdmin(); setIsMobileMenuOpen(false); }} className="w-full text-left px-5 py-4 bg-amber-500/10 text-amber-500 hover:bg-amber-500/20 rounded-xl transition-all font-black uppercase tracking-widest text-[10px] flex items-center gap-3 border border-amber-500/20">CORE ACCESS 🔒</button>
-                  </div>
-                )}
+                
+                 {onOpenAdmin && isAdmin && (
+                   <div className="mt-4 pt-4 border-t border-gray-100">
+                     <button 
+                       onClick={() => { onOpenAdmin(); setIsMobileMenuOpen(false); }}
+                       className="w-full text-left px-4 py-3 bg-amber-50 text-amber-800 hover:bg-amber-100 rounded-xl transition-all font-bold flex items-center gap-2"
+                     >
+                       Panel Admin 🔒
+                     </button>
+                   </div>
+                 )}
              </div>
           </div>
         </div>

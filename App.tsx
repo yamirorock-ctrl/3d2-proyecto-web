@@ -116,7 +116,7 @@ const MainLayout: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0b10] text-slate-200 font-sans selection:bg-cyan-500/30 selection:text-cyan-200">
+    <div className="min-h-screen bg-linear-to-br from-indigo-50 via-purple-50 to-pink-50 font-sans selection:bg-indigo-100 selection:text-indigo-900">
        {cartNotice && (
         <div className="bg-yellow-100 text-yellow-800 text-xs sm:text-sm p-2 text-center animate-fade-in">
           {cartNotice}
