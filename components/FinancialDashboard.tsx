@@ -878,7 +878,13 @@ const FinancialDashboard: React.FC<Props> = ({ orders, products, onEditProduct }
                             let pricePerGram = 0;
                             if (mat && mat.last_cost) {
                                 const unit = mat.unit?.toLowerCase() || '';
-                                if (['kg', 'kilos', 'kilogramos', 'rollos', 'bobina', 'bobinas'].some(u => unit.includes(u))) {
+                                // Si es filamento (estamos en colorPercentage), y el precio es alto (>1000), 
+                                // es casi seguro que el precio es por rollo/kg aunque diga "unidad"
+                                const isBulkUnit = ['kg', 'kilos', 'kilogramos', 'rollos', 'bobina', 'bobinas', 'unidad', 'unidades'].some(u => unit.includes(u));
+                                
+                                if (isBulkUnit && mat.last_cost > 1000) {
+                                    pricePerGram = mat.last_cost / 1000;
+                                } else if (['kg', 'kilos', 'kilogramos', 'rollos', 'bobina', 'bobinas'].some(u => unit.includes(u))) {
                                     pricePerGram = mat.last_cost / 1000;
                                 } else {
                                     pricePerGram = mat.last_cost;
