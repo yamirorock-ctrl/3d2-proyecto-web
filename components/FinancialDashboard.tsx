@@ -868,6 +868,8 @@ const FinancialDashboard: React.FC<Props> = ({ orders, products, onEditProduct }
                     
                     // 1. Costo Filamento / Plástico
                     let materialCost = 0;
+                    let totalMaterialWeight = 0;
+                    
                     if (p.colorPercentage && Array.isArray(p.colorPercentage)) {
                         p.colorPercentage.forEach(cp => {
                             const mat = materials.find(m => m.name.toLowerCase() === cp.color.toLowerCase());
@@ -893,6 +895,7 @@ const FinancialDashboard: React.FC<Props> = ({ orders, products, onEditProduct }
                             }
                             
                             materialCost += grams * pricePerGram;
+                            totalMaterialWeight += grams;
                         });
                     }
 
@@ -929,8 +932,10 @@ const FinancialDashboard: React.FC<Props> = ({ orders, products, onEditProduct }
                         </td>
                         <td className="px-4 py-4 text-center">
                           <div className="flex flex-col items-center">
-                              <span className="text-xs font-bold text-slate-600 bg-slate-100 px-2 rounded">{p.weight || 0}g</span>
-                              <span className="text-[10px] text-indigo-500 font-bold mt-1 flex items-center gap-1">
+                              <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-2 rounded" title="Peso neto de filamento">
+                                {totalMaterialWeight > 0 ? totalMaterialWeight.toFixed(1) : p.weight || 0}g
+                              </span>
+                              <span className="text-[10px] text-slate-400 font-bold mt-1 flex items-center gap-1">
                                 <Clock size={10}/> {p.printingTime || 0} hs
                               </span>
                           </div>

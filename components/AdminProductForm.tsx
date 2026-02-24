@@ -140,14 +140,10 @@ const AdminProductForm: React.FC<AdminProductFormProps> = ({ initial = {} as Par
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">Peso Envío (g)</label>
           <input type="number" min={0} className="w-full border rounded px-3 py-2" value={weight} onChange={e=>setWeight(Number(e.target.value))} placeholder="ML" />
-        </div>
-        <div>
-          <label className="block text-sm font-bold text-indigo-700 mb-2">Peso Neto (g)</label>
-          <input type="number" min={0} className="w-full border-indigo-300 bg-indigo-50/20 rounded px-3 py-2" value={netWeight} onChange={e=>setNetWeight(Number(e.target.value))} placeholder="Filamento" />
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">Tiempo (hs)</label>
