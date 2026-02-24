@@ -3,22 +3,24 @@ import { Instagram, Facebook, MessageCircle } from "lucide-react";
 
 const Footer: React.FC = () => {
   return (
-    <footer className="bg-white border-t border-gray-200 py-12 mt-12">
-      <div className="max-w-7xl mx-auto px-4">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
+    <footer className="bg-black/40 border-t border-white/5 py-16 relative overflow-hidden">
+      {/* Background decoration */}
+      <div className="absolute bottom-0 right-0 w-64 h-64 bg-cyan-500/5 blur-[100px] rounded-full pointer-events-none"></div>
+      
+      <div className="max-w-7xl mx-auto px-4 relative z-10">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-12 mb-12">
           <div className="text-center md:text-left">
-            <h3 className="font-black text-xl text-slate-900 mb-4">3D2</h3>
-            <p className="text-slate-500 text-sm max-w-xs mx-auto md:mx-0 mb-6">
-              Transformamos filamento y madera en tus ideas favoritas. Calidad y
-              detalle en cada impresión.
+            <h3 className="font-black text-2xl text-white mb-4 glow-cyan">3D<span className="text-cyan-400">2</span></h3>
+            <p className="text-slate-500 text-sm max-w-xs mx-auto md:mx-0 mb-6 font-medium leading-relaxed">
+              Fusión de ingeniería y creatividad. Evolucionamos la manufactura digital capa por capa.
             </p>
           </div>
 
           <div className="text-center">
-            <h4 className="font-bold text-slate-900 mb-4">Enlaces Rápidos</h4>
-            <ul className="space-y-2 text-sm text-slate-500">
+            <h4 className="text-xs font-black text-white uppercase tracking-[0.3em] mb-6">Navegación</h4>
+            <ul className="space-y-3 text-[11px] font-bold text-slate-500 uppercase tracking-widest">
               <li>
-                <a href="#" className="hover:text-indigo-600 transition-colors">
+                <a href="#" className="hover:text-cyan-400 transition-all hover:tracking-[0.4em]">
                   Catálogo
                 </a>
               </li>
@@ -27,8 +29,7 @@ const Footer: React.FC = () => {
                   href="https://www.instagram.com/3d2_creart/"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="hover:text-indigo-600 transition-colors"
-                  aria-label="Instagram"
+                  className="hover:text-cyan-400 transition-all hover:tracking-[0.4em]"
                 >
                   Instagram
                 </a>
@@ -38,8 +39,7 @@ const Footer: React.FC = () => {
                   href={`https://api.whatsapp.com/send?phone=${(import.meta.env.VITE_WHATSAPP_NUMBER || "5491171285516").trim()}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="hover:text-indigo-600 transition-colors"
-                  aria-label="WhatsApp"
+                  className="hover:text-cyan-400 transition-all hover:tracking-[0.4em]"
                 >
                   Contacto
                 </a>
@@ -48,25 +48,19 @@ const Footer: React.FC = () => {
           </div>
 
           <div className="text-center md:text-right">
-            <h4 className="font-bold text-slate-900 mb-4">Contacto</h4>
-            <ul className="space-y-4 text-sm text-slate-500">
-              <li className="font-medium text-slate-600">
-                Envios a todo el país
-              </li>
-              <li className="flex justify-center md:justify-end gap-4 pt-2">
+            <h4 className="text-xs font-black text-white uppercase tracking-[0.3em] mb-6">Conexión Social</h4>
+            <div className="flex justify-center md:justify-end gap-5">
                 {/* Instagram */}
                 <a
                   href="https://www.instagram.com/3d2_creart/"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="group relative p-2.5 bg-white rounded-xl shadow-sm border border-slate-100 hover:border-pink-200 hover:shadow-[0_0_15px_-3px_rgba(236,72,153,0.3)] transition-all duration-300"
+                  className="group relative p-3 bg-white/5 rounded-xl border border-white/10 hover:border-magenta-500/50 hover:shadow-[0_0_20px_rgba(255,0,255,0.2)] transition-all duration-300"
                   title="Instagram"
-                  aria-label="Instagram"
                 >
-                  <div className="absolute inset-0 bg-pink-50 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                   <Instagram
-                    size={22}
-                    className="relative z-10 text-slate-400 group-hover:text-pink-600 transition-colors duration-300"
+                    size={20}
+                    className="text-slate-400 group-hover:text-magenta-400 transition-colors"
                   />
                 </a>
 
@@ -78,14 +72,12 @@ const Footer: React.FC = () => {
                   ).trim()}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="group relative p-2.5 bg-white rounded-xl shadow-sm border border-slate-100 hover:border-blue-200 hover:shadow-[0_0_15px_-3px_rgba(59,130,246,0.3)] transition-all duration-300"
+                  className="group relative p-3 bg-white/5 rounded-xl border border-white/10 hover:border-blue-500/50 hover:shadow-[0_0_20px_rgba(59,130,246,0.2)] transition-all duration-300"
                   title="Facebook"
-                  aria-label="Facebook"
                 >
-                  <div className="absolute inset-0 bg-blue-50 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                   <Facebook
-                    size={22}
-                    className="relative z-10 text-slate-400 group-hover:text-blue-600 transition-colors duration-300"
+                    size={20}
+                    className="text-slate-400 group-hover:text-blue-400 transition-colors"
                   />
                 </a>
 
@@ -96,27 +88,27 @@ const Footer: React.FC = () => {
                   ).trim()}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="group relative p-2.5 bg-white rounded-xl shadow-sm border border-slate-100 hover:border-green-200 hover:shadow-[0_0_15px_-3px_rgba(34,197,94,0.3)] transition-all duration-300"
+                  className="group relative p-3 bg-white/5 rounded-xl border border-white/10 hover:border-cyan-500/50 hover:shadow-[0_0_20px_rgba(0,243,255,0.2)] transition-all duration-300"
                   title="WhatsApp"
-                  aria-label="WhatsApp"
                 >
-                  <div className="absolute inset-0 bg-green-50 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                   <MessageCircle
-                    size={22}
-                    className="relative z-10 text-slate-400 group-hover:text-green-600 transition-colors duration-300"
+                    size={20}
+                    className="text-slate-400 group-hover:text-cyan-400 transition-colors"
                   />
                 </a>
-              </li>
-            </ul>
+            </div>
+            <p className="mt-6 text-[10px] font-mono text-slate-600 uppercase tracking-widest">
+                ENVIOS A TODO EL PAÍS // SECURE_SHIPPING: ACTIVE
+            </p>
           </div>
         </div>
 
-        <div className="border-t border-slate-200/60 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
-          <p className="text-xs text-slate-400">
-            © {new Date().getFullYear()} 3D2 - Impresión 3D & Corte Láser
+        <div className="border-t border-white/5 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
+          <p className="text-[10px] font-mono text-slate-500 uppercase tracking-widest">
+            © {new Date().getFullYear()} 3D2_LABS. ALL RIGHTS RESERVED.
           </p>
-          <div className="flex gap-4">
-            {/* Icons would go here if imported */}
+          <div className="text-[9px] font-mono text-cyan-500/40 uppercase tracking-widest">
+            v2.6.0 // PROTOCOL_BY: CREART
           </div>
         </div>
       </div>
