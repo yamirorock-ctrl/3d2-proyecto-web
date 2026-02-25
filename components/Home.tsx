@@ -69,18 +69,21 @@ const Home: React.FC = () => {
                <div className="absolute -inset-6 bg-cyan-500/20 rounded-full blur-2xl animate-pulse-cyan z-0"></div>
                <div className="absolute -inset-4 border border-cyan-500/40 rounded-full animate-pulse-cyan z-0"></div>
                
-               {/* 3D Glass Bubble Container */}
-               <div className="glass-bubble w-full h-full flex items-center justify-center p-8 group z-10 relative">
-                  {/* Internal reflections and gradients */}
-                  <div className="absolute inset-0 bg-linear-to-tr from-cyan-400/20 via-transparent to-magenta-500/20 opacity-60 group-hover:opacity-80 transition-opacity"></div>
-                  <div className="absolute inset-x-0 top-0 h-1/2 bg-linear-to-b from-white/20 to-transparent"></div>
-                  
+                {/* 3D Glass Bubble Container */}
+                <div className="glass-bubble w-full h-full group z-10 relative overflow-hidden rounded-full">
+                  {/* The image is now the "base" of the bubble */}
                   <img 
                     src="/LOGO.jpg" 
                     alt="3D² Logo" 
-                    className="w-full h-full object-contain transition-transform duration-700 group-hover:scale-110 rounded-full shadow-inner"
-                    style={{ filter: 'drop-shadow(0 0 10px rgba(255,255,255,0.3))' }}
+                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                   />
+                  
+                  {/* Spherical Overlay (Shadows and Highlights) to "shape" the image */}
+                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_30%,rgba(255,255,255,0.4)_0%,transparent_50%,rgba(0,0,0,0.4)_100%)] pointer-events-none"></div>
+                  
+                  {/* Internal reflections and gradients on top */}
+                  <div className="absolute inset-0 bg-linear-to-tr from-cyan-400/30 via-transparent to-magenta-500/30 opacity-60 group-hover:opacity-80 transition-opacity pointer-events-none"></div>
+                  <div className="absolute inset-x-0 top-0 h-1/2 bg-linear-to-b from-white/30 to-transparent pointer-events-none"></div>
                 </div>
             </div>
           </div>
