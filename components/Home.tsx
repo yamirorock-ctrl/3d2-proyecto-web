@@ -61,20 +61,30 @@ const Home: React.FC = () => {
             <div className="absolute inset-0 bg-linear-to-r from-slate-950 via-slate-900/90 to-transparent"></div>
           </div>
           
-          {/* Animated 3D Logo Chip */}
-          <div className="absolute right-8 top-1/2 -translate-y-1/2 z-10 hidden lg:block">
-            <div className="relative w-72 h-72 animate-float">
-               <div className="absolute -inset-4 border border-cyan-500/20 rounded-full animate-pulse-cyan"></div>
-               <div className="w-full h-full rounded-3xl bg-white shadow-[0_0_40px_rgba(0,243,255,0.2)] flex items-center justify-center p-4 group overflow-hidden">
-                  <div className="absolute inset-0 bg-linear-to-tr from-cyan-500/10 to-magenta-500/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+          {/* Animated 3D Logo Bubble */}
+          <div className="absolute right-12 top-1/2 -translate-y-1/2 z-20 hidden lg:block">
+            <div className="animate-wander">
+              <div className="relative w-72 h-72 animate-float">
+               {/* Neon effect behind the bubble */}
+               <div className="absolute -inset-6 bg-cyan-500/20 rounded-full blur-2xl animate-pulse-cyan z-0"></div>
+               <div className="absolute -inset-4 border border-cyan-500/40 rounded-full animate-pulse-cyan z-0"></div>
+               
+               {/* 3D Glass Bubble Container */}
+               <div className="glass-bubble w-full h-full flex items-center justify-center p-8 group z-10 relative">
+                  {/* Internal reflections and gradients */}
+                  <div className="absolute inset-0 bg-linear-to-tr from-cyan-400/20 via-transparent to-magenta-500/20 opacity-60 group-hover:opacity-80 transition-opacity"></div>
+                  <div className="absolute inset-x-0 top-0 h-1/2 bg-linear-to-b from-white/20 to-transparent"></div>
+                  
                   <img 
                     src="/LOGO.jpg" 
                     alt="3D² Logo" 
-                    className="w-full h-full object-contain transition-transform duration-500 group-hover:scale-110"
+                    className="w-full h-full object-contain transition-transform duration-700 group-hover:scale-110 rounded-full shadow-inner"
+                    style={{ filter: 'drop-shadow(0 0 10px rgba(255,255,255,0.3))' }}
                   />
                 </div>
             </div>
           </div>
+        </div>
           
           <div className="relative z-10 max-w-3xl">
             <span className="inline-block px-3 py-1 bg-indigo-600/30 border border-indigo-400/30 rounded-full text-indigo-200 text-sm font-bold mb-4 backdrop-blur-sm tracking-wide uppercase">

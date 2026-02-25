@@ -79,10 +79,50 @@
 
 @keyframes pulse-cyan {
   0%, 100% { opacity: 0.5; box-shadow: 0 0 10px rgba(0, 243, 255, 0.2); }
-  50% { opacity: 1; box-shadow: 0 0 20px rgba(0, 243, 255, 0.5); }
+  50% { opacity: 1; box-shadow: 0 0 30px rgba(0, 243, 255, 0.6); }
 }
 
 .animate-pulse-cyan {
   animation: pulse-cyan 3s infinite;
+}
+
+/* 3D Bubble Effect */
+.glass-bubble {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  box-shadow: 
+    inset 0 0 20px rgba(255, 255, 255, 0.5),
+    inset 10px 10px 20px rgba(0, 0, 0, 0.1),
+    0 10px 30px rgba(0, 0, 0, 0.3),
+    0 0 50px rgba(0, 243, 255, 0.2);
+  position: relative;
+  overflow: hidden;
+}
+
+.glass-bubble::after {
+  content: '';
+  position: absolute;
+  top: 15%;
+  left: 15%;
+  width: 30%;
+  height: 30%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.4) 0%, transparent 70%);
+  border-radius: 50%;
+  filter: blur(2px);
+}
+
+/* Movement Animation */
+@keyframes wander {
+  0% { transform: translate(0, 0); }
+  25% { transform: translate(-100px, 50px); }
+  50% { transform: translate(-200px, -50px); }
+  75% { transform: translate(-100px, -100px); }
+  100% { transform: translate(0, 0); }
+}
+
+.animate-wander {
+  animation: wander 20s ease-in-out infinite;
 }
 
