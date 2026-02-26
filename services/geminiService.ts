@@ -196,3 +196,95 @@ Reglas CRÍTICAS:
     }
   }
 };
+
+export interface ProductAnalysis {
+  product_name: string;
+  usage_type: string;
+  scenarios: string[];
+  titles: string[];
+  descriptions: string[];
+  prices: number[];
+}
+
+export const analyzeProductForSales = async (imageBase64: string): Promise<ProductAnalysis | null> => {
+  if (!genAI || !apiKey) return null;
+
+  try {
+    const analysisPrompt = `Analiza este producto detalladamente. Tu objetivo es generar todo el material necesario de marketing y ventas (descripciones, títulos variados y estimaciones de precios). Responde estrictamente con un JSON válido usando esta estructura:
+{
+  "product_name": "nombre descriptivo del producto encontrado",
+  "usage_type": "ej: cocina, camping, oficina, fiesta",
+  "scenarios": ["escenario 1 detallado visualmente", "escenario 2 detallado visualmente", "escenario 3 detallado visualmente"],
+  "titles": ["3 títulos de venta muy atractivos, max 60 caracteres"],
+  "descriptions": ["3 descripciones de menos de 300 caracteres, estilo creativo y profesional"],
+  "prices": [sugerido, mínimo, premium]
+}
+En 'scenarios', describe entornos realistas y de muy alta calidad fotográfica donde el usuario colocaría el producto.`;
+
+    console.log("[Gemini] Iniciando análisis de producto (Vision)...");
+    
+    // Using simple fetch to ensure we can force JSON responseMimeType compatibility (SDK supports it, but fetch is robust for flash-preview)
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{
+          parts: [
+            { text: analysisPrompt },
+            { inlineData: { mimeType: "image/jpeg", data: imageBase64 } }
+          ]
+        }],
+        generationConfig: { responseMimeType: "application/json" }
+      })
+    });
+
+    if (!response.ok) throw new Error("Error en la respuesta de Gemini API");
+    
+    const data = await response.json();
+    const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+    
+    if (rawText) {
+       return JSON.parse(rawText) as ProductAnalysis;
+    }
+    return null;
+  } catch (error) {
+    console.error("[Gemini] Error analyzing product:", error);
+    return null;
+  }
+};
+
+export const generateAmbientImage = async (imageBase64: string, scenarioDescription: string): Promise<string | null> => {
+  if (!apiKey) return null;
+
+  try {
+    const prompt = `KEEP THE ORIGINAL PRODUCT EXACTLY AS IT IS (SHAPE, COLOR, TEXTURE). Place it naturally and seamlessly in this environment: ${scenarioDescription}. High quality product photography, realistic lighting, shadows, 4k resolution.`;
+    
+    console.log(`[Gemini] Generando imagen ambientada (Img2Img)... Escenario: ${scenarioDescription.slice(0, 30)}...`);
+
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image-preview:generateContent?key=${apiKey}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{
+          parts: [
+            { text: prompt },
+            { inlineData: { mimeType: "image/jpeg", data: imageBase64 } }
+          ]
+        }],
+        generationConfig: { responseModalities: ['TEXT', 'IMAGE'] }
+      })
+    });
+
+    if (!response.ok) {
+        throw new Error(`Error: ${response.status}`);
+    }
+
+    const result = await response.json();
+    const base64Image = result.candidates?.[0]?.content?.parts?.find((p: any) => p.inlineData)?.inlineData?.data;
+    
+    return base64Image ? `data:image/jpeg;base64,${base64Image}` : null;
+  } catch (error) {
+    console.error("[Gemini] Error generating ambient image:", error);
+    return null;
+  }
+};

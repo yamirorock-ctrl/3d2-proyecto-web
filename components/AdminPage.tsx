@@ -4,7 +4,7 @@ import { Product, Order } from '../types';
 import { CustomOrder } from './CustomOrderForm';
 import ProductAdmin from './ProductAdmin';
 import { ManualOrderForm } from './ManualOrderForm';
-import { Trash2, Edit, Plus, ArrowLeft, Package, Users, Mail, Phone, Calendar, CheckCircle, Clock, ShoppingCart, TrendingUp, DollarSign, ShieldAlert, RefreshCw, ListChecks, ShoppingBag, Settings, LogOut, ChevronDown, Database, Upload, Download, Wrench, Truck, Bot } from 'lucide-react';
+import { Trash2, Edit, Plus, ArrowLeft, Package, Users, Mail, Phone, Calendar, CheckCircle, Clock, ShoppingCart, TrendingUp, DollarSign, ShieldAlert, RefreshCw, ListChecks, ShoppingBag, Settings, LogOut, ChevronDown, Database, Upload, Download, Wrench, Truck, Bot, Sparkles } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { saveDataUrl, getBlob } from '../services/imageStore';
@@ -16,6 +16,7 @@ import FinancialDashboard from './FinancialDashboard';
 import AIMonitor from './AIMonitor';
 import AdminPromptEditor from './AdminPromptEditor';
 import { useAdminNotifications } from '../hooks/useAdminNotifications';
+import PreSalesManager from './PreSalesManager';
 
 interface Props {
   products: Product[];
@@ -28,7 +29,7 @@ const AdminPage: React.FC<Props> = ({ products, onAdd, onEdit, onDelete }) => {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isManualOrderOpen, setIsManualOrderOpen] = useState(false);
   const [editing, setEditing] = useState<Product | null>(null);
-  const [activeTab, setActiveTab] = useState<'products' | 'orders' | 'sales' | 'calendar' | 'finances' | 'ai_monitor' | 'ai_brain'>('products');
+  const [activeTab, setActiveTab] = useState<'products' | 'orders' | 'sales' | 'calendar' | 'finances' | 'ai_monitor' | 'ai_brain' | 'pre_sales'>('products');
 
   const [customOrders, setCustomOrders] = useState<CustomOrder[]>([]);
   const [salesOrders, setSalesOrders] = useState<Order[]>([]);
@@ -583,6 +584,15 @@ const AdminPage: React.FC<Props> = ({ products, onAdd, onEdit, onDelete }) => {
           )}
         </button>
         <button
+          onClick={() => setActiveTab('pre_sales')}
+          className={`px-4 py-3 font-medium flex items-center gap-2 border-b-2 transition-colors ${
+            activeTab === 'pre_sales' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500 hover:text-slate-700'
+          }`}
+        >
+          <Sparkles size={20} />
+          Gestor de Preventas
+        </button>
+        <button
           onClick={() => setActiveTab('calendar' as any)}
           className={`px-4 py-3 font-medium flex items-center gap-2 border-b-2 transition-colors ${
             activeTab === 'calendar' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500 hover:text-slate-700'
@@ -771,6 +781,24 @@ const AdminPage: React.FC<Props> = ({ products, onAdd, onEdit, onDelete }) => {
       {/* Finances Tab */}
       {activeTab === 'finances' && (
         <FinancialDashboard orders={salesOrders} products={products} onEditProduct={onEdit} />
+      )}
+
+      {/* Pre Sales Manager Tab */}
+      {activeTab === 'pre_sales' && (
+        <PreSalesManager onPublish={(data) => {
+          // Open ProductAdmin mapped with the generated data
+          setEditing({
+            id: 0,
+            name: data.name,
+            description: data.description,
+            price: data.price,
+            ml_title: data.ml_title,
+            category: 'Personalizados', // Provide a default category
+            image: data.imageBase64,
+            images: [{ url: data.imageBase64 }],
+            technology: '3D',
+          });
+        }} />
       )}
 
 
