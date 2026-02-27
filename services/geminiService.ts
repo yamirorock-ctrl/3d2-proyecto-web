@@ -199,27 +199,44 @@ Reglas CRÍTICAS:
 
 export interface ProductAnalysis {
   product_name: string;
+  is_3d_or_laser: boolean;
+  confidence_warning: string | null;
   usage_type: string;
   scenarios: string[];
   titles: string[];
   descriptions: string[];
-  prices: number[];
+  prices: {
+    recommended: { amount: number, reason: string };
+    minimum: { amount: number, reason: string };
+    premium: { amount: number, reason: string };
+  };
 }
 
 export const analyzeProductForSales = async (imageBase64: string): Promise<ProductAnalysis | null> => {
   if (!genAI || !apiKey) return null;
 
   try {
-    const analysisPrompt = `Analiza este producto detalladamente. Tu objetivo es generar todo el material necesario de marketing y ventas (descripciones, títulos variados y estimaciones de precios). Responde estrictamente con un JSON válido usando esta estructura:
+    const analysisPrompt = `Eres un experto en e-commerce y tasación comercial de productos de impresión 3D y corte láser en Argentina.
+Analiza este producto detalladamente. Si identificas claramente qué es, genera todo el material de marketing.
+Si la imagen es muy confusa, inusual o parece un error (ej. le pido evaluar un mate pero subió una taza de té corporativa de cerámica), adviértelo en "confidence_warning", pero intenta hacer el análisis de todas formas asumiendo qué podría ser.
+Calcula precios en Pesos Argentinos (ARS). Ten en cuenta los costos del filamento/MDF, el tiempo de máquina y el valor agregado de venta al público en el mercado de diseño.
+
+Responde estrictamente con un JSON válido usando esta estructura:
 {
   "product_name": "nombre descriptivo del producto encontrado",
-  "usage_type": "ej: cocina, camping, oficina, fiesta",
-  "scenarios": ["escenario 1 detallado visualmente", "escenario 2 detallado visualmente", "escenario 3 detallado visualmente"],
-  "titles": ["3 títulos de venta muy atractivos, max 60 caracteres"],
-  "descriptions": ["3 descripciones de menos de 300 caracteres, estilo creativo y profesional"],
-  "prices": [sugerido, mínimo, premium]
+  "is_3d_or_laser": booleano, si parece impreso en 3D o cortado en láser,
+  "confidence_warning": "Mensaje de alerta SI Y SOLO SI no estás seguro de qué es el objeto o si parece fuera de lugar. Si estás seguro, devuelve null.",
+  "usage_type": "ej: cocina, camping, oficina, fiesta, deco infantil",
+  "scenarios": ["escenario 1 visual", "escenario 2 visual", "escenario 3 visual"],
+  "titles": ["3 títulos para MercadoLibre atractivos, max 60 char"],
+  "descriptions": ["3 opciones de descripciones (max 300 char) para tienda online, incluyendo el por qué lo necesitan"],
+  "prices": {
+    "recommended": { "amount": numero_entero, "reason": "Cálculo basado en mercado competitivo actual para piezas estandar..." },
+    "minimum": { "amount": numero_entero, "reason": "Costo estimado de material base más desgaste mínimo de máquina..." },
+    "premium": { "amount": numero_entero, "reason": "Precio justificado si se ofrece post-procesado, pintura a mano o empaquetado de lujo..." }
+  }
 }
-En 'scenarios', describe entornos realistas y de muy alta calidad fotográfica donde el usuario colocaría el producto.`;
+En 'scenarios', describe entornos muy realistas y fotográficos.`;
 
     console.log("[Gemini] Iniciando análisis de producto (Vision)...");
     

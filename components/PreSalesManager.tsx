@@ -81,7 +81,7 @@ const PreSalesManager: React.FC<PreSalesManagerProps> = ({ onPublish }) => {
     onPublish({
       name: analysis.product_name,
       description: analysis.descriptions[0] || '', // Pick the first or best
-      price: analysis.prices[0] || 0,
+      price: analysis.prices.recommended.amount || 0,
       ml_title: analysis.titles[0] || '',
       imageBase64: finalImage
     });
@@ -183,9 +183,21 @@ const PreSalesManager: React.FC<PreSalesManagerProps> = ({ onPublish }) => {
                 </div>
                 <p className="text-indigo-200 text-xs font-bold uppercase tracking-widest mb-1">Producto Identificado</p>
                 <h3 className="text-3xl font-black capitalize mb-3 drop-shadow-md">{analysis.product_name}</h3>
-                <div className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-md px-3 py-1 rounded-full text-xs font-semibold shadow-sm border border-white/10">
-                  Ideal para: <span className="underline">{analysis.usage_type}</span>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="bg-white/20 backdrop-blur-md px-3 py-1 rounded-full text-xs font-semibold shadow-sm border border-white/10">
+                    Ideal para: <span className="underline">{analysis.usage_type}</span>
+                  </span>
+                  <span className="bg-white/20 backdrop-blur-md px-3 py-1 rounded-full text-xs font-semibold shadow-sm border border-white/10">
+                    {analysis.is_3d_or_laser ? 'Impresión 3D / Láser' : 'No parece impreso/láser'}
+                  </span>
                 </div>
+                
+                {analysis.confidence_warning && (
+                  <div className="mt-4 bg-orange-500/80 backdrop-blur-md p-4 rounded-xl border border-orange-400 text-sm flex gap-3 text-orange-50 font-medium">
+                    <AlertCircle className="w-5 h-5 shrink-0" />
+                    <p><strong>Aviso de la IA:</strong> {analysis.confidence_warning}</p>
+                  </div>
+                )}
               </div>
 
               {/* Títulos Estratégicos */}
@@ -211,13 +223,33 @@ const PreSalesManager: React.FC<PreSalesManagerProps> = ({ onPublish }) => {
                     <div className="bg-emerald-100 p-2 rounded-xl text-emerald-600"><DollarSign className="w-5 h-5" /></div>
                     <h3 className="text-lg font-bold text-slate-800">Precios de Venta</h3>
                   </div>
-                  <div className="flex flex-col gap-3">
-                    {analysis.prices.map((p, i) => (
-                      <div key={i} className={`p-3 rounded-xl flex items-center justify-between border ${i===0 ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-slate-50 border-slate-100 text-slate-600'}`}>
-                        <span className="text-xs font-bold uppercase">{i === 0 ? 'Recomendado' : i === 1 ? 'Mínimo (Costo)' : 'Premium'}</span>
-                        <span className="font-black text-lg">${p.toLocaleString('es-AR')}</span>
+                  <div className="flex flex-col gap-4">
+                    {/* Recomendado */}
+                    <div className="p-4 rounded-xl flex flex-col gap-2 border bg-emerald-50 border-emerald-200 text-emerald-800">
+                      <div className="flex justify-between items-center">
+                        <span className="text-xs font-bold uppercase">Recomendado</span>
+                        <span className="font-black text-xl">${analysis.prices.recommended.amount.toLocaleString('es-AR')}</span>
                       </div>
-                    ))}
+                      <p className="text-xs font-medium text-emerald-700 leading-tight bg-emerald-100/50 p-2 rounded">{analysis.prices.recommended.reason}</p>
+                    </div>
+
+                    {/* Mínimo */}
+                    <div className="p-4 rounded-xl flex flex-col gap-2 border bg-slate-50 border-slate-100 text-slate-700">
+                      <div className="flex justify-between items-center">
+                        <span className="text-xs font-bold uppercase">Mínimo (Costo / Liquidación)</span>
+                        <span className="font-bold text-lg text-slate-900">${analysis.prices.minimum.amount.toLocaleString('es-AR')}</span>
+                      </div>
+                      <p className="text-xs font-medium text-slate-500 leading-tight bg-slate-100 p-2 rounded">{analysis.prices.minimum.reason}</p>
+                    </div>
+
+                    {/* Premium */}
+                    <div className="p-4 rounded-xl flex flex-col gap-2 border bg-purple-50 border-purple-200 text-purple-800">
+                      <div className="flex justify-between items-center">
+                        <span className="text-xs font-bold uppercase">Premium (Alta Gama)</span>
+                        <span className="font-bold text-lg text-purple-900">${analysis.prices.premium.amount.toLocaleString('es-AR')}</span>
+                      </div>
+                      <p className="text-xs font-medium text-purple-700 leading-tight bg-purple-100 p-2 rounded">{analysis.prices.premium.reason}</p>
+                    </div>
                   </div>
                 </div>
 
