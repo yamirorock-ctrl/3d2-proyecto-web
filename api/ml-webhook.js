@@ -322,7 +322,6 @@ async function handleQuestion(resource, accessToken, res) {
 }
 
 async function handleOrder(resource, accessToken, res) {
-  // Simplified Order Logic
   try {
     const oRes = await fetch(`https://api.mercadolibre.com${resource}`, {
       headers: { Authorization: `Bearer ${accessToken}` },
@@ -330,12 +329,108 @@ async function handleOrder(resource, accessToken, res) {
     if (!oRes.ok) throw new Error("Orders API Failed");
     const order = await oRes.json();
 
-    // Stock Update Logic Here (Similar to before)
     console.log(
       `[ML Webhook] Order ${order.id} received. Total: ${order.total_amount}`,
     );
 
-    // Notify Make (Optional)
+    // If order is not paid, we might want to skip or just mark as pending
+    if (order.status !== "paid" && order.status !== "confirmed") {
+      console.log(
+        `[ML Webhook] Order ${order.id} is ${order.status}, but processing anyway.`,
+      );
+    }
+
+    const orderItems = [];
+    let updatedStockLog = [];
+
+    // 1. Process items & Update Stock
+    for (const item of order.order_items) {
+      const mlItemId = item.item.id; // e.g., MLA2828593406
+      const qty = item.quantity;
+      const price = item.unit_price;
+      const title = item.item.title;
+
+      // Find product in Supabase
+      const { data: dbProduct } = await supabase
+        .from("products")
+        .select("id, name, stock, image")
+        .eq("ml_item_id", mlItemId)
+        .limit(1)
+        .maybeSingle();
+
+      let productId = null;
+      let productImage = "https://via.placeholder.com/150?text=ML";
+
+      if (dbProduct) {
+        productId = dbProduct.id;
+        productImage = dbProduct.image;
+
+        // Decrement Stock
+        if (dbProduct.stock !== null) {
+          const newStock = Math.max(0, dbProduct.stock - qty);
+          await supabase
+            .from("products")
+            .update({ stock: newStock })
+            .eq("id", dbProduct.id);
+          updatedStockLog.push(
+            `Decreased ${dbProduct.name} stock to ${newStock}`,
+          );
+        }
+      }
+
+      orderItems.push({
+        product_id: productId || 0, // 0 for unregistered ML products
+        name: title,
+        price: price,
+        quantity: qty,
+        image: productImage,
+      });
+    }
+
+    // 2. Reflect sale in 'orders' table
+    const orderNumber = `ML-${order.id}`;
+
+    // Check if order already exists
+    const { data: existingOrder } = await supabase
+      .from("orders")
+      .select("id")
+      .eq("order_number", orderNumber)
+      .maybeSingle();
+
+    if (!existingOrder) {
+      const newOrder = {
+        order_number: orderNumber,
+        customer_name:
+          order.buyer.nickname || order.buyer.first_name || "Comprador ML",
+        customer_email: "venta@mercadolibre.com",
+        customer_phone: "ML",
+        items: orderItems,
+        subtotal: order.total_amount,
+        shipping_cost: 0,
+        total: order.total_amount,
+        shipping_method: "correo",
+        status: "paid",
+        payment_method: "mercadopago",
+        ml_shipment_id: order.shipping?.id?.toString() || null,
+        notes: `Venta automática desde MercadoLibre. ID: ${order.id}`,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+
+      const { error: insertError } = await supabase
+        .from("orders")
+        .insert(newOrder);
+      if (insertError) {
+        console.error("[ML Webhook] Failed to insert order:", insertError);
+      } else {
+        console.log(
+          `[ML Webhook] Extracted Order ${orderNumber} successfully. Stock updates:`,
+          updatedStockLog,
+        );
+      }
+    }
+
+    // 3. Notify Make (Optional)
     if (MAKE_WEBHOOK_URL) {
       fetch(MAKE_WEBHOOK_URL, {
         method: "POST",
@@ -348,7 +443,7 @@ async function handleOrder(resource, accessToken, res) {
       }).catch((e) => console.error("Make Error:", e));
     }
 
-    return res.status(200).json({ success: true });
+    return res.status(200).json({ success: true, logged: true });
   } catch (e) {
     console.error("Order Error:", e);
     return res.status(200).json({ error: e.message });
