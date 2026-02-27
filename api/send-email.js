@@ -35,8 +35,6 @@ export default async function handler(req, res) {
         pass: process.env.EMAIL_PASS,
       },
       tls: {
-        // Remover SSLv3 ya que es inseguro y Office365 lo rechaza
-        ciphers: "SSLv23", // Permite TLS 1.2+
         rejectUnauthorized: false,
       },
     });
