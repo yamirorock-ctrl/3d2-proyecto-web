@@ -278,7 +278,7 @@ export const generateAmbientImage = async (imageBase64: string, scenarioDescript
     
     console.log(`[Gemini] Generando imagen ambientada (Img2Img)... Escenario: ${scenarioDescription.slice(0, 30)}...`);
 
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image-preview:generateContent?key=${apiKey}`, {
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${apiKey}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

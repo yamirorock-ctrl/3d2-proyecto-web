@@ -46,11 +46,16 @@ const PreSalesManager: React.FC<PreSalesManagerProps> = ({ onPublish }) => {
       setAnalysis(data);
       toast.success('Análisis completado. Generando ambientaciones...');
 
-      // Generar 1-2 variantes como máximo para no exceder timeouts/cuota
-      const variantPromises = data.scenarios.slice(0, 2).map(scene => generateAmbientImage(base64Data, scene));
-      const generated = await Promise.all(variantPromises);
+      // Generar 1-2 variantes como máximo pero de forma SECUENCIAL para no exceder timeouts/cuota
+      const successfulImages: string[] = [];
+      for (const scene of data.scenarios.slice(0, 2)) {
+        toast.info(`Generando ambiente: ${scene.slice(0, 30)}...`);
+        const img = await generateAmbientImage(base64Data, scene);
+        if (img) successfulImages.push(img);
+        // Small delay to help with rate limits
+        await new Promise(r => setTimeout(r, 2000));
+      }
       
-      const successfulImages = generated.filter((v): v is string => v !== null);
       setAmbientImages(successfulImages);
       
       if (successfulImages.length > 0) {
