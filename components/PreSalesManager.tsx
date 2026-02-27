@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Camera, Upload, ShoppingBag, Sparkles, Image as ImageIcon, Loader2, Tag, FileText, DollarSign, AlertCircle, Download, CheckCircle2 } from 'lucide-react';
 import { analyzeProductForSales, generateAmbientImage, ProductAnalysis } from '../services/geminiService';
+import { compressImageToBase64 } from '../utils/imageCompression';
 import { toast } from 'sonner';
 
 interface PreSalesManagerProps {
@@ -14,17 +15,29 @@ const PreSalesManager: React.FC<PreSalesManagerProps> = ({ onPublish }) => {
   const [ambientImages, setAmbientImages] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImage(reader.result as string);
+      setLoading(true);
+      toast.info('Optimizando foto para la IA...');
+      try {
+        // Comprimir fuertemente para no saturar los límites de Tokens de la versión gratuita de Google
+        const base64Ready = await compressImageToBase64(file, {
+          maxSizeMB: 0.1, // 100kb
+          maxWidthOrHeight: 800, // No necesitamos 4K para analizar
+          useWebWorker: true,
+          initialQuality: 0.7
+        });
+        
+        setImage(base64Ready);
         setAnalysis(null);
         setAmbientImages([]);
         setError(null);
-      };
-      reader.readAsDataURL(file);
+      } catch (err) {
+        toast.error('Error al preparar la imagen.');
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
@@ -46,9 +59,9 @@ const PreSalesManager: React.FC<PreSalesManagerProps> = ({ onPublish }) => {
       setAnalysis(data);
       toast.success('Análisis completado. Generando ambientaciones...');
 
-      // Generar 1-2 variantes como máximo pero de forma SECUENCIAL para no exceder timeouts/cuota
+      // Generar solo 1 variante máxima por ahora para proteger el límite estricto de cuota gratuita.
       const successfulImages: string[] = [];
-      for (const scene of data.scenarios.slice(0, 2)) {
+      for (const scene of data.scenarios.slice(0, 1)) {
         toast.info(`Generando ambiente: ${scene.slice(0, 30)}...`);
         const img = await generateAmbientImage(base64Data, scene);
         if (img) successfulImages.push(img);
