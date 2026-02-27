@@ -89,11 +89,12 @@ export default async function handler(req, res) {
       return res.status(200).json({ error: "Server Configuration Error" });
     }
 
-    // 2. Check Global Switch
-    const enabled = await isBotEnabled();
-    if (!enabled) {
-      console.log("🛑 Bot is OFF by Admin. Skipping execution.");
-      return res.status(200).json({ status: "skipped_by_admin" });
+    // 2. Check Global Bot Status (but do NOT block orders from passing)
+    const botEnabled = await isBotEnabled();
+    if (!botEnabled) {
+      console.log(
+        "🛑 Bot is OFF by Admin. AI will skip answering, but will log question and process orders.",
+      );
     }
 
     const topic = req.query?.topic || req.body?.topic;
@@ -126,7 +127,7 @@ export default async function handler(req, res) {
 
     // 5. Route Logic
     if (topic === "questions") {
-      return await handleQuestion(resource, accessToken, res);
+      return await handleQuestion(resource, accessToken, res, botEnabled);
     } else {
       return await handleOrder(resource, accessToken, res);
     }
@@ -141,7 +142,7 @@ export default async function handler(req, res) {
 // HANDLERS
 // ------------------------------------------------------------------
 
-async function handleQuestion(resource, accessToken, res) {
+async function handleQuestion(resource, accessToken, res, botEnabled) {
   let questionText = "Unknown";
   let questionId = "Unknown";
   let itemId = "Unknown";
@@ -212,9 +213,17 @@ async function handleQuestion(resource, accessToken, res) {
       return res.status(200).json({ status: "skipped_status" });
     }
 
+    // --- BOT IS OFF: STOP HERE BUT LEAVE QUESTION LOGGED ---
+    if (!botEnabled) {
+      console.log(
+        `[ML Webhook] Bot disabled. Question ${questionId} logged for human answer.`,
+      );
+      return res.status(200).json({ status: "logged_for_human" });
+    }
+
     if (!genAI) throw new Error("Gemini API Key missing");
 
-    // 4. Fetch Contex (Parallel)
+    // 4. Fetch Context (Parallel)
     const [item, descriptionData, dbProduct] = await Promise.all([
       fetch(`https://api.mercadolibre.com/items/${itemId}`, {
         headers: { Authorization: `Bearer ${accessToken}` },
