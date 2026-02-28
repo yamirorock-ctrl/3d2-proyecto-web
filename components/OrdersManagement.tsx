@@ -110,7 +110,8 @@ const OrdersManagement: React.FC = () => {
       </head>
       <body>
         <div class="header">
-          <h1>3D2 Print & Laser</h1>
+          <img src="${window.location.origin}/LOGO.jpg" alt="3D2 Logo" style="max-height: 80px; margin-bottom: 10px; border-radius: 8px;" onerror="this.style.display='none'" />
+          <h1>3D2 Impresiones</h1>
           <p>Impresión 3D y Corte Láser</p>
         </div>
         
