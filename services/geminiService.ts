@@ -241,9 +241,12 @@ En 'scenarios', describe entornos muy realistas y fotográficos.`;
     console.log("[Gemini] Iniciando análisis de producto (Vision)...");
     
     // Using simple fetch to ensure we can force JSON responseMimeType compatibility
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`, {
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        'x-goog-api-key': apiKey
+      },
       body: JSON.stringify({
         contents: [{
           parts: [
