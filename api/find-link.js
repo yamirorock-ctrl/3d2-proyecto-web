@@ -44,12 +44,12 @@ export default async function handler(req, res) {
       .normalize("NFD")
       .replace(/[\u0300-\u036f]/g, "");
 
-    // Obtener catálogo (solo ID y Name para ser rápidos)
+    // Obtener catálogo (solo ID, Name y Foto para ser rápidos)
     // Traemos todo el catálogo porque suele ser pequeño (<1000 items).
     // Si crece mucho, habría que usar Search en DB.
     const { data: products, error } = await supabase
       .from("products")
-      .select("id, name");
+      .select("id, name, image_url");
 
     if (error || !products) {
       console.error("Error fetching products:", error);
