@@ -29,11 +29,12 @@ export default async function handler(req, res) {
   try {
     const queryText = req.query.q || req.body.text || "";
 
-    // Si no hay texto, devolvemos la home
+    // Si no hay texto, devolvemos la home con logo
     if (!queryText || !supabase) {
       return res.status(200).json({
         found: false,
         url: "https://www.creart3d2.com/",
+        product_image_url: "https://www.creart3d2.com/LOGO.jpg",
         reason: "no_text_or_config",
       });
     }
@@ -56,6 +57,7 @@ export default async function handler(req, res) {
       return res.status(200).json({
         found: false,
         url: "https://www.creart3d2.com/",
+        product_image_url: "https://www.creart3d2.com/LOGO.jpg",
         reason: "db_error",
       });
     }
