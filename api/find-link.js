@@ -32,9 +32,9 @@ export default async function handler(req, res) {
     // Si no hay texto, abortamos la operacion para no generar posts basura
     if (!queryText || !supabase) {
       console.log("No text or DB config found. Aborting.");
-      return res.status(404).json({
+      return res.status(200).json({
         found: false,
-        error: "Product not found (no text or db config)",
+        reason: "no_text_or_config",
       });
     }
 
@@ -53,9 +53,9 @@ export default async function handler(req, res) {
 
     if (error || !products) {
       console.error("Error fetching products:", error);
-      return res.status(500).json({
+      return res.status(200).json({
         found: false,
-        error: "Database error resolving products",
+        reason: "db_error",
       });
     }
 
@@ -158,11 +158,15 @@ export default async function handler(req, res) {
       return res.status(200).json(responseJson);
     }
 
-    // Fallback: Si no encuentro match, devuelvo 404 para que Make frene el flujo
-    console.log("No product matched. Sending 404 to stop Make flow.");
-    return res.status(404).json({
+    // Fallback: Si no encuentro match, devuelvo status 200 con found:false
+    // IMPORTANTE: Se devuelve 200 para que Make.com no tome esto como un "Error Crítico"
+    // y no desactive el escenario. En Make, se debe usar un "Filtro" (Condition: found = true).
+    console.log(
+      "No product matched. Sending json with found:false to gracefully stop Make flow.",
+    );
+    return res.status(200).json({
       found: false,
-      error: "Product not found",
+      reason: "no_match_found",
     });
   } catch (e) {
     console.error("API Error:", e);
