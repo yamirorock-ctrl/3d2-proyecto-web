@@ -81,13 +81,13 @@ export default async function handler(req, res) {
       try {
         console.log("Iniciando búsqueda IA (Single Shot)...");
         // AHORA DEVUELVE UN OBJETO con { product_name, pinterest_title, pinterest_description }
-        const aiResult = await findProductWithAI(
-          queryText,
-          products,
-          genAI,
-          imageUrl,
-          optimizeFor,
-        );
+        // Timeout de 8 segundos para evitar que Vercel cancele la función (límite 10s)
+        const aiResult = await Promise.race([
+          findProductWithAI(queryText, products, genAI, imageUrl, optimizeFor),
+          new Promise((_, reject) =>
+            setTimeout(() => reject(new Error("Gemini AI Timeout (8s)")), 8000),
+          ),
+        ]);
 
         const matchName = aiResult.product_name;
         aiDescription = aiResult.pinterest_description; // Guardamos la descripción
@@ -163,6 +163,7 @@ export default async function handler(req, res) {
     return res.status(200).json({
       found: false,
       url: "https://www.creart3d2.com/",
+      product_image_url: "https://www.creart3d2.com/LOGO.jpg", // Logo por defecto
       reason: "no_match_found",
     });
   } catch (e) {
@@ -304,6 +305,7 @@ function performManualFuzzySearch(normalizedText, products) {
     .filter((t) => t.length > 2 && !stopWords.includes(t));
 
   for (const product of products) {
+    if (!product.name) continue; // Proteger contra nombres null en BD
     const normalizedName = product.name
       .toLowerCase()
       .normalize("NFD")
