@@ -267,9 +267,9 @@ async function handleQuestion(resource, accessToken, res, botEnabled) {
 
     // 6. Generate AI Answer
     const model = genAI.getGenerativeModel({
-      model: "gemini-1.5-flash",
+      model: "gemini-3-flash-preview",
       systemInstruction: finalPrompt,
-    }); // Use stable model
+    }); // Use Printy 3.0 model
     const result = await model.generateContent(`Pregunta: "${questionText}"`);
     const answerText = result.response.text().trim();
 
