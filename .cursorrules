@@ -1,13 +1,29 @@
-# Reglas Generales del Proyecto 3D2 - Printy IA
+# 🚀 Reglas Generales y Arquitectura del Proyecto "3D2"
 
-1. **Modelos de Inteligencia Artificial (Gemini)**:
-   - **NUNCA** hagas downgrade de los modelos de Gemini.
-   - El modelo de Printy es la versión 3.0. Utiliza siempre `gemini-3-flash-preview` o `gemini-3-pro-preview` según corresponda para texto y visión.
-   - NO usar versiones 1.5 o 2.5 flash a menos que sea explícitamente requerido por el usuario (ej. problemas de rate limit severo comprobados), pero la BASE debe ser `gemini-3`.
-   - Si el sistema tira error 429 de Rate Limit, pide al usuario autorización para manejar la cuota con delays o encolado, pero NO cambies la versión del modelo sin su estricto permiso, ya que se perderían las capacidades del 3.0.
+**ATENCIÓN IA:** Este documento contiene las directrices INQUEBRANTABLES para trabajar en este proyecto. Debes leerlas y acatarlas en cada sesión sin excepciones.
 
-2. **Producción**:
-   - Todo código asume entorno productivo conectado a Vercel y Supabase.
+## 1. 🧠 Inteligencia Artificial (Printy 3.0)
+- **CERO DOWNGRADES:** NUNCA hagas downgrade de los modelos de Gemini. El asistente "Printy" funciona exclusivamente en la generación 3.0.
+- **Modelos Permitidos:** Utiliza siempre `gemini-3-flash-preview` o `gemini-3-pro-preview` según corresponda para texto y visión.
+- **Límites de Cuota (429):** Si la API arroja error `429 Too Many Requests`, NO cambies el modelo a versiones inferiores (1.5 o 2.5 flash). Informa al usuario para manejar la cuota (delays, reintentos) manteniendo el motor 3.0 intacto.
 
-3. **Seguridad**:
-   - Nunca alojes credenciales sensibles en el código, usar variables de entorno `VITE_` e ignorar los env files en git.
+## 2. 🏗️ Arquitectura del Sistema (El Organismo)
+- **El Cuerpo (Hosting):** La web corre en **Vercel** (Plan Gratuito).
+  - *Límite Estricto:* Existe un máximo de 12 Serverless Functions (archivos en la carpeta `/api/`). NO crees nuevos endpoints o scripts ahí adentro sin extrema necesidad o sin fusionar existentes.
+- **El Cerebro (Data):** Todo el backend es **Supabase** (PostgreSQL, Auth, Storage). Supabase es la ÚNICA fuente de la verdad para stock, productos, preguntas de ML y tokens.
+- **El Corazón (Despliegue):** El flujo de vida es 100% **Git -> GitHub**. Cada `git push origin main` detona un despliegue en Vercel. NO existen configuraciones manuales por FTP; el código que subes a Git es el que impacta al mundo.
+- **Estado:** La página está en estricta **PRODUCCIÓN**. No pruebes código destructivo ni juegues con la base de datos sin precausión.
+
+## 3. 🛡️ Seguridad Absoluta
+- **SECRETO MÁXIMO:** NUNCA reveles, imprimas en consola, ni subas a Git (commits) las API Keys reales del usuario (Gemini, MercadoLibre, Outlook, MercadoPago, Supabase Service Role).
+- **Manejo de Variables:** Todos los secretos viven EXCLUSIVAMENTE en `.env.local` (ignorado por Git) y cargados manualmente en la UI de Vercel. 
+
+## 4. 🛒 Integraciones Críticas (MercadoLibre)
+- El sistema tiene un puente bidireccional de "ida y vuelta" constante con MercadoLibre.
+- **Webhook de ML:** El archivo `api/ml-webhook.js` es el guardián de la puerta. Recibe y automatiza:
+  - Preguntas de compradores (Derivadas y contestadas por Printy 3.0 si está encendido).
+  - Ventas (Descuenta stock en Supabase y notifica).
+- Cualquier cambio aquí debe ser minucioso, ya que una caída frena las operaciones del negocio.
+
+## 5. 🛠️ Regla de Intervención
+- **Limitación Autónoma:** NO modifiques estructuras de la base de datos (SQL, Tablas) ni borres código de integración (como Make.com) sin la aprobación explícita del usuario. Pide permiso antes de hacer re-escrituras masivas.
