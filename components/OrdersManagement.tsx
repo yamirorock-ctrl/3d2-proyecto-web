@@ -93,24 +93,31 @@ const OrdersManagement: React.FC = () => {
       <head>
         <title>Comprobante de Pedido #${order.order_number}</title>
         <style>
-          body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #333; line-height: 1.6; padding: 20px; max-width: 800px; margin: 0 auto; }
-          .header { text-align: center; border-bottom: 2px solid #333; padding-bottom: 20px; margin-bottom: 20px; }
-          .header h1 { margin: 0; color: #4f46e5; font-size: 28px; }
-          .header p { margin: 5px 0 0; color: #666; font-size: 14px; }
-          .warning { text-align: center; background: #f3f4f6; padding: 10px; font-size: 12px; color: #666; border-radius: 4px; border: 1px solid #e5e7eb; margin-bottom: 20px; }
-          .details { display: flex; justify-content: space-between; margin-bottom: 30px; }
+          @page { margin: 10mm; size: A4; }
+          body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #333; line-height: 1.3; font-size: 11px; padding: 0; max-width: 100%; margin: 0 auto; box-sizing: border-box; }
+          h1, h2, h3, p { margin: 0; padding: 0; }
+          .header { text-align: center; border-bottom: 2px solid #333; padding-bottom: 10px; margin-bottom: 10px; }
+          .header img { width: 45px; height: 45px; object-fit: cover; border-radius: 50%; margin-bottom: 5px; }
+          .header h1 { color: #4f46e5; font-size: 20px; }
+          .header p { color: #666; font-size: 11px; margin-top: 2px; }
+          .warning { text-align: center; background: #f3f4f6; padding: 5px; font-size: 10px; color: #666; border: 1px solid #e5e7eb; margin-bottom: 15px; }
+          .details { display: flex; justify-content: space-between; margin-bottom: 15px; }
           .details div { flex: 1; }
-          .details h3 { margin-top: 0; font-size: 16px; border-bottom: 1px solid #eee; padding-bottom: 5px; }
-          table { w-full; border-collapse: collapse; margin-bottom: 30px; width: 100%; }
-          th, td { padding: 12px; text-align: left; border-bottom: 1px solid #eee; }
-          th { background-color: #f9fafb; font-weight: bold; }
-          .total { text-align: right; font-size: 20px; font-weight: bold; }
-          .footer { margin-top: 50px; text-align: center; font-size: 12px; color: #999; border-top: 1px solid #eee; padding-top: 20px; }
+          .details h3 { font-size: 13px; border-bottom: 1px solid #eee; padding-bottom: 2px; margin-bottom: 5px; color: #4f46e5; }
+          .details p { margin-bottom: 3px; }
+          table { border-collapse: collapse; margin-bottom: 15px; width: 100%; border: 1px solid #eee; }
+          th, td { padding: 6px; text-align: left; border-bottom: 1px solid #eee; font-size: 11px; }
+          th { background-color: #f9fafb; font-weight: bold; padding: 8px 6px; }
+          td { padding-top: 8px; padding-bottom: 8px; }
+          .item-name { max-width: 250px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: inline-block; }
+          .total { text-align: right; font-size: 14px; font-weight: bold; background: #f9fafb; padding: 10px; border: 1px solid #eee; }
+          .notes { margin-top: 15px; padding: 8px; background: #fafafa; border-left: 3px solid #4f46e5; font-size: 10px; }
+          .footer { margin-top: 20px; text-align: center; font-size: 10px; color: #999; border-top: 1px solid #eee; padding-top: 10px; }
         </style>
       </head>
       <body>
         <div class="header">
-          <img src="${window.location.origin}/LOGO.jpg" alt="3D2 Logo" style="max-height: 80px; margin-bottom: 10px; border-radius: 8px;" onerror="this.style.display='none'" />
+          <img src="${window.location.origin}/LOGO.jpg" alt="3D2 Logo" onerror="this.style.display='none'" />
           <h1>3D2 Impresiones</h1>
           <p>Impresión 3D y Corte Láser</p>
         </div>
@@ -147,7 +154,7 @@ const OrdersManagement: React.FC = () => {
           <tbody>
             ${order.items.map(item => `
               <tr>
-                <td>${item.name}</td>
+                <td><span class="item-name" title="${item.name}">${item.name}</span></td>
                 <td>${item.quantity}</td>
                 <td>$${Number(item.price).toLocaleString('es-AR')}</td>
                 <td style="text-align: right;">$${Number(item.price * item.quantity).toLocaleString('es-AR')}</td>
@@ -161,7 +168,7 @@ const OrdersManagement: React.FC = () => {
         </div>
 
         ${order.notes ? `
-        <div style="margin-top: 30px; padding: 15px; background: #fafafa; border-left: 4px solid #4f46e5;">
+        <div class="notes">
           <strong>Notas del Pedido:</strong><br/>
           ${order.notes.replace(/\n/g, '<br/>')}
         </div>
