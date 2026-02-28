@@ -44,12 +44,12 @@ export default async function handler(req, res) {
       .normalize("NFD")
       .replace(/[\u0300-\u036f]/g, "");
 
-    // Obtener catálogo (solo ID, Name y Foto para ser rápidos)
+    // Obtener catálogo (ID, Name, Foto, Descripción y Precio)
     // Traemos todo el catálogo porque suele ser pequeño (<1000 items).
     // Si crece mucho, habría que usar Search en DB.
     const { data: products, error } = await supabase
       .from("products")
-      .select("id, name, image_url");
+      .select("id, name, image_url, description, price");
 
     if (error || !products) {
       console.error("Error fetching products:", error);
@@ -133,14 +133,29 @@ export default async function handler(req, res) {
     }
 
     if (bestMatch && maxScore > 0) {
+      // 🛡️ REGLA ESTRICTA DE CONTROL: Validar de que existan TODOS los datos necesarios en la BD.
+      // Make se rompe si devolvemos found:true pero nos falta la imagen.
+      if (!bestMatch.image_url) {
+        console.log(
+          `⚠️ Producto encontrado (${bestMatch.name}) pero BLOQUEADO porque NO TIENE IMAGEN en la base de datos.`,
+        );
+        return res.status(200).json({
+          found: false,
+          reason: "incomplete_data_missing_image_in_db",
+        });
+      }
+
       // Construir URL
       const productUrl = `https://www.creart3d2.com/product/${bestMatch.id}`;
 
       const responseJson = {
         found: true,
+        product_id: bestMatch.id,
         product: bestMatch.name,
         url: productUrl,
-        product_image_url: bestMatch.image_url || null, // 📸 Foto oficial para Pinterest
+        product_image_url: bestMatch.image_url, // 📸 Garantizado que existe por el check de arriba
+        original_description: bestMatch.description || "",
+        price: bestMatch.price || 0,
         match_type: maxScore >= 100 ? "exact_name_in_text" : "keyword_match",
         score: maxScore,
       };
