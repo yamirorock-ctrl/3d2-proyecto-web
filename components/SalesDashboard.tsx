@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { Order, Payment, OrderStatus } from '../types';
-import { TrendingUp, Package, DollarSign, Clock, Download, Calendar, CheckCircle, Loader, XCircle, Trash2, RefreshCw, Truck, Edit, AlertCircle, Plus, Wallet, CreditCard, Banknote, History } from 'lucide-react';
+import { TrendingUp, Package, DollarSign, Clock, Download, Calendar, CheckCircle, Loader, XCircle, Trash2, RefreshCw, Truck, Edit, AlertCircle, Plus, Wallet, CreditCard, Banknote, History, Printer } from 'lucide-react';
 
 interface Props {
   orders: Order[];
@@ -198,6 +198,103 @@ const SalesDashboard: React.FC<Props> = ({ orders, payments, onUpdateStatus, onE
     } else {
         onUpdateStatus && onUpdateStatus(order.id, nextStatus as any);
     }
+  };
+
+  const handlePrintReceipt = (order: Order) => {
+    const printWindow = window.open('', '_blank', 'width=800,height=600');
+    if (!printWindow) return alert('Por favor habilitá las ventanas emergentes (pop-ups) para imprimir el recibo.');
+
+    const receiptHtml = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Comprobante de Pedido #${order.order_number || order.id.slice(0,8)}</title>
+        <style>
+          body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #333; line-height: 1.6; padding: 20px; max-width: 800px; margin: 0 auto; }
+          .header { text-align: center; border-bottom: 2px solid #333; padding-bottom: 20px; margin-bottom: 20px; }
+          .header h1 { margin: 0; color: #4f46e5; font-size: 28px; }
+          .header p { margin: 5px 0 0; color: #666; font-size: 14px; }
+          .warning { text-align: center; background: #f3f4f6; padding: 10px; font-size: 12px; color: #666; border-radius: 4px; border: 1px solid #e5e7eb; margin-bottom: 20px; }
+          .details { display: flex; justify-content: space-between; margin-bottom: 30px; }
+          .details div { flex: 1; }
+          .details h3 { margin-top: 0; font-size: 16px; border-bottom: 1px solid #eee; padding-bottom: 5px; }
+          table { border-collapse: collapse; margin-bottom: 30px; width: 100%; }
+          th, td { padding: 12px; text-align: left; border-bottom: 1px solid #eee; }
+          th { background-color: #f9fafb; font-weight: bold; }
+          .total { text-align: right; font-size: 20px; font-weight: bold; }
+          .footer { margin-top: 50px; text-align: center; font-size: 12px; color: #999; border-top: 1px solid #eee; padding-top: 20px; }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h1>3D2 Print & Laser</h1>
+          <p>Impresión 3D y Corte Láser</p>
+        </div>
+        
+        <div class="warning">
+          <strong>Documento No Fiscal</strong> - Comprobante interno de pedido para el cliente.
+        </div>
+
+        <div class="details">
+          <div>
+            <h3>Datos del Cliente</h3>
+            <p><strong>Nombre:</strong> ${(order as any).customer?.name || (order as any).customer_name || 'N/A'}</p>
+            <p><strong>Email:</strong> ${(order as any).customer?.email || (order as any).customer_email || 'N/A'}</p>
+            <p><strong>Teléfono:</strong> ${(order as any).customer?.phone || (order as any).customer_phone || 'N/A'}</p>
+          </div>
+          <div style="text-align: right;">
+            <h3>Detalles del Pedido</h3>
+            <p><strong>N° de Pedido:</strong> ${order.order_number || order.id.slice(0,8)}</p>
+            <p><strong>Fecha:</strong> ${new Date((order as any).timestamp || (order as any).created_at).toLocaleDateString('es-AR')}</p>
+            <p><strong>Método de Pago:</strong> ${((order as any).method === 'mercadopago' || (order as any).payment_id) ? 'MercadoPago' : ((order as any).paymentMethod === 'transfer' ? 'Transferencia' : 'Otro')}</p>
+            <p><strong>Estado:</strong> ${order.status.toUpperCase()}</p>
+          </div>
+        </div>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Producto</th>
+              <th>Cantidad</th>
+              <th>Precio Unit.</th>
+              <th style="text-align: right;">Subtotal</th>
+            </tr>
+          </thead>
+            ${(order.items || []).map(item => `
+              <tr>
+                <td>${item.name}</td>
+                <td>${item.quantity}</td>
+                <td>$${Number(item.price).toLocaleString('es-AR')}</td>
+                <td style="text-align: right;">$${Number(item.price * item.quantity).toLocaleString('es-AR')}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+
+        <div class="total">
+          <p>Total a Pagar: $${Number(order.total).toLocaleString('es-AR')}</p>
+        </div>
+
+        ${order.notes ? `
+        <div style="margin-top: 30px; padding: 15px; background: #fafafa; border-left: 4px solid #4f46e5;">
+          <strong>Notas del Pedido:</strong><br/>
+          ${order.notes.replace(/\n/g, '<br/>')}
+        </div>
+        ` : ''}
+
+        <div class="footer">
+          ¡Gracias por confiar en 3D2! Si tienes dudas con tu pedido comunícate con nosotros.
+        </div>
+        
+        <script>
+          window.onload = function() { window.print(); }
+        </script>
+      </body>
+      </html>
+    `;
+
+    printWindow.document.write(receiptHtml);
+    printWindow.document.close();
   };
 
   return (
@@ -613,6 +710,14 @@ const SalesDashboard: React.FC<Props> = ({ orders, payments, onUpdateStatus, onE
                          Editar Venta
                        </button>
                     )}
+
+                    <button
+                      onClick={() => handlePrintReceipt(order)}
+                      className="px-4 py-2 bg-slate-800 text-white rounded-md text-sm hover:bg-slate-900 transition-colors flex items-center justify-center gap-2 shadow-sm"
+                    >
+                      <Printer size={14} />
+                      Imprimir Recibo
+                    </button>
 
                     {/* Descargar etiqueta MercadoEnvíos si existe shipment */}
                     {(order as any).ml_shipment_id && (
