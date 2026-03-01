@@ -104,6 +104,10 @@ export interface OrderItem {
     model?: string;
     color?: string;
   };
+  consumables?: {
+    material: string;
+    quantity: number;
+  }[];
 }
 
 export interface Order {

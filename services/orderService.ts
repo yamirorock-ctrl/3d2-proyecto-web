@@ -431,6 +431,24 @@ async function deductRawMaterials(items: OrderItem[]) {
   // 3. Analizar Items
   for (const item of items) {
     const qty = item.quantity;
+    
+    // --- NUEVO: CONSUMIBLES DEL ITEM DIRECTO (Ventas manuales/personalizadas) ---
+    if (item.consumables && Array.isArray(item.consumables) && item.consumables.length > 0) {
+        console.log(`[Stock] Usando receta personalizada del item: ${item.name}`);
+        item.consumables.forEach((c: any) => {
+            if (c.material && c.quantity) {
+                const mat = findMaterialIdByName(c.material);
+                if (mat) {
+                    addDeduction(mat.id, c.quantity * qty);
+                } else {
+                    console.warn(`[Stock] Consumible no encontrado (custom): ${c.material}`);
+                }
+            }
+        });
+        // Si el item ya define su propia receta en vivo, ignoramos la receta de base de datos para no duplicar.
+        continue;
+    }
+
     const productDef = productMap.get(item.product_id) as any; // Cast a any explícito para acceder a propiedades dinámicas
     
     if (!productDef) continue;

@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { toast } from 'sonner';
-import { Product, Order, OrderItem, ShippingMethod, OrderStatus, Payment } from '../types';
+import { Product, Order, OrderItem, ShippingMethod, OrderStatus, Payment, RawMaterial } from '../types';
 import { createOrder, updateOrder } from '../services/orderService';
 import { updateProductStock } from '../services/productService';
-import { Search, Calculator, Check, Plus, X, User, Phone, FileText, ShoppingCart, DollarSign, Trash2, Edit, AlertCircle } from 'lucide-react';
+import { getMaterials } from '../services/supabaseService';
+import { Search, Calculator, Check, Plus, X, User, Phone, FileText, ShoppingCart, DollarSign, Trash2, Edit, AlertCircle, Package } from 'lucide-react';
 
 interface Props {
   products: Product[];
@@ -23,6 +24,12 @@ export const ManualOrderForm: React.FC<Props> = ({ products, initialOrder, onClo
   const [quantity, setQuantity] = useState(1);
   const [customPrice, setCustomPrice] = useState<string>(''); // Precio TOTAL del ítem actual (unitario * cantidad)
 
+  // Insumos personalizados para orden manual
+  const [availableMaterials, setAvailableMaterials] = useState<RawMaterial[]>([]);
+  const [customConsumables, setCustomConsumables] = useState<{ material: string, quantity: number }[]>([]);
+  const [tempMaterial, setTempMaterial] = useState('');
+  const [tempMaterialQty, setTempMaterialQty] = useState(1);
+
   // Datos de la Orden
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
@@ -35,6 +42,12 @@ export const ManualOrderForm: React.FC<Props> = ({ products, initialOrder, onClo
   const [paymentAmount, setPaymentAmount] = useState<string>(''); // Monto que paga AHORA
   const [payMethod, setPayMethod] = useState<Payment['method']>('efectivo');
   const [deliveryDate, setDeliveryDate] = useState<string>(''); // Fecha prometida
+
+  useEffect(() => {
+    getMaterials().then(res => {
+      if (res.data) setAvailableMaterials(res.data);
+    });
+  }, []);
 
   // Cargar datos si es edición
   useEffect(() => {
@@ -134,6 +147,7 @@ export const ManualOrderForm: React.FC<Props> = ({ products, initialOrder, onClo
       price: unitPrice,
       quantity: quantity,
       image: selectedProduct?.image || selectedProduct?.images?.[0]?.url || 'https://via.placeholder.com/150?text=Personalizado',
+      consumables: isCustomProductMode && customConsumables.length > 0 ? [...customConsumables] : undefined
     };
 
     setOrderItems([...orderItems, newItem]);
@@ -143,6 +157,9 @@ export const ManualOrderForm: React.FC<Props> = ({ products, initialOrder, onClo
     setCustomNameItem('');
     setQuantity(1);
     setCustomPrice('');
+    setCustomConsumables([]);
+    setTempMaterial('');
+    setTempMaterialQty(1);
     toast.success('Producto agregado a la lista');
   };
 
@@ -384,6 +401,56 @@ export const ManualOrderForm: React.FC<Props> = ({ products, initialOrder, onClo
                         </div>
                       </div>
                    </div>
+                   
+                   {/* Sección Consumibles / Insumos Dinámicos */}
+                   <div className="bg-white p-3 rounded-lg border border-blue-100 shadow-sm mt-2">
+                      <label className="text-[10px] font-bold text-slate-500 uppercase flex items-center gap-1 mb-2">
+                        <Package size={12}/> Insumos a descontar (por unidad)
+                      </label>
+                      
+                      {customConsumables.map((c, i) => (
+                          <div key={i} className="flex justify-between items-center bg-slate-50 p-2 rounded mb-1 border border-slate-100 text-xs">
+                             <span><b className="text-slate-700">{c.material}</b> x{c.quantity}</span>
+                             <button type="button" onClick={() => setCustomConsumables(prev => prev.filter((_, idx) => idx !== i))} className="text-red-500 hover:text-red-700 p-1"><X size={12}/></button>
+                          </div>
+                      ))}
+
+                      <div className="flex flex-col sm:flex-row gap-2 mt-2">
+                         <select 
+                            className="flex-1 p-1.5 text-xs border border-slate-200 rounded focus:ring-1 focus:ring-blue-500 bg-slate-50"
+                            value={tempMaterial}
+                            onChange={e => setTempMaterial(e.target.value)}
+                         >
+                            <option value="">Seleccionar insumo...</option>
+                            {availableMaterials.map(m => (
+                              <option key={m.id} value={m.name}>{m.name} ({m.category})</option>
+                            ))}
+                         </select>
+                         <input 
+                            type="number" 
+                            min="0.1"
+                            step="any"
+                            className="w-16 p-1.5 text-xs border border-slate-200 rounded text-center focus:ring-1 focus:ring-blue-500 bg-slate-50"
+                            value={tempMaterialQty}
+                            onChange={e => setTempMaterialQty(Number(e.target.value) || 1)}
+                            title="Cantidad"
+                         />
+                         <button 
+                            type="button" 
+                            className="bg-blue-100 hover:bg-blue-200 text-blue-700 px-3 py-1.5 rounded text-xs font-bold transition-colors"
+                            onClick={() => {
+                               if (tempMaterial && tempMaterialQty > 0) {
+                                  setCustomConsumables(prev => [...prev, { material: tempMaterial, quantity: tempMaterialQty }]);
+                                  setTempMaterial('');
+                                  setTempMaterialQty(1);
+                               }
+                            }}
+                         >
+                            Añadir
+                         </button>
+                      </div>
+                   </div>
+
                    <button
                     type="button"
                     onClick={handleAddItem}
