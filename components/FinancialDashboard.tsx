@@ -18,8 +18,8 @@ interface Props {
 const FILAMENT_BRANDS = ['Grilon', 'Printalot', '3n3', 'Elegoo', 'GST3D', 'Extrules', 'Creality', 'Otros'];
 const FILAMENT_TYPES = ['PLA', 'PLA+', 'SILK', 'PETG', 'TPU', 'ABS', 'Carbono', 'ASA', 'Nylon', 'Otros'];
 
-// Categorías y Subcategorías predefinidas
-const EXPENSE_CATEGORIES = {
+// Categorías y Subcategorías predefinidas (Base)
+const DEFAULT_EXPENSE_CATEGORIES = {
   'Filamento': ['PLA', 'PETG', 'TPU', 'ABS', 'FLEX', 'Otros'],
   'Madera': ['MDF 3mm', 'MDF 5.5mm', 'Fibroplus Blanco', 'Fibroplus Negro', 'Otros'],
   'Insumos': [
@@ -94,6 +94,34 @@ const FinancialDashboard: React.FC<Props> = ({ orders, products, onEditProduct }
     unit: 'unidades',
     min_threshold: 1
   });
+
+  const [customCategories, setCustomCategories] = useState<Record<string, string[]>>(() => {
+    try {
+      const saved = localStorage.getItem('customCategories');
+      return saved ? JSON.parse(saved) : DEFAULT_EXPENSE_CATEGORIES;
+    } catch {
+      return DEFAULT_EXPENSE_CATEGORIES;
+    }
+  });
+
+  const handleAddPredeterminado = (cat: string | undefined, value: string | undefined) => {
+    const cleanCat = cat || 'Otros';
+    const cleanValue = (value || '').trim();
+    if (!cleanValue) return toast.error('Nombre inválido');
+    
+    setCustomCategories(prev => {
+       const existingList = prev[cleanCat] || [];
+       if (existingList.includes(cleanValue)) {
+         toast.error('Ya existe en la lista predeterminada');
+         return prev;
+       }
+       const nextCat = [...existingList, cleanValue];
+       const nextState = { ...prev, [cleanCat]: nextCat };
+       localStorage.setItem('customCategories', JSON.stringify(nextState));
+       toast.success(`Guardado: ${cleanValue}`);
+       return nextState;
+    });
+  };
 
   useEffect(() => {
     loadData();
@@ -470,13 +498,33 @@ const FinancialDashboard: React.FC<Props> = ({ orders, products, onEditProduct }
                     <span className="absolute left-2 top-2 text-slate-400">$</span>
                     <input type="number" placeholder="0.00" value={newExpense.amount || ''} onChange={e => setNewExpense({...newExpense, amount: Number(e.target.value)})} className="w-full p-2 pl-6 border rounded text-sm"/>
                   </div>
-                  <select value={newExpense.category} onChange={e => setNewExpense({...newExpense, category: e.target.value as any, subcategory: EXPENSE_CATEGORIES[e.target.value as keyof typeof EXPENSE_CATEGORIES][0]})} className="w-full p-2 border rounded text-sm">
-                    {Object.keys(EXPENSE_CATEGORIES).map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                  <select value={newExpense.category} onChange={e => setNewExpense({...newExpense, category: e.target.value as any, subcategory: customCategories[e.target.value]?.[0] || ''})} className="w-full p-2 border rounded text-sm">
+                    {Object.keys(customCategories).map(cat => <option key={cat} value={cat}>{cat}</option>)}
                   </select>
                 </div>
-                <select value={newExpense.subcategory} onChange={e => setNewExpense({...newExpense, subcategory: e.target.value})} className="w-full p-2 border rounded text-sm">
-                    {EXPENSE_CATEGORIES[newExpense.category as keyof typeof EXPENSE_CATEGORIES]?.map(sub => <option key={sub} value={sub}>{sub}</option>)}
-                </select>
+                {/* Input con datalist dinámico y botón para agregar nuevo */}
+                <div className="flex gap-2 items-center">
+                  <div className="relative flex-1">
+                    <input 
+                       list={`subcat-list-${newExpense.category}`}
+                       value={newExpense.subcategory || ''} 
+                       onChange={e => setNewExpense({...newExpense, subcategory: e.target.value})} 
+                       className="w-full p-2 border rounded text-sm bg-white"
+                       placeholder="Elegir o escribir nuevo..."
+                    />
+                    <datalist id={`subcat-list-${newExpense.category}`}>
+                        {customCategories[newExpense.category || 'Otros']?.map(sub => <option key={sub} value={sub} />)}
+                    </datalist>
+                  </div>
+                  <button 
+                    type="button" 
+                    onClick={() => handleAddPredeterminado(newExpense.category, newExpense.subcategory)}
+                    className="px-3 py-2 bg-indigo-50 text-indigo-700 text-xs rounded border border-indigo-200 hover:bg-indigo-100 font-bold whitespace-nowrap"
+                    title="Guardar término predeterminado en el navegador"
+                  >
+                    + Guardar
+                  </button>
+                </div>
                 <input type="text" placeholder="Descripción..." value={newExpense.description || ''} onChange={e => setNewExpense({...newExpense, description: e.target.value})} className="w-full p-2 border rounded text-sm"/>
                 
                 {/* Opción Agregar a Stock (Solo CREACIÓN) */}
@@ -643,15 +691,33 @@ const FinancialDashboard: React.FC<Props> = ({ orders, products, onEditProduct }
                 </div>
                 <div className="flex flex-wrap gap-2 items-end">
                   <div className="flex-1 min-w-[150px]">
-                    <label className="text-xs text-indigo-800 font-bold">Nombre / Identificador</label>
+                    <label className="text-xs text-indigo-800 font-bold flex justify-between items-end">
+                       <span>Nombre / Identificador</span>
+                       {newMaterial.category !== 'Filamento' && !editingMaterialId && (
+                         <button 
+                             type="button" 
+                             onClick={() => handleAddPredeterminado(newMaterial.category, newMaterial.name)} 
+                             className="text-[10px] text-indigo-600 hover:underline"
+                             title="Guardarlo para que aparezca sugerido la próxima vez"
+                         >
+                           + Predeterminado
+                         </button>
+                       )}
+                    </label>
                     <input 
                       type="text" 
-                      placeholder="Ej: Grilon PLA Blanco" 
+                      list={newMaterial.category !== 'Filamento' ? `mat-names-${newMaterial.category}` : undefined}
+                      placeholder="Ej: MDF 3mm" 
                       value={newMaterial.name} 
                       onChange={e => setNewMaterial({...newMaterial, name: e.target.value})} 
-                      className="w-full p-2 text-sm border rounded bg-white font-medium" 
+                      className="w-full p-2 text-sm border rounded bg-white font-medium mt-1" 
                       readOnly={newMaterial.category === 'Filamento' && !editingMaterialId}
                     />
+                    {newMaterial.category !== 'Filamento' && (
+                       <datalist id={`mat-names-${newMaterial.category}`}>
+                          {(customCategories[newMaterial.category || 'Otros'] || []).map(item => <option key={item} value={item} />)}
+                       </datalist>
+                    )}
                     {newMaterial.category === 'Filamento' && !editingMaterialId && (
                       <p className="text-[10px] text-slate-400 mt-1 italic">Nombre generado automáticamente</p>
                     )}
