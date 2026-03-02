@@ -450,6 +450,78 @@ async function handleOrder(resource, accessToken, res) {
           });
         }
       }
+    } else {
+      // El pedido ya existe -> Sincronizar estado de envío y fecha de entrega
+      if (order.shipping && order.shipping.id) {
+        try {
+          const shipRes = await fetch(
+            `https://api.mercadolibre.com/shipments/${order.shipping.id}`,
+            {
+              headers: { Authorization: `Bearer ${accessToken}` },
+            },
+          );
+
+          if (shipRes.ok) {
+            const shipData = await shipRes.json();
+            const updatePayload = {};
+
+            // Mapear estado interno de envío de ML al estado de la app
+            const mapStatus = {
+              pending: "processing",
+              handling: "preparing",
+              ready_to_ship: "preparing",
+              shipped: "shipped",
+              delivered: "delivered",
+              cancelled: "cancelled",
+            };
+
+            if (shipData.status && mapStatus[shipData.status]) {
+              updatePayload.status = mapStatus[shipData.status];
+            }
+
+            if (shipData.tracking_number) {
+              updatePayload.tracking_number = shipData.tracking_number;
+            }
+
+            // Recuperar fecha prometida y formato de nota
+            if (shipData.estimated_delivery_time?.date) {
+              const estDate = new Date(shipData.estimated_delivery_time.date);
+              const day = String(estDate.getDate()).padStart(2, "0");
+              const month = String(estDate.getMonth() + 1).padStart(2, "0");
+              const year = estDate.getFullYear();
+              const formatD = `[ENTREGA: ${day}/${month}/${year}]`;
+
+              // Necesitamos la nota actual para no pisarla completa
+              const { data: localOrder } = await supabase
+                .from("orders")
+                .select("notes")
+                .eq("id", existingOrder.id)
+                .single();
+              let notes = localOrder?.notes || "";
+
+              if (!notes.includes("ENTREGA:")) {
+                updatePayload.notes = notes + `\n${formatD}`;
+              } else {
+                updatePayload.notes = notes.replace(/\[ENTREGA:.*?\]/, formatD);
+              }
+            }
+
+            if (Object.keys(updatePayload).length > 0) {
+              updatePayload.updated_at = new Date().toISOString();
+              await supabase
+                .from("orders")
+                .update(updatePayload)
+                .eq("id", existingOrder.id);
+              console.log(
+                `[ML Webhook] Updated Order ${orderNumber} shipping info:`,
+                updatePayload,
+              );
+            }
+          }
+        } catch (e) {
+          console.error("[ML Webhook] Error updating shipping details:", e);
+        }
+      }
     }
 
     // 3. Notify Make (Optional)
