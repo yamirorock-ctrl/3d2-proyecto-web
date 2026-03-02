@@ -1083,7 +1083,7 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
                      >
                         <option value="">Seleccionar...</option>
                         {availableMaterials
-                          .filter(m => m.category === 'Insumos' || m.category === 'Otros')
+                          .filter(m => m.category === 'Insumos' || m.category === 'Otros' || m.category === 'Madera')
                           .map(m => (
                             <option key={m.id} value={m.name}>{m.name} (Stock: {m.quantity} {m.unit})</option>
                         ))}
