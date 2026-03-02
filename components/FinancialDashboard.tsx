@@ -175,11 +175,18 @@ const FinancialDashboard: React.FC<Props> = ({ orders, products, onEditProduct }
   const financials = useMemo(() => {
     let salesTotal = 0; // Lo facturado total
     let debtTotal = 0;  // Lo que falta cobrar
+    let mlPending = 0;  // A liquidar en ML
     let totalHours = 0; // Total de horas máquina del mes
     
     monthlyOrders.forEach(o => {
         salesTotal += (o.total || 0);
-        debtTotal += getDebt(o.notes);
+
+        // Si es venta automática de ML, la plata siempre está "a liquidar" y no físicamente en caja inmediata.
+        if (o.notes && o.notes.includes('Venta automática desde MercadoLibre')) {
+           mlPending += (o.total || 0);
+        } else {
+           debtTotal += getDebt(o.notes);
+        }
 
         // Calcular horas máquina consumidas por esta orden
         if (o.items && Array.isArray(o.items)) {
@@ -193,12 +200,14 @@ const FinancialDashboard: React.FC<Props> = ({ orders, products, onEditProduct }
         }
     });
 
-    const income = salesTotal - debtTotal; // Ingreso Real (Caja)
+    const income = salesTotal - debtTotal - mlPending; // Ingreso Real Fisico (Caja)
+    // El profit lo calculamos con TODAS las ventas netas del mes (Caja + ML a liquidar)
+    const netRevenue = salesTotal - debtTotal; 
     const outcome = monthlyExpenses.reduce((sum, e) => sum + (e.amount || 0), 0);
-    const profit = income - outcome;
-    const margin = income > 0 ? ((profit / income) * 100) : 0;
+    const profit = netRevenue - outcome;
+    const margin = netRevenue > 0 ? ((profit / netRevenue) * 100) : 0;
 
-    return { salesTotal, debtTotal, income, outcome, profit, margin, totalHours };
+    return { salesTotal, debtTotal, mlPending, income, outcome, profit, margin, totalHours };
   }, [monthlyOrders, monthlyExpenses, products]);
 
   // Handlers Gastos
@@ -443,16 +452,27 @@ const FinancialDashboard: React.FC<Props> = ({ orders, products, onEditProduct }
       <>
       {/* 2. Tarjetas de Finanzas (KPIs) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="p-6 rounded-xl bg-linear-to-br from-emerald-500 to-emerald-600 text-white shadow-lg relative overflow-hidden">
+        <div className="p-6 rounded-xl bg-linear-to-br from-emerald-500 to-emerald-600 text-white shadow-lg relative overflow-hidden flex flex-col justify-between">
           <div className="absolute top-0 right-0 p-4 opacity-20"><TrendingUp size={48} /></div>
-          <p className="text-emerald-100 text-sm font-medium mb-1">Ingresos (Caja Real)</p>
-          <h3 className="text-3xl font-bold">${financials.income.toLocaleString('es-AR')}</h3>
-          {financials.debtTotal > 0 && (
-            <div className="text-xs bg-black/20 px-2 py-0.5 rounded mt-2 inline-flex items-center gap-1">
-              <AlertCircle size={10} className="text-yellow-300" />
-              <span>Por Cobrar: ${financials.debtTotal.toLocaleString('es-AR')}</span>
-            </div>
-          )}
+          <div>
+              <p className="text-emerald-100 text-sm font-medium mb-1">Ingresos (Caja Real)</p>
+              <h3 className="text-3xl font-bold">${financials.income.toLocaleString('es-AR')}</h3>
+          </div>
+          
+          <div className="flex flex-col gap-1 mt-3">
+              {financials.debtTotal > 0 && (
+                <div className="text-xs bg-black/20 px-2 py-1 rounded inline-flex items-center gap-1 w-max">
+                  <AlertCircle size={10} className="text-yellow-300" />
+                  <span>Por Cobrar (Fiado): ${financials.debtTotal.toLocaleString('es-AR')}</span>
+                </div>
+              )}
+              {financials.mlPending > 0 && (
+                <div className="text-xs bg-blue-900/40 px-2 py-1 rounded inline-flex items-center gap-1 w-max border border-blue-500/30">
+                  <Package size={10} className="text-blue-200" />
+                  <span>A Liquidar ML: ${financials.mlPending.toLocaleString('es-AR')}</span>
+                </div>
+              )}
+          </div>
         </div>
 
         <div className="p-6 rounded-xl bg-linear-to-br from-rose-500 to-rose-600 text-white shadow-lg relative overflow-hidden">
