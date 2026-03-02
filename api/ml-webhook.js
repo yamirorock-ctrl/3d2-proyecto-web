@@ -419,16 +419,19 @@ async function handleOrder(resource, accessToken, res) {
         total: order.total_amount,
         shipping_method: "correo",
         status: "paid",
-        payment_method: "mercadopago",
+        payment_id: order.payments?.[0]?.id?.toString() || "mercadopago",
+        payment_status: "approved",
         ml_shipment_id: order.shipping?.id?.toString() || null,
-        notes: `Venta automática desde MercadoLibre. ID: ${order.id}`,
+        notes: `Venta automática desde MercadoLibre. ID: ${order.id}\n[PAGADO TOTAL: $${order.total_amount}]`,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       };
 
-      const { error: insertError } = await supabase
+      const { data: insertedOrder, error: insertError } = await supabase
         .from("orders")
-        .insert(newOrder);
+        .insert(newOrder)
+        .select()
+        .single();
       if (insertError) {
         console.error("[ML Webhook] Failed to insert order:", insertError);
       } else {
@@ -436,6 +439,16 @@ async function handleOrder(resource, accessToken, res) {
           `[ML Webhook] Extracted Order ${orderNumber} successfully. Stock updates:`,
           updatedStockLog,
         );
+        // Also add a payment record so it shows up in the timeline
+        if (insertedOrder) {
+          await supabase.from("payments").insert({
+            order_id: insertedOrder.id,
+            amount: order.total_amount,
+            method: "mercadopago",
+            date: new Date().toISOString(),
+            notes: "Pago automático ML",
+          });
+        }
       }
     }
 
