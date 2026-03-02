@@ -69,6 +69,10 @@ const FinancialDashboard: React.FC<Props> = ({ orders, products, onEditProduct }
   const [filType, setFilType] = useState('PLA');
   const [filColor, setFilColor] = useState('');
 
+  // Estados para Madera estructurada
+  const [woodType, setWoodType] = useState('MDF 3mm');
+  const [woodExtraCount, setWoodExtraCount] = useState(0);
+
   // Sincronizar nombre de material filamento automáticamente
   useEffect(() => {
     if (newMaterial.category === 'Filamento' && !editingMaterialId) {
@@ -230,43 +234,70 @@ const FinancialDashboard: React.FC<Props> = ({ orders, products, onEditProduct }
           // 2. Si se marcó "Pasar al Inventario", actualizar/crear material
           if (addToInventory) {
             let materialName = newExpense.subcategory;
+            let secondaryMaterialName = ''; // For extra cuts
+            let secondaryQuantity = 0;
             
             // Si es filamento, usamos el nombre estructurado
             if (newExpense.category === 'Filamento') {
                 materialName = `${filBrand} ${filType} ${filColor}`.trim();
+            } else if (newExpense.category === 'Madera') {
+                // Si es madera desde el formulario complejo
+                if (woodType) {
+                   materialName = `${woodType} 40x40`;
+                   if (woodExtraCount > 0) {
+                      secondaryMaterialName = `${woodType} 40x17`;
+                      secondaryQuantity = woodExtraCount;
+                   }
+                }
             }
 
             if (!materialName) {
-                toast.error('Nombre de material inválido para el inventario');
+                toast.error('Nombre de material principal inválido para el inventario');
                 return;
             }
 
-            // Buscar si ya existe el material con ese nombreexacto
+            // --- Guardar Material Principal ---
             const existingMaterial = materials.find(m => m.name === materialName);
-            
+            let primaryCost = (newExpense.amount || 0) / (quantityToAdd + secondaryQuantity); // Aproximado parejo de costo
+
             if (existingMaterial) {
-              // Actualizar Stock
               await updateMaterial(existingMaterial.id, { 
                 quantity: Number(existingMaterial.quantity) + Number(quantityToAdd),
-                last_cost: (newExpense.amount || 0) / quantityToAdd
+                last_cost: primaryCost
               });
-              toast.success('Stock actualizado automáticamente');
             } else {
-              // Determinar la unidad según la categoría del gasto
-              let unitToSave = 'unidades';
-              if (newExpense.category === 'Filamento') unitToSave = 'kg';
-              if (newExpense.category === 'Madera') unitToSave = 'placas';
-
-              // Crear Nuevo Material
+              let unitToSave = newExpense.category === 'Filamento' ? 'kg' : (newExpense.category === 'Madera' ? 'placas' : 'unidades');
               await addMaterial({
                 name: materialName,
                 category: newExpense.category === 'Filamento' ? 'Filamento' : (newExpense.category === 'Madera' ? 'Madera' : (newExpense.category === 'Insumos' ? 'Insumos' : 'Otros')),
                 quantity: quantityToAdd,
                 unit: unitToSave,
                 min_threshold: 1,
-                last_cost: (newExpense.amount || 0) / quantityToAdd
+                last_cost: primaryCost
               });
-              toast.success(`Nuevo material '${materialName}' creado en inventario`);
+            }
+
+            // --- Guardar Material Secundario (Retazos) si existen ---
+            if (secondaryMaterialName && secondaryQuantity > 0) {
+                const existingSecondary = materials.find(m => m.name === secondaryMaterialName);
+                if (existingSecondary) {
+                   await updateMaterial(existingSecondary.id, {
+                      quantity: Number(existingSecondary.quantity) + Number(secondaryQuantity),
+                      last_cost: primaryCost
+                   });
+                } else {
+                   await addMaterial({
+                      name: secondaryMaterialName,
+                      category: 'Madera',
+                      quantity: secondaryQuantity,
+                      unit: 'placas',
+                      min_threshold: 1,
+                      last_cost: primaryCost
+                   });
+                }
+                toast.success('Materiales cortados registrados por separado');
+            } else {
+                toast.success('Stock actualizado en inventario');
             }
           }
           toast.success('Gasto registrado');
@@ -277,6 +308,7 @@ const FinancialDashboard: React.FC<Props> = ({ orders, products, onEditProduct }
       setNewExpense({ ...newExpense, amount: 0, description: '' }); // Reset parcial
       setAddToInventory(false);
       setQuantityToAdd(1);
+      setWoodExtraCount(0);
       loadData();
     } catch (e) {
       toast.error('Error al guardar');
@@ -598,32 +630,62 @@ const FinancialDashboard: React.FC<Props> = ({ orders, products, onEditProduct }
                             </div>
                             <div className="col-span-2 mt-1 border-t pt-1">
                                <p className="text-[10px] text-slate-400">Se registrará como: <b className="text-indigo-600">{(filBrand + ' ' + filType + ' ' + filColor).trim() || '(Vacío)'}</b></p>
-                            </div>
+                             </div>
+                          </div>
+                       )}
+
+                       {newExpense.category === 'Madera' && (
+                         <div className="grid grid-cols-2 gap-2 mb-3 bg-amber-50 p-2 rounded border border-amber-200">
+                             <div className="col-span-2 text-[10px] font-bold text-amber-800 uppercase mb-1 flex items-center gap-1">
+                                <Package size={10}/> Despiece de Placa
+                             </div>
+                             <div className="col-span-2">
+                                <label className="text-[10px] font-bold text-amber-700 uppercase">Tipo de Madera</label>
+                                <select value={woodType} onChange={e => setWoodType(e.target.value)} className="w-full p-1 text-xs border border-amber-300 rounded bg-white">
+                                   {(DEFAULT_EXPENSE_CATEGORIES['Madera'] as string[]).map(w => <option key={w} value={w}>{w}</option>)}
+                                </select>
+                             </div>
+                             <div>
+                                <label className="text-[10px] font-bold text-amber-700 uppercase">Placas (40x40)</label>
+                                <input type="number" value={quantityToAdd} onChange={e => setQuantityToAdd(Number(e.target.value))} className="w-full p-1 text-xs border border-amber-300 rounded text-center" min="0"/>
+                             </div>
+                             <div>
+                                <label className="text-[10px] font-bold text-amber-700 uppercase">Recortes (40x17)</label>
+                                <input type="number" value={woodExtraCount} onChange={e => setWoodExtraCount(Number(e.target.value))} className="w-full p-1 text-xs border border-amber-300 rounded text-center" min="0"/>
+                             </div>
+                             
+                             <div className="col-span-2 mt-1 border-t border-amber-200 pt-1">
+                                <p className="text-[10px] text-amber-700">El costo se dividirá equitativamente para <b>{quantityToAdd + woodExtraCount}</b> piezas totales.</p>
+                             </div>
                          </div>
                        )}
 
-                       <div className="flex justify-between items-center mb-2">
-                           <label className="text-xs font-bold text-slate-600">Cantidad Comprada:</label>
-                           <div className="flex items-center gap-1">
-                               <input 
-                                type="number" 
-                                value={quantityToAdd} 
-                                onChange={e => setQuantityToAdd(Number(e.target.value))}
-                                className="w-20 p-1 text-sm border rounded text-center font-bold bg-white focus:ring-2 focus:ring-indigo-500"
-                                min="1"
-                               />
-                                <span className="text-xs text-slate-400">
-                                  {newExpense.category === 'Filamento' ? 'kg' : newExpense.category === 'Madera' ? 'placas' : 'unidades'}
-                                </span>
-                           </div>
-                       </div>
+                       {newExpense.category !== 'Madera' && (
+                         <div className="flex justify-between items-center mb-2">
+                             <label className="text-xs font-bold text-slate-600">Cantidad Comprada:</label>
+                             <div className="flex items-center gap-1">
+                                 <input 
+                                  type="number" 
+                                  value={quantityToAdd} 
+                                  onChange={e => setQuantityToAdd(Number(e.target.value))}
+                                  className="w-20 p-1 text-sm border rounded text-center font-bold bg-white focus:ring-2 focus:ring-indigo-500"
+                                  min="1"
+                                 />
+                                  <span className="text-xs text-slate-400">
+                                    {newExpense.category === 'Filamento' ? 'kg' : newExpense.category === 'Madera' ? 'placas' : 'unidades'}
+                                  </span>
+                             </div>
+                         </div>
+                       )}
                        
                        {/* Estimación de Costo Unitario */}
-                       {(newExpense.amount || 0) > 0 && quantityToAdd > 0 && (
+                       {(newExpense.amount || 0) > 0 && (quantityToAdd > 0 || woodExtraCount > 0) && (
                            <div className="bg-white p-2 rounded border border-indigo-100 shadow-sm text-xs">
                                <div className="flex justify-between items-center mb-1">
                                   <span className="text-slate-500">Costo Unitario (Calculado):</span>
-                                  <b className="text-indigo-700 text-sm font-mono">${((newExpense.amount || 0) / quantityToAdd).toFixed(2)}</b>
+                                  <b className="text-indigo-700 text-sm font-mono">
+                                    ${((newExpense.amount || 0) / (newExpense.category === 'Madera' ? (quantityToAdd + woodExtraCount) : quantityToAdd)).toFixed(2)}
+                                  </b>
                                </div>
                                
                                {/* Comparación de Precio */}
@@ -633,7 +695,7 @@ const FinancialDashboard: React.FC<Props> = ({ orders, products, onEditProduct }
                                       : newExpense.subcategory;
                                    const mat = materials.find(m => m.name === targetName);
                                    if (mat && mat.last_cost) {
-                                       const current = (newExpense.amount || 0) / quantityToAdd;
+                                   const current = (newExpense.amount || 0) / (newExpense.category === 'Madera' ? (quantityToAdd + woodExtraCount) : quantityToAdd);
                                        const diff = current - mat.last_cost;
                                        const percent = ((diff / mat.last_cost) * 100).toFixed(1);
                                        
