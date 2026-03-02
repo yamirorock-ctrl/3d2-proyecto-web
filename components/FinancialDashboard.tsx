@@ -252,12 +252,17 @@ const FinancialDashboard: React.FC<Props> = ({ orders, products, onEditProduct }
               });
               toast.success('Stock actualizado automáticamente');
             } else {
+              // Determinar la unidad según la categoría del gasto
+              let unitToSave = 'unidades';
+              if (newExpense.category === 'Filamento') unitToSave = 'kg';
+              if (newExpense.category === 'Madera') unitToSave = 'placas';
+
               // Crear Nuevo Material
               await addMaterial({
                 name: materialName,
-                category: newExpense.category === 'Filamento' ? 'Filamento' : (newExpense.category === 'Insumos' ? 'Insumos' : 'Otros'),
+                category: newExpense.category === 'Filamento' ? 'Filamento' : (newExpense.category === 'Madera' ? 'Madera' : (newExpense.category === 'Insumos' ? 'Insumos' : 'Otros')),
                 quantity: quantityToAdd,
-                unit: newExpense.category === 'Filamento' ? 'kg' : 'unidades', // Filamentos suelen ser kg
+                unit: unitToSave,
                 min_threshold: 1,
                 last_cost: (newExpense.amount || 0) / quantityToAdd
               });
@@ -607,7 +612,9 @@ const FinancialDashboard: React.FC<Props> = ({ orders, products, onEditProduct }
                                 className="w-20 p-1 text-sm border rounded text-center font-bold bg-white focus:ring-2 focus:ring-indigo-500"
                                 min="1"
                                />
-                               <span className="text-xs text-slate-400">{newExpense.category === 'Filamento' ? 'kg' : 'unidades'}</span>
+                                <span className="text-xs text-slate-400">
+                                  {newExpense.category === 'Filamento' ? 'kg' : newExpense.category === 'Madera' ? 'placas' : 'unidades'}
+                                </span>
                            </div>
                        </div>
                        
