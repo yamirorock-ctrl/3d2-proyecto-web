@@ -275,6 +275,47 @@ const AdminPage: React.FC<Props> = ({ products, onAdd, onEdit, onDelete }) => {
     }
   };
 
+  const handleDeletePayment = async (paymentId: string) => {
+    if (!window.confirm('¿Seguro que quieres eliminar este pago?')) return;
+    try {
+      const paymentToDel = payments.find(p => p.id === paymentId);
+      if (!paymentToDel) return;
+
+      const { deletePayment, getOrderById, updateOrder } = await import('../services/orderService');
+      const success = await deletePayment(paymentId);
+      if (success) {
+        // Reverse the debt in notes
+        const { data: order } = await getOrderById(paymentToDel.order_id);
+        if (order) {
+          let currentNotes = order.notes || '';
+          const debtMatch = currentNotes.match(/RESTA:\s*\$([\d\.,\s]+)/i);
+          
+          if (debtMatch) {
+            const oldDebtClean = debtMatch[1].replace(/\./g, '').replace(',', '.').replace(/\s/g, '');
+            const oldDebt = parseFloat(oldDebtClean) || 0;
+            const newDebt = oldDebt + paymentToDel.amount;
+            
+            let newNotes = currentNotes.replace(debtMatch[0], `RESTA: $${newDebt.toLocaleString('es-AR')}`);
+            
+            const updates: any = { notes: newNotes };
+            if (order.status === 'paid' && newDebt > 0) {
+               updates.status = 'payment_pending';
+            }
+            await updateOrder(paymentToDel.order_id, updates);
+          }
+        }
+
+        toast.success('Pago eliminado correctamente');
+        refreshSalesOrders();
+      } else {
+        toast.error('Error al eliminar el pago');
+      }
+    } catch (e) {
+      console.error(e);
+      toast.error('Error al intentar eliminar el pago');
+    }
+  };
+
   const handleExportBackup = () => {
     try {
       const data = {
@@ -759,6 +800,7 @@ const AdminPage: React.FC<Props> = ({ products, onAdd, onEdit, onDelete }) => {
           onRefresh={refreshSalesOrders}
           onPatchOrder={handlePatchOrder}
           onRecordPayment={handleRecordPayment}
+          onDeletePayment={handleDeletePayment}
         />
       )}
 

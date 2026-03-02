@@ -217,18 +217,7 @@ export const ManualOrderForm: React.FC<Props> = ({ products, initialOrder, onClo
         // === MODO EDICIÓN ===
         const result = await updateOrder(initialOrder.id, commonData);
         if (result.error) throw result.error;
-        
-        // Registrar pago si se ingresó un monto
-        if (pay > 0) {
-          const { addPayment } = await import('../services/orderService');
-          await addPayment({
-            order_id: initialOrder.id,
-            amount: pay,
-            method: payMethod,
-            date: new Date().toISOString(),
-            notes: 'Pago registrado en edición'
-          });
-        }
+        // Eliminado registro de pago en edición (se maneja desde panel principal)
         
         toast.success('¡Orden actualizada correctamente!');
         // NOTA: No descontamos stock en edición para evitar duplicados complejos.
@@ -582,35 +571,46 @@ export const ManualOrderForm: React.FC<Props> = ({ products, initialOrder, onClo
                   </div>
 
                    <div className="grid grid-cols-2 gap-4">
-                      {/* Campo Pago / Seña */}
-                      <div>
-                          <label className="block text-xs font-bold text-blue-700 uppercase mb-1">Pagó / Seña</label>
-                          <div className="relative">
-                              <span className="absolute left-3 top-2 text-blue-500 font-bold">$</span>
-                              <input 
-                                  type="number" 
-                                  className="w-full pl-6 pr-3 py-2 border border-blue-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-hidden font-bold text-slate-900"
-                                  placeholder="0"
-                                  value={paymentAmount}
-                                  onChange={(e) => setPaymentAmount(e.target.value)}
-                              />
+                      {!initialOrder && (
+                        <>
+                          {/* Campo Pago / Seña */}
+                          <div>
+                              <label className="block text-xs font-bold text-blue-700 uppercase mb-1">Pagó / Seña</label>
+                              <div className="relative">
+                                  <span className="absolute left-3 top-2 text-blue-500 font-bold">$</span>
+                                  <input 
+                                      type="number" 
+                                      className="w-full pl-6 pr-3 py-2 border border-blue-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-hidden font-bold text-slate-900"
+                                      placeholder="0"
+                                      value={paymentAmount}
+                                      onChange={(e) => setPaymentAmount(e.target.value)}
+                                  />
+                              </div>
                           </div>
-                      </div>
 
-                      {/* Medio de Pago */}
-                      <div>
-                          <label className="block text-xs font-bold text-blue-700 uppercase mb-1">Medio</label>
-                          <select 
-                            value={payMethod} 
-                            onChange={e => setPayMethod(e.target.value as any)} 
-                            className="w-full px-3 py-2 border border-blue-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-hidden text-sm font-medium text-slate-700 bg-white"
-                          >
-                            <option value="efectivo">Efectivo</option>
-                            <option value="transferencia">Transf.</option>
-                            <option value="mercadopago">MP</option>
-                            <option value="otro">Otro</option>
-                          </select>
-                      </div>
+                          {/* Medio de Pago */}
+                          <div>
+                              <label className="block text-xs font-bold text-blue-700 uppercase mb-1">Medio</label>
+                              <select 
+                                value={payMethod} 
+                                onChange={e => setPayMethod(e.target.value as any)} 
+                                className="w-full px-3 py-2 border border-blue-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-hidden text-sm font-medium text-slate-700 bg-white"
+                              >
+                                <option value="efectivo">Efectivo</option>
+                                <option value="transferencia">Transf.</option>
+                                <option value="mercadopago">MP</option>
+                                <option value="otro">Otro</option>
+                              </select>
+                          </div>
+                        </>
+                      )}
+                      
+                      {initialOrder && (
+                        <div className="col-span-2 bg-white/50 p-3 rounded-lg border border-blue-200 text-xs text-blue-800 font-medium">
+                          <AlertCircle className="inline mr-1" size={14} />
+                          Para modificar los pagos abonados (eliminar o registrar nuevos cobros), utiliza el <b>Historial de Pagos</b> en el panel principal.
+                        </div>
+                      )}
 
                       {/* Campo Fecha Entrega */}
                       <div className="col-span-2">

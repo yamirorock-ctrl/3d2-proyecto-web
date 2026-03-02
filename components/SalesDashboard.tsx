@@ -12,11 +12,12 @@ interface Props {
   onRecordPayment?: (orderId: string, amount: number, method: Payment['method']) => void;
   onRefresh?: () => void;
   onPatchOrder?: (orderId: string, updates: Partial<Order>) => void;
+  onDeletePayment?: (paymentId: string) => void;
 }
 
 type DateFilter = 'today' | 'week' | 'month' | 'all';
 
-const SalesDashboard: React.FC<Props> = ({ orders, payments, onUpdateStatus, onEdit, onDelete, onRecordPayment, onRefresh, onPatchOrder }) => {
+const SalesDashboard: React.FC<Props> = ({ orders, payments, onUpdateStatus, onEdit, onDelete, onRecordPayment, onRefresh, onPatchOrder, onDeletePayment }) => {
   const [dateFilter, setDateFilter] = useState<DateFilter>('all');
   const [recordingPaymentId, setRecordingPaymentId] = useState<string | null>(null);
   const [newPayAmount, setNewPayAmount] = useState<string>('');
@@ -658,7 +659,14 @@ const SalesDashboard: React.FC<Props> = ({ orders, payments, onUpdateStatus, onE
                                   <span className="text-slate-400">{new Date(p.date).toLocaleDateString('es-AR')}</span>
                                   <span className="font-bold text-indigo-600 bg-indigo-50 px-1.5 rounded uppercase text-[9px]">{p.method}</span>
                                </div>
-                               <b className="text-emerald-600 font-mono">+${p.amount.toLocaleString('es-AR')}</b>
+                               <div className="flex items-center gap-2">
+                                 <b className="text-emerald-600 font-mono">+${p.amount.toLocaleString('es-AR')}</b>
+                                 {onDeletePayment && (
+                                   <button onClick={() => onDeletePayment(p.id)} className="text-slate-300 hover:text-red-500 transition-colors bg-white rounded p-1 shadow-xs border border-slate-100" title="Eliminar pago">
+                                     <Trash2 size={12}/>
+                                   </button>
+                                 )}
+                               </div>
                             </div>
                           ))}
                         </div>
