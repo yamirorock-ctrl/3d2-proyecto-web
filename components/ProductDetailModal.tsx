@@ -158,14 +158,14 @@ const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product, isOpen
         </div>
 
         {/* Galería */}
-        <div className="w-full md:w-1/2 bg-white md:bg-gray-50 flex flex-col p-4 sm:p-6 items-center justify-start sm:justify-center relative shrink-0 border-b border-gray-100 md:border-b-0 md:border-r">
-           <div className="relative w-full max-w-[280px] aspect-square sm:max-w-none sm:aspect-auto sm:h-80 mb-2">
+        <div className="w-full md:w-1/2 bg-white md:bg-gray-50 flex flex-col p-4 sm:p-6 items-center justify-center relative shrink-0 border-b border-gray-100 md:border-b-0 md:border-r">
+           <div className="w-full max-w-sm aspect-square sm:aspect-auto sm:max-w-none sm:h-80 flex items-center justify-center mb-4">
              <SmartImage 
                 src={images[active].url} 
                 storageKey={images[active].storageKey} 
                 alt={product.name} 
-                wrapperClassName="absolute inset-0 w-full h-full flex items-center justify-center"
-                className="max-h-full max-w-full object-contain drop-shadow-xl p-2"
+                wrapperClassName="flex w-full h-full items-center justify-center"
+                className="w-full h-full object-contain drop-shadow-xl"
              />
            </div>
            {images.length > 1 && (
