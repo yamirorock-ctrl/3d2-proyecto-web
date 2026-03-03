@@ -158,25 +158,25 @@ const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product, isOpen
         </div>
 
         {/* Galería */}
-        <div className="w-full md:w-1/2 bg-white md:bg-gray-50 flex flex-col p-0 sm:p-6 items-center justify-center relative min-h-[300px]">
-           <div className="relative w-full h-[45vh] sm:h-80 flex items-center justify-center p-4">
+        <div className="w-full md:w-1/2 bg-white md:bg-gray-50 flex flex-col p-4 sm:p-6 items-center justify-start sm:justify-center relative shrink-0 border-b border-gray-100 md:border-b-0 md:border-r">
+           <div className="relative w-full max-w-[280px] aspect-square sm:max-w-none sm:aspect-auto sm:h-80 mb-2">
              <SmartImage 
                 src={images[active].url} 
                 storageKey={images[active].storageKey} 
                 alt={product.name} 
-                wrapperClassName="!flex w-full h-full items-center justify-center"
-                className="max-h-full max-w-full object-contain drop-shadow-xl"
+                wrapperClassName="absolute inset-0 w-full h-full flex items-center justify-center"
+                className="max-h-full max-w-full object-contain drop-shadow-xl p-2"
              />
            </div>
            {images.length > 1 && (
-             <div className="flex gap-2 mt-2 px-4 pb-4 overflow-x-auto w-full justify-center">
+             <div className="flex gap-2 mt-4 px-2 pb-2 overflow-x-auto w-full justify-center shrink-0">
                {images.map((img, idx) => (
                  <button 
                    key={idx} 
                    onClick={() => setActive(idx)}
                    className={`h-14 w-14 border-2 rounded-lg overflow-hidden shrink-0 transition-all ${idx === active ? 'border-indigo-600 ring-2 ring-indigo-200' : 'border-gray-200 opacity-60 hover:opacity-100'}`}
                  >
-                   <SmartImage src={img.url} storageKey={img.storageKey} className="w-full h-full object-cover" />
+                   <SmartImage src={img.url} storageKey={img.storageKey} wrapperClassName="!flex w-full h-full" className="w-full h-full object-cover" />
                  </button>
                ))}
              </div>
