@@ -158,7 +158,7 @@ const SalesDashboard: React.FC<Props> = ({ orders, payments, onUpdateStatus, onE
       o.total.toFixed(2),
       (o as any).paymentMethod || ((o as any).payment_id ? 'mercadopago' : 'otro'),
       o.status,
-      o.items.map(i => `${i.name} (x${i.quantity})`).join('; '),
+      o.items.filter(i => !i.name.startsWith('[EMPAQUE]')).map(i => `${i.name} (x${i.quantity})`).join('; '),
       o.notes || ''
     ]);
     
@@ -270,7 +270,7 @@ const SalesDashboard: React.FC<Props> = ({ orders, payments, onUpdateStatus, onE
             </tr>
           </thead>
           <tbody>
-            ${(order.items || []).map(item => `
+            ${(order.items || []).filter(item => !item.name.startsWith('[EMPAQUE]')).map(item => `
               <tr>
                 <td><span class="item-name" title="${item.name}">${item.name}</span></td>
                 <td>${item.quantity}</td>

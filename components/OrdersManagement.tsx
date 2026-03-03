@@ -152,7 +152,7 @@ const OrdersManagement: React.FC = () => {
             </tr>
           </thead>
           <tbody>
-            ${order.items.map(item => `
+            ${order.items.filter(item => !item.name.startsWith('[EMPAQUE]')).map(item => `
               <tr>
                 <td><span class="item-name" title="${item.name}">${item.name}</span></td>
                 <td>${item.quantity}</td>
