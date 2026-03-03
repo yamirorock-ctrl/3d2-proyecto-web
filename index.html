@@ -29,6 +29,9 @@
     <meta property="twitter:description" content="Diseño y fabricación de productos únicos mediante impresión 3D y corte láser." />
     <meta property="twitter:image" content="https://www.creart3d2.com/LOGO.jpg" />
     <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="apple-touch-icon" href="/LOGO.jpg" />
+    <meta name="theme-color" content="#4f46e5" />
     <style>
       body {
         font-family: 'Inter', sans-serif;
@@ -71,6 +74,12 @@
         history.replaceState(null, '', redirect);
       }
     })();
+    // Register Service Worker for mobile notifications
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js').catch(err => console.log('SW error', err));
+      });
+    }
   </script>
   <script type="module" src="/index.tsx"></script>
 </body>

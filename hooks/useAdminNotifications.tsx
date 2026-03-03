@@ -13,17 +13,26 @@ export const useAdminNotifications = () => {
       Notification.requestPermission();
     }
 
-    const showNativeNotification = (title: string, body: string, icon?: string) => {
+    const showNativeNotification = async (title: string, body: string, icon?: string) => {
       if ('Notification' in window && Notification.permission === 'granted') {
-        const notif = new Notification(title, {
+        const options = {
           body,
-          icon: icon || '/favicon.ico', // Asegúrate de tener un favicon o logo
-          // requireInteraction: true // Para que se quede fija hasta que la cierres (opcional)
-        });
-        notif.onclick = () => {
-          window.focus();
-          // window.location.hash = '#orders'; // Opcional: navegar a la sección
+          icon: icon || '/LOGO.jpg',
         };
+
+        if ('serviceWorker' in navigator) {
+          try {
+            const registration = await navigator.serviceWorker.ready;
+            await registration.showNotification(title, options);
+          } catch (e) {
+            // Fallback for desktop / missing SW
+            const notif = new Notification(title, options);
+            notif.onclick = () => window.focus();
+          }
+        } else {
+          const notif = new Notification(title, options);
+          notif.onclick = () => window.focus();
+        }
       }
     };
 

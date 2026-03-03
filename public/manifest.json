@@ -1,0 +1,20 @@
+{
+  "short_name": "3D2 App",
+  "name": "3D2 Admin Venta",
+  "icons": [
+    {
+      "src": "/LOGO.jpg",
+      "type": "image/jpeg",
+      "sizes": "192x192"
+    },
+    {
+      "src": "/LOGO.jpg",
+      "type": "image/jpeg",
+      "sizes": "512x512"
+    }
+  ],
+  "start_url": "/admin",
+  "background_color": "#f8fafc",
+  "display": "standalone",
+  "theme_color": "#4f46e5"
+}
