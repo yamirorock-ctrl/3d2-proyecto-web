@@ -28,7 +28,9 @@ export const ManualOrderForm: React.FC<Props> = ({ products, initialOrder, onClo
   const [availableMaterials, setAvailableMaterials] = useState<RawMaterial[]>([]);
   const [customConsumables, setCustomConsumables] = useState<{ material: string, quantity: number }[]>([]);
   const [tempMaterial, setTempMaterial] = useState('');
-  const [tempMaterialQty, setTempMaterialQty] = useState(1);
+  const [tempMaterialQty, setTempMaterialQty] = useState<number>(1);
+  const [packMaterial, setPackMaterial] = useState('');
+  const [packMaterialQty, setPackMaterialQty] = useState<number>(1);
 
   // Datos de la Orden
   const [customerName, setCustomerName] = useState('');
@@ -527,6 +529,63 @@ export const ManualOrderForm: React.FC<Props> = ({ products, initialOrder, onClo
                     <span>${orderTotal.toLocaleString('es-AR')}</span>
                  </div>
                )}
+               
+               {/* MATERIALES DE EMPAQUE (Rápido) */}
+               <div className="bg-slate-50 p-3 rounded-lg border border-slate-200 mt-4">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase flex items-center gap-1 mb-2">
+                    <Package size={12}/> Envases / Materiales de Despacho
+                  </label>
+                  <div className="flex flex-col sm:flex-row gap-2">
+                     <select 
+                        className="flex-1 p-1.5 text-xs border border-slate-200 rounded focus:ring-1 focus:ring-emerald-500 bg-white"
+                        value={packMaterial}
+                        onChange={e => setPackMaterial(e.target.value)}
+                     >
+                        <option value="">Añadir bolsa, caja, cinta...</option>
+                        {availableMaterials.filter(m => m.category === 'Insumos' || m.category === 'Otros').map(m => (
+                          <option key={m.id} value={m.name}>{m.name} (Stock: {m.quantity})</option>
+                        ))}
+                     </select>
+                     <input 
+                        type="number" 
+                        min="1"
+                        step="1"
+                        className="w-16 p-1.5 text-xs border border-slate-200 rounded text-center focus:ring-1 focus:ring-emerald-500 bg-white"
+                        value={packMaterialQty}
+                        onChange={e => setPackMaterialQty(Number(e.target.value) || 1)}
+                        title="Cantidad"
+                     />
+                     <button 
+                        type="button" 
+                        className="bg-slate-200 hover:bg-slate-300 text-slate-700 px-3 py-1.5 rounded text-xs font-bold transition-colors"
+                        onClick={() => {
+                           if (packMaterial && packMaterialQty > 0) {
+                              const existIndex = orderItems.findIndex(i => i.name === `[EMPAQUE] ${packMaterial}`);
+                              if (existIndex >= 0) {
+                                  const updated = [...orderItems];
+                                  updated[existIndex].quantity += packMaterialQty;
+                                  // As consumables deduction multiplies by item quantity, we leave the consumable quantity at 1.
+                                  setOrderItems(updated);
+                              } else {
+                                  const newItem = {
+                                      product_id: 0,
+                                      name: `[EMPAQUE] ${packMaterial}`,
+                                      price: 0,
+                                      quantity: packMaterialQty,
+                                      image: 'https://via.placeholder.com/150/f8fafc/94a3b8?text=Empaque',
+                                      consumables: [{ material: packMaterial, quantity: 1 }]
+                                  };
+                                  setOrderItems([...orderItems, newItem]);
+                              }
+                              setPackMaterial('');
+                              setPackMaterialQty(1);
+                           }
+                        }}
+                     >
+                        Sumar
+                     </button>
+                  </div>
+               </div>
             </div>
 
           </div>
