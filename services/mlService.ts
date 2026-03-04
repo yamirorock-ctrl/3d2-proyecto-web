@@ -42,8 +42,9 @@ export async function predictCategory(title: string) {
  * Triggers the serverless function to sync a product to MercadoLibre.
  * @param productId ID of the product in Supabase
  * @param userId ID of the admin user (required to fetch the correct ML Token)
+ * @param productData Unsaved form data to use in place of stale database records
  */
-export async function syncProductToML(productId: number, userId: string, markupPercentage: number = 25) {
+export async function syncProductToML(productId: number, userId: string, markupPercentage: number = 25, productData?: any) {
   const apiUrl = (import.meta as any).env.VITE_API_URL || '/api'; // Fallback to relative /api if not set
   
   // Usually in Vercel dev, it's just /api/ml-sync-product
@@ -56,7 +57,7 @@ export async function syncProductToML(productId: number, userId: string, markupP
       headers: {
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ productId, userId, markupPercentage })
+      body: JSON.stringify({ productId, userId, markupPercentage, productData })
     });
 
     const data = await response.json();

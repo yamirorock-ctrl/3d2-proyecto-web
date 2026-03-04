@@ -1359,7 +1359,7 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
                         if(!confirm(`¿Sincronizar este producto con MercadoLibre con un aumento del ${mlMarkup}%?`)) return;
                         setIsSyncing(true);
                         const markupValue = Number(mlMarkup) || 0;
-                        const res = await syncProductToML(form.id, user.id, markupValue);
+                        const res = await syncProductToML(form.id, user.id, markupValue, form);
                         setIsSyncing(false);
                         if(res.ok) {
                             toast.success('¡Sincronización enviada con éxito!');

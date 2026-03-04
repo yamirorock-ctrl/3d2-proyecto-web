@@ -28,7 +28,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { productId, userId } = req.body;
+    const { productId, userId, productData } = req.body;
 
     if (!productId || !userId) {
       return res.status(400).json({ error: "Missing productId or userId" });
@@ -62,6 +62,12 @@ export default async function handler(req, res) {
 
     if (productError || !product) {
       return res.status(404).json({ error: "Product not found" });
+    }
+
+    // Si el frontend envía variables de la interfaz que no se habían guardado aún,
+    // usamos las del form como prioridad para no tomar datos viejos de la DB.
+    if (productData) {
+      Object.assign(product, productData);
     }
 
     // 3. Prepare Product Data for ML
