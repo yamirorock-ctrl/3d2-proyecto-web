@@ -215,6 +215,43 @@ export default async function handler(req, res) {
           : [{ id: "EMPTY_GTIN_REASON", value_id: "17055158" }]),
         ...(product.mpn ? [{ id: "SKU", value_name: product.mpn }] : []),
 
+        // Dimensions and Weight mappings (Requested by ML if tracking boxes)
+        ...(product.dimensions?.length
+          ? [
+              {
+                id: "PACKAGE_LENGTH",
+                value_name: product.dimensions.length + " cm",
+              },
+            ]
+          : []),
+        ...(product.dimensions?.width
+          ? [
+              {
+                id: "PACKAGE_WIDTH",
+                value_name: product.dimensions.width + " cm",
+              },
+            ]
+          : []),
+        ...(product.dimensions?.height
+          ? [
+              {
+                id: "PACKAGE_HEIGHT",
+                value_name: product.dimensions.height + " cm",
+              },
+            ]
+          : []),
+        ...(product.weight
+          ? [
+              {
+                id: "PACKAGE_WEIGHT_ESTIMATE",
+                value_name: product.weight + " g",
+              },
+            ]
+          : []),
+        ...(product.weight
+          ? [{ id: "WEIGHT", value_name: product.weight + " g" }]
+          : []),
+
         // Dynamic Attributes from UI (Flexible Schema)
         ...(product.ml_attributes
           ? Object.entries(product.ml_attributes).map(([key, value]) => ({
@@ -227,11 +264,10 @@ export default async function handler(req, res) {
         { id: "WARRANTY_TYPE", value_id: "2230280" }, // "Garantía del vendedor"
         { id: "WARRANTY_TIME", value_name: "30 días" },
       ],
-      shipping: {
-        mode: "me2", // Mercado Envíos - envío a cargo del vendedor
-        local_pick_up: true,
-        free_shipping: false,
-      },
+      // Nota: `shipping:` objeto eliminado temporalmente.
+      // Si a una categoría no le corresponde 'me2', forzarlo desde la API arroja:
+      // "Validation error | User has not mode meX".
+      // Al no especificar el array shipping, Mercado Libre usará por defecto el mejor método.
     };
 
     console.log(`[ML Sync] Full Payload:`, JSON.stringify(itemBody));

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { toast } from 'sonner';
 import { Product, ProductImage, RawMaterial } from '../types';
 import SmartImage from './SmartImage';
-import { uploadToSupabase, getMaterials } from '../services/supabaseService';
+import { uploadToSupabase, getMaterials, supabase } from '../services/supabaseService';
 import { syncProductToML } from '../services/mlService';
 import { suggestMLTitle } from '../services/geminiService';
 import { useAuth } from '../context/AuthContext';
@@ -1314,6 +1314,25 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
        <div className="mt-6 flex justify-end gap-3 items-center">
           {product && form.id && (
              <div className="flex items-center gap-2">
+                 {form.ml_item_id && (
+                    <button 
+                        type="button" 
+                        onClick={async () => {
+                            if(!confirm('¿Estás seguro de desvincular este producto de MercadoLibre? Esto sirve para forzar la creación de un artículo NUEVO si el actual se bloqueó o quieres borrar su historial.')) return;
+                            try {
+                                // @ts-ignore
+                                await supabase.from('products').update({ ml_item_id: null }).eq('id', form.id);
+                                handleChange('ml_item_id', undefined);
+                                toast.success('Producto desvinculado de ML exitosamente. Si le das a Sincronizar, se creará uno nuevo.');
+                            } catch (e) {
+                                toast.error('Error desvinculando.');
+                            }
+                        }}
+                        className="px-3 py-2 bg-red-50 text-red-600 rounded-md text-sm hover:bg-red-100 transition-colors border border-red-200"
+                    >
+                        Desvincular ID
+                    </button>
+                 )}
                  <button 
                     type="button" 
                     onClick={async () => {
