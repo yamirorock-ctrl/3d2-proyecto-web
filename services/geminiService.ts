@@ -53,9 +53,9 @@ export const createChatSession = (products: Product[]) => {
   `;
 
   try {
-    console.log("[Gemini] Iniciando sesión de chat con Printy (v3.0-flash)...");
+    console.log("[Gemini] Iniciando sesión de chat con Printy (v2.5-flash)...");
     const model = genAI.getGenerativeModel({ 
-      model: "gemini-3-flash-preview",
+      model: "gemini-2.5-flash",
       systemInstruction: systemInstruction 
     });
 
@@ -81,7 +81,7 @@ export const createChatSession = (products: Product[]) => {
     }
 
     try {
-       const modelPro = genAI!.getGenerativeModel({ model: "gemini-3-pro-preview" });
+       const modelPro = genAI!.getGenerativeModel({ model: "gemini-2.5-pro" });
        return modelPro.startChat({ history: [] });
     } catch (e2) {
        console.error("[Gemini] Fallback de chat fallido:", e2);
@@ -126,8 +126,8 @@ export const suggestMLTitle = async (productName: string, description: string, i
   if (!genAI) return "Error: API Key no configurada";
 
   try {
-    console.log("[Gemini] Intentando generar título con gemini-3-flash-preview...");
-    const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" });
+    console.log("[Gemini] Intentando generar título con gemini-2.5-flash...");
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
     const prompt = `Actúa como un experto en SEO para MercadoLibre Argentina.
 Genera un TÍTULO DE VENTA competitivo para el siguiente producto.
@@ -185,8 +185,8 @@ Reglas CRÍTICAS:
     }
     
     try {
-      console.log("[Gemini] Fallback: Intentando con gemini-3-pro-preview...");
-      const modelPro = genAI!.getGenerativeModel({ model: "gemini-3-pro-preview" });
+      console.log("[Gemini] Fallback: Intentando con gemini-2.5-pro...");
+      const modelPro = genAI!.getGenerativeModel({ model: "gemini-2.5-pro" });
       const resultPro = await modelPro.generateContent(`Genera un título de 60 caracteres para un producto llamado: ${productName}`);
       const respPro = await resultPro.response;
       return respPro.text().trim();
@@ -241,7 +241,7 @@ En 'scenarios', describe entornos muy realistas y fotográficos.`;
     console.log("[Gemini] Iniciando análisis de producto (Vision)...");
     
     // Using simple fetch to ensure we can force JSON responseMimeType compatibility
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent`, {
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent`, {
       method: 'POST',
       headers: { 
         'Content-Type': 'application/json',

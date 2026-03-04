@@ -194,7 +194,7 @@ async function handleQuestion(resource, accessToken, res, botEnabled) {
         question_text: questionText,
         question_id: questionId.toString(),
         status: "pending",
-        ai_model: "gemini-3-flash-preview",
+        ai_model: "gemini-2.5-flash",
       });
     }
 
@@ -267,7 +267,7 @@ async function handleQuestion(resource, accessToken, res, botEnabled) {
 
     // 6. Generate AI Answer
     const model = genAI.getGenerativeModel({
-      model: "gemini-3-flash-preview",
+      model: "gemini-2.5-flash",
       systemInstruction: finalPrompt,
     }); // Use Printy 3.0 model
     const result = await model.generateContent(`Pregunta: "${questionText}"`);

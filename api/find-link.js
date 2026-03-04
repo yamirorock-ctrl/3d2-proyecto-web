@@ -215,10 +215,10 @@ async function findProductWithAI(
   imageUrl,
   optimizeFor,
 ) {
-  // ⚡🚀 USAMOS GEMINI 3 FLASH PREVIEW - SINGLE SHOT MODE
+  // ⚡🚀 USAMOS GEMINI 2.5 FLASH - SINGLE SHOT MODE
   // ESTRATEGIA "PAPELITO": Pedimos el NOMBRE EXACTO, no el ID.
   const model = genAI.getGenerativeModel({
-    model: "gemini-3-flash-preview",
+    model: "gemini-2.5-flash",
     generationConfig: { responseMimeType: "application/json" },
   });
 

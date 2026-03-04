@@ -19,7 +19,7 @@ const genAI = new GoogleGenerativeAI(API_KEY);
 
 async function runTest() {
   console.log(
-    "🤖 Iniciando SIMULACIÓN DE IA (Gemini 3 Flash Preview - Printy Config)...",
+    "🤖 Iniciando SIMULACIÓN DE IA (Gemini 2.5 Flash - Printy Config)...",
   );
 
   if (!API_KEY || API_KEY.includes("PEGAR_TU_API_KEY")) {
@@ -32,7 +32,7 @@ async function runTest() {
 
   // CONFIGURACIÓN EXACTA DE PRINTY (Services/geminiService.ts) !!!
   const model = genAI.getGenerativeModel({
-    model: "gemini-3-flash-preview",
+    model: "gemini-2.5-flash",
     // generationConfig: { responseMimeType: "application/json" }, // Printy NO usa esto en su config, lo quitamos.
   });
 
