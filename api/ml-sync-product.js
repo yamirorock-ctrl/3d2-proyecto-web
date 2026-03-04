@@ -134,27 +134,53 @@ export default async function handler(req, res) {
 
     let categoryId = "MLA3530"; // Default fallback (Others)
     let categoryName = "Otros";
-    if (predictorData && predictorData.length > 0) {
-      // Filter out 'SERVICE' domains if possible, as they require extra contact fields (like family_name)
-      const isService =
-        predictorData[0].domain_id?.includes("SERVICE") ||
-        predictorData[0].domain_id?.includes("SERVICIO");
 
-      if (isService) {
-        console.log(
-          `[ML Sync] Predictor suggested a Service category (${predictorData[0].domain_id}). Falling back to generic product category to avoid 'family_name' errors.`,
-        );
-        categoryId = "MLA3530"; // Others
-        categoryName = "Otros (Físico)";
+    // SMART CATEGORY MAPPING PREVENTING ATTRIBUTE ERRORS
+    // If we have specific ML Attributes from UI, we MUST lock the category
+    // otherwise ML Domain Discovery might predict a category where these attributes are invalid/variations.
+    let forceCategory = false;
+
+    if (product.ml_attributes?.PATTERN_NAME) {
+      categoryId = "MLA417942"; // Colgantes de Puerta para Bebés
+      categoryName = "Bebés / Colgantes de Puerta";
+      forceCategory = true;
+    } else if (product.ml_attributes?.MATE_GOURD_TYPE) {
+      categoryId = "MLA392282"; // Mates
+      categoryName = "Mates";
+      forceCategory = true;
+    } else if (product.ml_attributes?.CELL_PHONE_HOLDER_MOUNTING_TYPE) {
+      categoryId = "MLA13459"; // Soportes para Celulares
+      categoryName = "Soportes de Celular";
+      forceCategory = true;
+    }
+
+    if (!forceCategory) {
+      if (predictorData && predictorData.length > 0) {
+        // Filter out 'SERVICE' domains if possible, as they require extra contact fields (like family_name)
+        const isService =
+          predictorData[0].domain_id?.includes("SERVICE") ||
+          predictorData[0].domain_id?.includes("SERVICIO");
+
+        if (isService) {
+          console.log(
+            `[ML Sync] Predictor suggested a Service category (${predictorData[0].domain_id}). Falling back to generic product category to avoid 'family_name' errors.`,
+          );
+          categoryId = "MLA3530"; // Others
+          categoryName = "Otros (Físico)";
+        } else {
+          categoryId = predictorData[0].category_id;
+          categoryName = predictorData[0].domain_id || "Predicha";
+          console.log(
+            `[ML Sync] Predicted Category: ${categoryId} (${categoryName})`,
+          );
+        }
       } else {
-        categoryId = predictorData[0].category_id;
-        categoryName = predictorData[0].domain_id || "Predicha";
-        console.log(
-          `[ML Sync] Predicted Category: ${categoryId} (${categoryName})`,
-        );
+        console.log(`[ML Sync] Using fallback category: ${categoryId}`);
       }
     } else {
-      console.log(`[ML Sync] Using fallback category: ${categoryId}`);
+      console.log(
+        `[ML Sync] Smart Category Forced: ${categoryId} (${categoryName})`,
+      );
     }
 
     // Aseguramos que el precio y stock sean válidos
