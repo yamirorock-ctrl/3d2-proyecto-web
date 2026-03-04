@@ -423,6 +423,7 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
                   <option value="Llaveros">Llaveros</option>
                   <option value="Adornos">Adornos y Decoración</option>
                   <option value="Bebés">Artículos para Bebés</option>
+                  <option value="Vasos">Vasos y Chopps</option>
                </select>
                
                {/* Campos Dinámicos según Categoría */}
@@ -448,6 +449,22 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
                                 placeholder="Ej: Plástico PLA, Madera"
                                 value={form.ml_attributes?.['MATE_GOURD_MATERIALS'] || ''}
                                 onChange={e => handleChange('ml_attributes', { ...form.ml_attributes, 'MATE_GOURD_MATERIALS': e.target.value })}
+                                className="mt-1 block w-full rounded-md border-gray-200 text-sm" 
+                            />
+                        </div>
+                      </>
+                  )}
+
+                  {/* VASOS Y CHOPPS */}
+                  {(mlTemplate === 'Vasos' || form.category?.toLowerCase().includes('vaso') || form.name?.toLowerCase().includes('chopp')) && (
+                      <>
+                        <div>
+                            <label className="block text-xs font-medium text-slate-600">Tipo de producto (DRINKING_GLASS_PRODUCT_TYPE)</label>
+                            <input 
+                                type="text" 
+                                placeholder="Ej: Vaso, Chopp, Copa"
+                                value={form.ml_attributes?.['DRINKING_GLASS_PRODUCT_TYPE'] || 'Vaso'}
+                                onChange={e => handleChange('ml_attributes', { ...form.ml_attributes, 'DRINKING_GLASS_PRODUCT_TYPE': e.target.value })}
                                 className="mt-1 block w-full rounded-md border-gray-200 text-sm" 
                             />
                         </div>

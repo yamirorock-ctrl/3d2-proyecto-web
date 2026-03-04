@@ -148,6 +148,10 @@ export default async function handler(req, res) {
       categoryId = "MLA392282"; // Mates
       categoryName = "Mates";
       forceCategory = true;
+    } else if (product.ml_attributes?.DRINKING_GLASS_PRODUCT_TYPE) {
+      categoryId = "MLA1594"; // Vasos y Copas
+      categoryName = "Vasos y Copas";
+      forceCategory = true;
     } else if (product.ml_attributes?.CELL_PHONE_HOLDER_MOUNTING_TYPE) {
       categoryId = "MLA13459"; // Soportes para Celulares
       categoryName = "Soportes de Celular";
