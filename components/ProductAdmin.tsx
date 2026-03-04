@@ -64,6 +64,7 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
   const [isCompressing, setIsCompressing] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [mlMarkup, setMlMarkup] = useState<string>('25'); // Default 25%
+  const [mlTemplate, setMlTemplate] = useState<string>('');
   const [isGeneratingTitle, setIsGeneratingTitle] = useState(false);
   const { user } = useAuth();
 
@@ -411,11 +412,8 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
                <label className="block text-xs font-medium text-yellow-800 mb-1">Tipo de Producto (Plantilla ML)</label>
                <select 
                  className="block w-full rounded-md border-yellow-200 text-sm"
-                 value={form.category || ''} 
-                 onChange={(e) => {
-                     // Solo sugerencia visual, realmente usa la categoría principal
-                     // Pero podríamos hacer que esto pre-llene atributos
-                 }}
+                 value={mlTemplate} 
+                 onChange={(e) => setMlTemplate(e.target.value)}
                >
                   <option value="">-- Seleccionar para ver campos requeridos --</option>
                   <option value="Mates">Mates y Accesorios</option>
@@ -430,7 +428,7 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
                <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
                   
                   {/* MATES */}
-                  {(form.category?.toLowerCase().includes('mate') || form.name?.toLowerCase().includes('mate')) && (
+                  {(mlTemplate === 'Mates' || form.category?.toLowerCase().includes('mate') || form.name?.toLowerCase().includes('mate')) && (
                       <>
                         <div>
                             <label className="block text-xs font-medium text-slate-600">Tipo de Mate (MATE_GOURD_TYPE)</label>
@@ -456,7 +454,7 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
                   )}
 
                   {/* MUÑECOS / DECO */}
-                  {(form.category?.toLowerCase().includes('muñeco') || form.category?.toLowerCase().includes('figura') || form.category?.toLowerCase().includes('adorno')) && (
+                  {(mlTemplate === 'Muñecos' || mlTemplate === 'Adornos' || form.category?.toLowerCase().includes('muñeco') || form.category?.toLowerCase().includes('figura') || form.category?.toLowerCase().includes('adorno')) && (
                       <>
                         <div>
                             <label className="block text-xs font-medium text-slate-600">Personaje</label>
@@ -480,7 +478,7 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
                   )}
 
                    {/* SOPORTES */}
-                  {(form.category?.toLowerCase().includes('soporte') || form.name?.toLowerCase().includes('soporte')) && (
+                  {(mlTemplate === 'Soportes' || form.category?.toLowerCase().includes('soporte') || form.name?.toLowerCase().includes('soporte')) && (
                       <>
                         <div>
                             <label className="block text-xs font-medium text-slate-600">Tipo de Ajuste (MOUNTING_TYPE)</label>
@@ -959,24 +957,36 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
                 <div>
                    <label className="block text-xs font-medium text-purple-800 mb-1">Colores Disponibles</label>
                    <div className="flex gap-2 mb-2">
-                       <select 
+                       <input 
+                         type="text"
+                         list="inventory-colors"
                          className="flex-1 rounded-md border-purple-200 text-sm focus:border-purple-400 focus:ring-purple-400 bg-white"
                          value={newColorInput}
                          onChange={e => setNewColorInput(e.target.value)}
-                       >
-                         <option value="">Seleccionar del inventario...</option>
+                         placeholder="Escribir color o elegir..."
+                         onKeyDown={e => {
+                             if (e.key === 'Enter') {
+                                 e.preventDefault();
+                                 if (newColorInput.trim() && !availColors.includes(newColorInput.trim())) {
+                                     setAvailColors(p => [...p, newColorInput.trim()]);
+                                     setNewColorInput('');
+                                 }
+                             }
+                         }}
+                       />
+                       <datalist id="inventory-colors">
                          {availableMaterials
-                            .filter(m => m.category === 'Filamento' || m.category === 'Madera')
+                            .filter(m => m.category === 'Filamento' || m.category === 'Madera' || m.category === 'Insumos')
                             .map(m => (
-                               <option key={m.id} value={m.name}>{m.name}</option>
+                               <option key={m.id} value={m.name} />
                             ))
                          }
-                       </select>
+                       </datalist>
                       <button 
                          type="button"
                          onClick={() => {
-                             if (newColorInput && !availColors.includes(newColorInput)) {
-                                 setAvailColors(p => [...p, newColorInput]);
+                             if (newColorInput.trim() && !availColors.includes(newColorInput.trim())) {
+                                 setAvailColors(p => [...p, newColorInput.trim()]);
                                  setNewColorInput('');
                              }
                          }}
@@ -1132,19 +1142,22 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
                 <div className="flex gap-2 items-end">
                    <div className="flex-1">
                      <label className="text-xs text-slate-500">Color / Insumo</label>
-                      <select 
+                      <input 
+                         type="text"
+                         list="inventory-color-dist"
                          className="w-full text-sm border rounded px-2 py-1.5 bg-white"
                          value={newColorDistName}
                          onChange={e => setNewColorDistName(e.target.value)}
-                      >
-                         <option value="">Seleccionar material...</option>
+                         placeholder="Escribir material..."
+                      />
+                      <datalist id="inventory-color-dist">
                          {availableMaterials
                             .filter(m => m.category === 'Filamento' || m.category === 'Madera')
                             .map(m => (
-                               <option key={m.id} value={m.name}>{m.name}</option>
+                               <option key={m.id} value={m.name} />
                             ))
                          }
-                      </select>
+                      </datalist>
                    </div>
                    <div className="w-24">
                       <div className="flex justify-between items-center mb-1">
