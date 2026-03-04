@@ -508,7 +508,17 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
                   {(mlTemplate === 'Bebés' || form.category?.toLowerCase().includes('bebé') || form.category?.toLowerCase().includes('infantil')) && (
                       <>
                         <div>
-                            <label className="block text-xs font-medium text-slate-600">Edad Min. Recomendada (MIN_RECOMMENDED_AGE)</label>
+                            <label className="block text-xs font-medium text-slate-600">Diseño (PATTERN_NAME)</label>
+                            <input 
+                                type="text" 
+                                placeholder="Ej: Animalitos, Nubes, Liso"
+                                value={form.ml_attributes?.['PATTERN_NAME'] || ''}
+                                onChange={e => handleChange('ml_attributes', { ...form.ml_attributes, 'PATTERN_NAME': e.target.value })}
+                                className="mt-1 block w-full rounded-md border-gray-200 text-sm" 
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-medium text-slate-600">Edad Min. Recomendada</label>
                             <input 
                                 type="text" 
                                 placeholder="Ej: 3 años, 6 meses"

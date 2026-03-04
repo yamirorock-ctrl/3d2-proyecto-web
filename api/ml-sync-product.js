@@ -421,15 +421,21 @@ export default async function handler(req, res) {
       let suggestion = "Revisa los campos obligatorios del producto.";
       const causesStr = JSON.stringify(causes);
 
+      // Extract specifically what's missing so the frontend can display it
+      const missingFieldsRegex = /missing_attributes.*?([A-Z_0-9,\s]+)/g;
+      let missingFields = [];
+      causes.forEach((c) => {
+        if (c.message) {
+          missingFields.push(c.message);
+        }
+      });
+
       if (
-        errorMsg.includes("body.required_fields") ||
-        errorMsg.includes("missing_attributes")
+        causesStr.includes("missing") ||
+        causesStr.includes("required") ||
+        errorMsg.includes("body.required_fields")
       ) {
-        const missingFields = causes
-          .map((c) => c.message || c.id || JSON.stringify(c))
-          .join(", ");
-        suggestion = `Faltan campos obligatorios en MercadoLibre: ${missingFields}.`;
-        console.log(`[ML Sync] Missing fields identified: ${missingFields}`);
+        suggestion = `Atributos faltantes/inválidos en ML:\n${missingFields.join("\n")}`;
       } else if (causesStr.includes("family_name")) {
         suggestion =
           "MercadoLibre cree que esto es un 'Servicio'. Intenta cambiar el nombre del producto para que parezca un objeto físico.";
