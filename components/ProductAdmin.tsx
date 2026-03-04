@@ -537,6 +537,16 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
                                 className="mt-1 block w-full rounded-md border-gray-200 text-sm" 
                             />
                         </div>
+                        <div>
+                            <label className="block text-xs font-medium text-slate-600">Color (COLOR)</label>
+                            <input 
+                                type="text" 
+                                placeholder="Ej: Multicolor, Rosa, Azul"
+                                value={form.ml_attributes?.['COLOR'] || 'Multicolor'}
+                                onChange={e => handleChange('ml_attributes', { ...form.ml_attributes, 'COLOR': e.target.value })}
+                                className="mt-1 block w-full rounded-md border-gray-200 text-sm" 
+                            />
+                        </div>
                       </>
                   )}
                   
