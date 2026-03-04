@@ -1337,6 +1337,25 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
                     type="button" 
                     onClick={async () => {
                         if(!user?.id) return toast.error('No estás autenticado para esta acción');
+                        
+                        // Validaciones específicas de plantilla antes de llamar a la API
+                        const currentTemplate = (form as any).ml_template;
+                        if (currentTemplate === 'Bebés') {
+                           if (!form.ml_attributes?.PATTERN_NAME?.trim()) {
+                              return toast.error('Para la categoría Bebés es OBLIGATORIO completar el "Nombre del diseño".');
+                           }
+                           let minAge = form.ml_attributes?.MIN_RECOMMENDED_AGE?.trim();
+                           if (minAge && !isNaN(Number(minAge))) {
+                              // Auto-fix: si solo puso un número, asumimos meses
+                              form.ml_attributes.MIN_RECOMMENDED_AGE = `${minAge} meses`;
+                           }
+                        }
+                        if (currentTemplate === 'Vasos') {
+                           if (!form.ml_attributes?.DRINKING_GLASS_PRODUCT_TYPE) {
+                              return toast.error('Para Vasos/Chopps es OBLIGATORIO elegir el Tipo de Producto (Vaso/Chopp).');
+                           }
+                        }
+
                         if(!confirm(`¿Sincronizar este producto con MercadoLibre con un aumento del ${mlMarkup}%?`)) return;
                         setIsSyncing(true);
                         const markupValue = Number(mlMarkup) || 0;
