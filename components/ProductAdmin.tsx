@@ -422,6 +422,7 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
                   <option value="Soportes">Soportes de Celular</option>
                   <option value="Llaveros">Llaveros</option>
                   <option value="Adornos">Adornos y Decoración</option>
+                  <option value="Bebés">Artículos para Bebés</option>
                </select>
                
                {/* Campos Dinámicos según Categoría */}
@@ -497,6 +498,32 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
                                 placeholder="Ej: Universal, Samsung, iPhone"
                                 value={form.ml_attributes?.['COMPATIBLE_BRANDS'] || 'Universal'}
                                 onChange={e => handleChange('ml_attributes', { ...form.ml_attributes, 'COMPATIBLE_BRANDS': e.target.value })}
+                                className="mt-1 block w-full rounded-md border-gray-200 text-sm" 
+                            />
+                        </div>
+                      </>
+                  )}
+
+                  {/* BEBÉS / INFANTIL */}
+                  {(mlTemplate === 'Bebés' || form.category?.toLowerCase().includes('bebé') || form.category?.toLowerCase().includes('infantil')) && (
+                      <>
+                        <div>
+                            <label className="block text-xs font-medium text-slate-600">Edad Min. Recomendada (MIN_RECOMMENDED_AGE)</label>
+                            <input 
+                                type="text" 
+                                placeholder="Ej: 3 años, 6 meses"
+                                value={form.ml_attributes?.['MIN_RECOMMENDED_AGE'] || '3 años'}
+                                onChange={e => handleChange('ml_attributes', { ...form.ml_attributes, 'MIN_RECOMMENDED_AGE': e.target.value })}
+                                className="mt-1 block w-full rounded-md border-gray-200 text-sm" 
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-medium text-slate-600">Material (MATERIALS)</label>
+                            <input 
+                                type="text" 
+                                placeholder="Ej: Plástico, Madera"
+                                value={form.ml_attributes?.['MATERIALS'] || 'Plástico'}
+                                onChange={e => handleChange('ml_attributes', { ...form.ml_attributes, 'MATERIALS': e.target.value })}
                                 className="mt-1 block w-full rounded-md border-gray-200 text-sm" 
                             />
                         </div>
