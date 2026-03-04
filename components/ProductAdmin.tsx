@@ -64,7 +64,7 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
   const [isCompressing, setIsCompressing] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [mlMarkup, setMlMarkup] = useState<string>('25'); // Default 25%
-  const [mlTemplate, setMlTemplate] = useState<string>('');
+  const [mlTemplate, setMlTemplate] = useState<string>(() => (product?.ml_attributes?.TEMPLATE || ''));
   const [isGeneratingTitle, setIsGeneratingTitle] = useState(false);
   const { user } = useAuth();
 
@@ -413,7 +413,10 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
                <select 
                  className="block w-full rounded-md border-yellow-200 text-sm"
                  value={mlTemplate} 
-                 onChange={(e) => setMlTemplate(e.target.value)}
+                 onChange={(e) => {
+                     setMlTemplate(e.target.value);
+                     handleChange('ml_attributes', { ...form.ml_attributes, TEMPLATE: e.target.value });
+                 }}
                >
                   <option value="">-- Seleccionar para ver campos requeridos --</option>
                   <option value="Mates">Mates y Accesorios</option>
@@ -1339,7 +1342,7 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
                         if(!user?.id) return toast.error('No estás autenticado para esta acción');
                         
                         // Validaciones específicas de plantilla antes de llamar a la API
-                        const currentTemplate = (form as any).ml_template;
+                        const currentTemplate = mlTemplate || form.ml_attributes?.TEMPLATE;
                         if (currentTemplate === 'Bebés') {
                            if (!form.ml_attributes?.PATTERN_NAME?.trim()) {
                               return toast.error('Para la categoría Bebés es OBLIGATORIO completar el "Nombre del diseño".');
