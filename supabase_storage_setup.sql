@@ -12,32 +12,25 @@ DROP POLICY IF EXISTS "Public Access Insert" ON storage.objects;
 DROP POLICY IF EXISTS "Public Access Update" ON storage.objects;
 DROP POLICY IF EXISTS "Public Access Delete" ON storage.objects;
 
--- 3. Configurar políticas de seguridad (RLS) para 'product-images'
--- NOTA: Como el Admin usa un sistema de login propio y no Supabase Auth,
--- el usuario actúa como 'anon'. Para permitir la subida desde el Admin,
--- debemos permitir acceso al rol 'anon' o 'public'.
--- IMPORTANTE: Esto permite a cualquiera con la API Key pública subir archivos.
--- Para mayor seguridad, se debería migrar a Supabase Auth.
-
--- Permitir lectura pública a todos (para que se vean las fotos en la web)
+-- Permitir lectura pública a todos (para que se vean las fotos en la web y para herramientas externas como Make)
 CREATE POLICY "Public Access Select"
 ON storage.objects FOR SELECT
 USING ( bucket_id = 'product-images' );
 
--- Permitir subida (INSERT) a todos (rol anon incluido)
-CREATE POLICY "Public Access Insert"
+-- Permitir subida (INSERT) SOLO a administradores autenticados
+CREATE POLICY "Admin Access Insert"
 ON storage.objects FOR INSERT
-WITH CHECK ( bucket_id = 'product-images' );
+WITH CHECK ( bucket_id = 'product-images' AND auth.role() = 'authenticated' );
 
--- Permitir actualización (UPDATE) a todos
-CREATE POLICY "Public Access Update"
+-- Permitir actualización (UPDATE) SOLO a administradores autenticados
+CREATE POLICY "Admin Access Update"
 ON storage.objects FOR UPDATE
-USING ( bucket_id = 'product-images' );
+USING ( bucket_id = 'product-images' AND auth.role() = 'authenticated' );
 
--- Permitir borrado (DELETE) a todos
-CREATE POLICY "Public Access Delete"
+-- Permitir borrado (DELETE) SOLO a administradores autenticados
+CREATE POLICY "Admin Access Delete"
 ON storage.objects FOR DELETE
-USING ( bucket_id = 'product-images' );
+USING ( bucket_id = 'product-images' AND auth.role() = 'authenticated' );
 
 -- 4. Verificar tabla de productos y asegurar columnas
 -- Asegurarnos que la tabla 'products' tenga las columnas necesarias para las imágenes
