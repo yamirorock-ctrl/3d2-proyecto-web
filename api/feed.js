@@ -16,7 +16,7 @@ export default async function handler(req, res) {
 
     if (!supabaseUrl || !supabaseKey) {
       throw new Error(
-        `Faltan credenciales de Supabase. URL: ${!!supabaseUrl}, Key: ${!!supabaseKey}`
+        `Faltan credenciales de Supabase. URL: ${!!supabaseUrl}, Key: ${!!supabaseKey}`,
       );
     }
 
@@ -54,8 +54,8 @@ export default async function handler(req, res) {
     };
 
     const csvRows = (products || []).map((product) => {
-      const availability =
-        product.stock && product.stock > 0 ? "in stock" : "out of stock";
+      // By default, consider it in stock (Print On Demand), unless explicitly 0
+      const availability = product.stock === 0 ? "out of stock" : "in stock";
       let imageUrl = product.image;
       if (
         product.images &&

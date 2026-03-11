@@ -660,24 +660,6 @@ const FinancialDashboard: React.FC<Props> = ({ orders, products, onEditProduct }
                          </div>
                        )}
 
-                       {newExpense.category !== 'Madera' && (
-                         <div className="flex justify-between items-center mb-2">
-                             <label className="text-xs font-bold text-slate-600">Cantidad Comprada:</label>
-                             <div className="flex items-center gap-1">
-                                 <input 
-                                  type="number" 
-                                  value={quantityToAdd} 
-                                  onChange={e => setQuantityToAdd(Number(e.target.value))}
-                                  className="w-20 p-1 text-sm border rounded text-center font-bold bg-white focus:ring-2 focus:ring-indigo-500"
-                                  min="1"
-                                 />
-                                  <span className="text-xs text-slate-400">
-                                    {newExpense.category === 'Filamento' ? 'kg' : newExpense.category === 'Madera' ? 'placas' : 'unidades'}
-                                  </span>
-                             </div>
-                         </div>
-                       )}
-                       
                        {/* Estimación de Costo Unitario */}
                        {(newExpense.amount || 0) > 0 && (quantityToAdd > 0 || woodExtraCount > 0) && (
                            <div className="bg-white p-2 rounded border border-indigo-100 shadow-sm text-xs">
