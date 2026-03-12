@@ -39,7 +39,22 @@ export default async function handler(req, res) {
 
     const refreshToken = lastToken.refresh_token;
 
-    // 3. Solicitar Renovación a MercadoLibre
+    // 3. Verificar si necesita renovación (Expira en 6hs = 21600 segs)
+    // Renovamos si pasaron más de 5 horas (18000 segundos) desde el último update
+    const lastUpdate = new Date(lastToken.updated_at).getTime();
+    const now = Date.now();
+    const secondsSinceUpdate = (now - lastUpdate) / 1000;
+
+    if (secondsSinceUpdate < 18000) {
+      console.log(`[ML Refresh] Token still valid for ${21600 - secondsSinceUpdate}s. Skipping refresh.`);
+      return res.status(200).json({ 
+        success: true, 
+        message: "Token still valid, skipped refresh.",
+        expires_in: 21600 - secondsSinceUpdate
+      });
+    }
+
+    // 4. Solicitar Renovación a MercadoLibre
     const tokenUrl = "https://api.mercadolibre.com/oauth/token";
     const params = new URLSearchParams();
     params.set("grant_type", "refresh_token");

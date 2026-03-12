@@ -586,17 +586,19 @@ const FinancialDashboard: React.FC<Props> = ({ orders, products, onEditProduct }
                 
                 {/* Opción Agregar a Stock (Solo CREACIÓN) */}
                 {!editingExpenseId && (
-                <div className="flex items-center gap-2 bg-indigo-50 p-2 rounded border border-indigo-100">
-                  <input 
-                    type="checkbox" 
-                    id="addToStack"
-                    checked={addToInventory}
-                    onChange={e => setAddToInventory(e.target.checked)}
-                    className="rounded text-indigo-600 focus:ring-indigo-500" 
-                  />
-                  <label htmlFor="addToStack" className="text-xs font-bold text-indigo-700 cursor-pointer select-none flex-1">
-                    Pasar al Inventario
-                  </label>
+                 <div className="bg-indigo-50 p-2 rounded border border-indigo-100">
+                  <div className="flex items-center gap-2">
+                    <input 
+                      type="checkbox" 
+                      id="addToStack"
+                      checked={addToInventory}
+                      onChange={e => setAddToInventory(e.target.checked)}
+                      className="rounded text-indigo-600 focus:ring-indigo-500" 
+                    />
+                    <label htmlFor="addToStack" className="text-xs font-bold text-indigo-700 cursor-pointer select-none flex-1">
+                      Pasar al Inventario
+                    </label>
+                  </div>
                   
                   {addToInventory && (
                     <div className="mt-3 bg-slate-50 p-3 rounded-md border border-slate-200 animate-in slide-in-from-left-2">
@@ -660,24 +662,42 @@ const FinancialDashboard: React.FC<Props> = ({ orders, products, onEditProduct }
                          </div>
                        )}
 
+                       {newExpense.category !== 'Madera' && (
+                         <div className="flex justify-between items-center mb-2">
+                             <label className="text-xs font-bold text-slate-600">Cantidad Comprada:</label>
+                             <div className="flex items-center gap-1">
+                                 <input 
+                                  type="number" 
+                                  value={quantityToAdd} 
+                                  onChange={e => setQuantityToAdd(Number(e.target.value))}
+                                  className="w-20 p-1 text-sm border rounded text-center font-bold bg-white focus:ring-2 focus:ring-indigo-500"
+                                  min="1"
+                                 />
+                                  <span className="text-xs text-slate-400">
+                                    {newExpense.category === 'Filamento' ? 'kg' : newExpense.category === 'Madera' ? 'placas' : 'unidades'}
+                                  </span>
+                             </div>
+                         </div>
+                       )}
+                       
                        {/* Estimación de Costo Unitario */}
                        {(newExpense.amount || 0) > 0 && (quantityToAdd > 0 || woodExtraCount > 0) && (
                            <div className="bg-white p-2 rounded border border-indigo-100 shadow-sm text-xs">
                                <div className="flex justify-between items-center mb-1">
                                   <span className="text-slate-500">Costo Unitario (Calculado):</span>
                                   <b className="text-indigo-700 text-sm font-mono">
-                                    ${((newExpense.amount || 0) / (newExpense.category === 'Madera' ? (quantityToAdd + woodExtraCount) : quantityToAdd)).toFixed(2)}
+                                    ${((newExpense.amount || 0) / ((newExpense.category as string) === 'Madera' ? (quantityToAdd + woodExtraCount) : quantityToAdd)).toFixed(2)}
                                   </b>
                                </div>
                                
                                {/* Comparación de Precio */}
                                {(() => {
-                                   const targetName = newExpense.category === 'Filamento' 
+                                   const targetName = (newExpense.category as string) === 'Filamento' 
                                       ? `${filBrand} ${filType} ${filColor}`.trim() 
                                       : newExpense.subcategory;
                                    const mat = materials.find(m => m.name === targetName);
                                    if (mat && mat.last_cost) {
-                                   const current = (newExpense.amount || 0) / (newExpense.category === 'Madera' ? (quantityToAdd + woodExtraCount) : quantityToAdd);
+                                   const current = (newExpense.amount || 0) / ((newExpense.category as string) === 'Madera' ? (quantityToAdd + woodExtraCount) : quantityToAdd);
                                        const diff = current - mat.last_cost;
                                        const percent = ((diff / mat.last_cost) * 100).toFixed(1);
                                        
