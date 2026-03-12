@@ -113,7 +113,7 @@ export default async function handler(req, res) {
     // 4. Get Active Token
     const { data: tokenData, error: tokenError } = await supabase
       .from("ml_tokens")
-      .select("access_token")
+      .select("*")
       .order("updated_at", { ascending: false })
       .limit(1)
       .single();
@@ -123,7 +123,54 @@ export default async function handler(req, res) {
       return res.status(200).json({ error: "No token" });
     }
 
-    const accessToken = tokenData.access_token;
+    let accessToken = tokenData.access_token;
+
+    // 4.b AUTO-REFRESH ON THE FLY (No external Cron/UptimeRobot needed!)
+    // If the token is older than 5 hours (18000 secs), we refresh it right here before handling the ML event.
+    const lastUpdate = new Date(tokenData.updated_at).getTime();
+    const secondsSinceUpdate = (Date.now() - lastUpdate) / 1000;
+    
+    if (secondsSinceUpdate > 18000) {
+        console.log(`[ML Webhook] Token is ${secondsSinceUpdate}s old (> 5hrs). Auto-refreshing on the fly...`);
+        try {
+            const client_id = process.env.VITE_ML_APP_ID || process.env.ML_APP_ID;
+            const client_secret = process.env.VITE_ML_APP_SECRET || process.env.ML_APP_SECRET;
+            const tokenUrl = "https://api.mercadolibre.com/oauth/token";
+            
+            const params = new URLSearchParams();
+            params.set("grant_type", "refresh_token");
+            params.set("client_id", String(client_id));
+            params.set("client_secret", String(client_secret));
+            params.set("refresh_token", String(tokenData.refresh_token));
+            
+            const r = await fetch(tokenUrl, {
+                method: "POST",
+                headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                body: params.toString(),
+            });
+            
+            if (r.ok) {
+                const refreshedData = await r.json();
+                accessToken = refreshedData.access_token;
+                
+                // Save it for future requests
+                await supabase.from("ml_tokens").upsert({
+                    user_id: String(refreshedData.user_id),
+                    access_token: refreshedData.access_token,
+                    refresh_token: refreshedData.refresh_token,
+                    expires_in: refreshedData.expires_in,
+                    scope: refreshedData.scope,
+                    token_type: refreshedData.token_type,
+                    updated_at: new Date().toISOString(),
+                }, { onConflict: "user_id" });
+                console.log("[ML Webhook] 🔥 Auto-Refresh ON THE FLY successful!");
+            } else {
+                console.error("[ML Webhook] Auto-Refresh failed. Continuing with old token (might fail).", await r.text());
+            }
+        } catch (err) {
+            console.error("[ML Webhook] Auto-Refresh execution error:", err);
+        }
+    }
 
     // 5. Route Logic
     if (topic === "questions") {
