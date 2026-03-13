@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 import { Order, Payment, OrderStatus } from '../types';
 import { TrendingUp, Package, DollarSign, Clock, Download, Calendar, CheckCircle, Loader, XCircle, Trash2, RefreshCw, Truck, Edit, AlertCircle, Plus, Wallet, CreditCard, Banknote, History, Printer } from 'lucide-react';
 
@@ -16,9 +16,11 @@ interface Props {
 }
 
 type DateFilter = 'today' | 'week' | 'month' | 'all';
+type StatusFilter = 'all' | 'completed' | 'processing' | 'pending';
 
 const SalesDashboard: React.FC<Props> = ({ orders, payments, onUpdateStatus, onEdit, onDelete, onRecordPayment, onRefresh, onPatchOrder, onDeletePayment }) => {
   const [dateFilter, setDateFilter] = useState<DateFilter>('all');
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [recordingPaymentId, setRecordingPaymentId] = useState<string | null>(null);
   const [newPayAmount, setNewPayAmount] = useState<string>('');
   const [newPayMethod, setNewPayMethod] = useState<Payment['method']>('efectivo');
@@ -146,6 +148,16 @@ const SalesDashboard: React.FC<Props> = ({ orders, payments, onUpdateStatus, onE
 
     return { total: totalRealIncome, totalDebt, byMethod, completed, pending, processing, topProducts };
   }, [filteredOrders, payments, dateFilter]);
+
+  const displayedOrders = useMemo(() => {
+    return filteredOrders.filter(o => {
+      if (statusFilter === 'all') return true;
+      if (statusFilter === 'completed') return ['paid','delivered','completed'].includes(o.status as any);
+      if (statusFilter === 'processing') return ['preparing','payment_pending','processing','shipped'].includes(o.status as any);
+      if (statusFilter === 'pending') return ['pending','to_coordinate'].includes(o.status as any);
+      return true;
+    });
+  }, [filteredOrders, statusFilter]);
 
   const handleExportCSV = () => {
     const headers = ['ID', 'Fecha', 'Cliente', 'Email', 'Teléfono', 'Total', 'Método Pago', 'Estado', 'Productos', 'Notas/Deuda'];
@@ -370,15 +382,21 @@ const SalesDashboard: React.FC<Props> = ({ orders, payments, onUpdateStatus, onE
           )}
         </div>
 
-        <div className="bg-linear-to-br from-green-500 to-green-600 rounded-xl p-4 sm:p-6 text-white shadow-lg">
+        <div 
+          onClick={() => setStatusFilter('all')}
+          className={`bg-linear-to-br from-green-500 to-green-600 rounded-xl p-4 sm:p-6 text-white shadow-lg cursor-pointer hover:scale-[1.02] hover:shadow-xl transition-all ${statusFilter === 'all' ? 'ring-4 ring-offset-2 ring-green-400' : ''}`}
+        >
           <div className="flex items-center justify-between mb-2">
             <Package size={20} className="opacity-80 sm:w-6 sm:h-6" />
           </div>
-          <p className="text-xs sm:text-sm opacity-90 mb-1">Órdenes</p>
+          <p className="text-xs sm:text-sm opacity-90 mb-1">Órdenes (Todas)</p>
           <p className="text-2xl sm:text-3xl font-bold">{filteredOrders.length}</p>
         </div>
 
-        <div className="bg-linear-to-br from-blue-500 to-blue-600 rounded-xl p-4 sm:p-6 text-white shadow-lg">
+        <div 
+          onClick={() => setStatusFilter('processing')}
+          className={`bg-linear-to-br from-blue-500 to-blue-600 rounded-xl p-4 sm:p-6 text-white shadow-lg cursor-pointer hover:scale-[1.02] hover:shadow-xl transition-all ${statusFilter === 'processing' ? 'ring-4 ring-offset-2 ring-blue-400' : ''}`}
+        >
           <div className="flex items-center justify-between mb-2">
             <Clock size={20} className="opacity-80 sm:w-6 sm:h-6" />
           </div>
@@ -386,7 +404,10 @@ const SalesDashboard: React.FC<Props> = ({ orders, payments, onUpdateStatus, onE
           <p className="text-2xl sm:text-3xl font-bold">{metrics.processing}</p>
         </div>
 
-        <div className="bg-purple-500 rounded-xl p-4 sm:p-6 text-white shadow-lg">
+        <div 
+          onClick={() => setStatusFilter('pending')}
+          className={`bg-purple-500 rounded-xl p-4 sm:p-6 text-white shadow-lg cursor-pointer hover:scale-[1.02] hover:shadow-xl transition-all ${statusFilter === 'pending' ? 'ring-4 ring-offset-2 ring-purple-400' : ''}`}
+        >
           <div className="flex items-center justify-between mb-2">
             <Calendar size={20} className="opacity-80 sm:w-6 sm:h-6" />
           </div>
@@ -427,22 +448,84 @@ const SalesDashboard: React.FC<Props> = ({ orders, payments, onUpdateStatus, onE
           </div>
       </div>
 
-      {/* Gráfico de Ventas por Producto (Top 5) */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
-        <h4 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
-          <TrendingUp size={20} className="text-indigo-600" />
-          Top 5 Productos (Ingresos)
-        </h4>
-        <div className="h-64 w-full">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={metrics.topProducts}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} />
-              <XAxis dataKey="name" fontSize={12} tickFormatter={(val) => val.length > 15 ? val.slice(0, 15)+'...' : val} />
-              <YAxis />
-              <Tooltip formatter={(value: number) => [`$${value.toFixed(2)}`, 'Ingresos']} />
-              <Bar dataKey="total" fill="#4f46e5" name="Ingresos ($)" radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
+      {/* Gráficos */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        
+        {/* Gráfico de Ventas por Producto (Top 5) */}
+        <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
+          <h4 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
+            <TrendingUp size={20} className="text-indigo-600" />
+            Top 5 Productos (Ingresos)
+          </h4>
+          <div className="h-64 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={metrics.topProducts} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="colorBar" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#6366f1" stopOpacity={0.9}/>
+                    <stop offset="95%" stopColor="#4f46e5" stopOpacity={0.6}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                <XAxis dataKey="name" fontSize={11} tickLine={false} axisLine={false} tickFormatter={(val) => val.length > 10 ? val.slice(0, 10)+'...' : val} />
+                <YAxis fontSize={11} tickLine={false} axisLine={false} tickFormatter={(val) => `$${(val/1000)}k`} />
+                <Tooltip 
+                  cursor={{fill: '#f1f5f9'}}
+                  contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                  formatter={(value: number) => [`$${value.toLocaleString('es-AR')}`, 'Ingresos']} 
+                />
+                <Bar dataKey="total" fill="url(#colorBar)" radius={[6, 6, 0, 0]} barSize={40} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Gráfico de Distribución de Ingresos */}
+        <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
+          <h4 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
+            <Banknote size={20} className="text-emerald-600" />
+            Distribución de Ingresos
+          </h4>
+          <div className="h-64 w-full">
+            {metrics.total > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={[
+                      { name: 'Efectivo', value: metrics.byMethod.efectivo, color: '#10b981' },
+                      { name: 'Transf.', value: metrics.byMethod.transferencia, color: '#3b82f6' },
+                      { name: 'MercadoPago', value: metrics.byMethod.mercadopago, color: '#eab308' },
+                      { name: 'Otros', value: metrics.byMethod.otro, color: '#64748b' }
+                    ].filter(d => d.value > 0)}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={60}
+                    outerRadius={80}
+                    paddingAngle={5}
+                    dataKey="value"
+                  >
+                    {[
+                      { name: 'Efectivo', value: metrics.byMethod.efectivo, color: '#10b981' },
+                      { name: 'Transf.', value: metrics.byMethod.transferencia, color: '#3b82f6' },
+                      { name: 'MercadoPago', value: metrics.byMethod.mercadopago, color: '#eab308' },
+                      { name: 'Otros', value: metrics.byMethod.otro, color: '#64748b' }
+                    ].filter(d => d.value > 0).map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip 
+                    contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                    formatter={(value: number) => [`$${value.toLocaleString('es-AR')}`, 'Monto']} 
+                  />
+                  <Legend verticalAlign="bottom" height={36} iconType="circle" />
+                </PieChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-full flex items-center justify-center text-slate-400 text-sm">
+                No hay ingresos en este período
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -474,19 +557,28 @@ const SalesDashboard: React.FC<Props> = ({ orders, payments, onUpdateStatus, onE
         )}
       </div>
 
-      {/* Distribución por estado */}
+    {/* Distribución por estado */}
       <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
         <h4 className="text-lg font-bold text-slate-900 mb-4">Distribución por Estado</h4>
         <div className="grid grid-cols-3 gap-4">
-          <div className="text-center p-4 bg-green-50 rounded-lg border border-green-200">
+          <div 
+            onClick={() => setStatusFilter('completed')}
+            className={`text-center p-4 rounded-lg border cursor-pointer hover:shadow-md hover:scale-105 transition-all ${statusFilter === 'completed' ? 'bg-green-100 border-green-500 ring-2 ring-green-400' : 'bg-green-50 border-green-200'}`}
+          >
             <p className="text-2xl font-bold text-green-600">{metrics.completed}</p>
             <p className="text-sm text-slate-600 mt-1">Completadas</p>
           </div>
-          <div className="text-center p-4 bg-blue-50 rounded-lg border border-blue-200">
+          <div 
+            onClick={() => setStatusFilter('processing')}
+            className={`text-center p-4 rounded-lg border cursor-pointer hover:shadow-md hover:scale-105 transition-all ${statusFilter === 'processing' ? 'bg-blue-100 border-blue-500 ring-2 ring-blue-400' : 'bg-blue-50 border-blue-200'}`}
+          >
             <p className="text-2xl font-bold text-blue-600">{metrics.processing}</p>
             <p className="text-sm text-slate-600 mt-1">En Proceso</p>
           </div>
-          <div className="text-center p-4 bg-amber-50 rounded-lg border border-amber-200">
+          <div 
+            onClick={() => setStatusFilter('pending')}
+            className={`text-center p-4 rounded-lg border cursor-pointer hover:shadow-md hover:scale-105 transition-all ${statusFilter === 'pending' ? 'bg-amber-100 border-amber-500 ring-2 ring-amber-400' : 'bg-amber-50 border-amber-200'}`}
+          >
             <p className="text-2xl font-bold text-amber-600">{metrics.pending}</p>
             <p className="text-sm text-slate-600 mt-1">Pendientes</p>
           </div>
@@ -495,18 +587,33 @@ const SalesDashboard: React.FC<Props> = ({ orders, payments, onUpdateStatus, onE
 
       {/* Lista detallada de órdenes */}
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-        <div className="p-6 border-b bg-gray-50">
-          <h4 className="text-lg font-bold text-slate-900">Todas las Órdenes</h4>
-          <p className="text-sm text-slate-500 mt-1">{filteredOrders.length} órdenes en el período seleccionado</p>
+        <div className="p-6 border-b bg-gray-50 flex items-center justify-between">
+          <div>
+            <h4 className="text-lg font-bold text-slate-900">
+              {statusFilter === 'all' && 'Todas las Órdenes'}
+              {statusFilter === 'completed' && 'Órdenes Completadas'}
+              {statusFilter === 'processing' && 'Órdenes En Proceso'}
+              {statusFilter === 'pending' && 'Órdenes Pendientes'}
+            </h4>
+            <p className="text-sm text-slate-500 mt-1">{displayedOrders.length} órdenes mostradas</p>
+          </div>
+          {statusFilter !== 'all' && (
+            <button 
+               onClick={() => setStatusFilter('all')}
+               className="text-sm text-indigo-600 hover:text-indigo-800 font-bold bg-indigo-50 px-3 py-1.5 rounded-lg transition-colors border border-indigo-100"
+            >
+              Quitar Filtro
+            </button>
+          )}
         </div>
         <div className="divide-y">
-          {filteredOrders.length === 0 ? (
+          {displayedOrders.length === 0 ? (
             <div className="p-8 text-center text-slate-500">
               <Package size={48} className="mx-auto mb-4 opacity-30" />
               <p>No hay órdenes para mostrar</p>
             </div>
           ) : (
-            filteredOrders.sort((a, b) => {
+            displayedOrders.sort((a, b) => {
               const aTime = new Date((a as any).timestamp || (a as any).created_at).getTime();
               const bTime = new Date((b as any).timestamp || (b as any).created_at).getTime();
               return bTime - aTime;
