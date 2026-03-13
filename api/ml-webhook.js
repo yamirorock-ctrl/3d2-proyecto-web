@@ -454,6 +454,37 @@ async function handleOrder(resource, accessToken, res) {
       .maybeSingle();
 
     if (!existingOrder) {
+      let initialNotes = `Venta automática desde MercadoLibre. ID: ${order.id}\n[PAGADO TOTAL: $${order.total_amount}]`;
+      let initialStatus = "paid";
+      
+      // Fetch shipping info right away to get delivery estimates for the Calendar
+      if (order.shipping && order.shipping.id) {
+         try {
+           const shipRes = await fetch(`https://api.mercadolibre.com/shipments/${order.shipping.id}`, {
+              headers: { Authorization: `Bearer ${accessToken}` },
+           });
+           if (shipRes.ok) {
+             const shipData = await shipRes.json();
+             
+             const mapStatus = {
+                pending: "processing", handling: "preparing", ready_to_ship: "preparing",
+                shipped: "shipped", delivered: "delivered", cancelled: "cancelled",
+             };
+             if (shipData.status && mapStatus[shipData.status]) {
+                initialStatus = mapStatus[shipData.status];
+             }
+             
+             if (shipData.shipping_option?.estimated_delivery_time?.date) {
+               const estDate = new Date(shipData.shipping_option.estimated_delivery_time.date);
+               const day = String(estDate.getDate()).padStart(2, "0");
+               const month = String(estDate.getMonth() + 1).padStart(2, "0");
+               const year = estDate.getFullYear();
+               initialNotes += `\n[ENTREGA: ${day}/${month}/${year}]`;
+             }
+           }
+         } catch(e) { console.error("[ML Webhook] Error fetching initial shipping:", e); }
+      }
+
       const newOrder = {
         order_number: orderNumber,
         customer_name:
@@ -465,11 +496,11 @@ async function handleOrder(resource, accessToken, res) {
         shipping_cost: 0,
         total: order.total_amount,
         shipping_method: "correo",
-        status: "paid",
+        status: initialStatus,
         payment_id: order.payments?.[0]?.id?.toString() || "mercadopago",
         payment_status: "approved",
         ml_shipment_id: order.shipping?.id?.toString() || null,
-        notes: `Venta automática desde MercadoLibre. ID: ${order.id}\n[PAGADO TOTAL: $${order.total_amount}]`,
+        notes: initialNotes,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       };
@@ -531,8 +562,8 @@ async function handleOrder(resource, accessToken, res) {
             }
 
             // Recuperar fecha prometida y formato de nota
-            if (shipData.estimated_delivery_time?.date) {
-              const estDate = new Date(shipData.estimated_delivery_time.date);
+            if (shipData.shipping_option?.estimated_delivery_time?.date) {
+              const estDate = new Date(shipData.shipping_option.estimated_delivery_time.date);
               const day = String(estDate.getDate()).padStart(2, "0");
               const month = String(estDate.getMonth() + 1).padStart(2, "0");
               const year = estDate.getFullYear();
