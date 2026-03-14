@@ -1,0 +1,140 @@
+{
+  "payments": [
+    {
+      "reason": "Soporte Headset Y Joysticks",
+      "status_code": null,
+      "total_paid_amount": 29815.99,
+      "operation_type": "regular_payment",
+      "transaction_amount": 19500,
+      "transaction_amount_refunded": 0,
+      "date_approved": "2026-01-17T15:09:40.000-04:00",
+      "collector": {
+        "id": 414444653
+      },
+      "coupon_id": null,
+      "installments": 1,
+      "authorization_code": "193470",
+      "taxes_amount": 0,
+      "id": 141783760843,
+      "date_last_modified": "2026-01-17T15:09:40.000-04:00",
+      "coupon_amount": 0,
+      "available_actions": [
+        "refund"
+      ],
+      "shipping_cost": 10315.99,
+      "installment_amount": 29815.99,
+      "date_created": "2026-01-17T15:09:38.000-04:00",
+      "activation_uri": null,
+      "overpaid_amount": 0,
+      "card_id": 9438843294,
+      "status_detail": "accredited",
+      "issuer_id": "12842",
+      "payment_method_id": "visa",
+      "payment_type": "prepaid_card",
+      "deferred_period": null,
+      "atm_transfer_reference": {
+        "transaction_id": null,
+        "company_id": null
+      },
+      "site_id": "MLA",
+      "payer_id": 244687331,
+      "order_id": 2000014755362576,
+      "currency_id": "ARS",
+      "status": "approved",
+      "transaction_order_id": null
+    }
+  ],
+  "fulfilled": true,
+  "taxes": {
+    "amount": null,
+    "currency_id": null,
+    "id": null
+  },
+  "order_request": {
+    "change": null,
+    "return": null
+  },
+  "expiration_date": "2026-02-14T15:09:40.000-04:00",
+  "feedback": {
+    "buyer": null,
+    "seller": null
+  },
+  "shipping": {
+    "id": 46289127628
+  },
+  "date_closed": "2026-01-17T15:09:40.000-04:00",
+  "id": 2000014755362576,
+  "manufacturing_ending_date": null,
+  "order_items": [
+    {
+      "item": {
+        "id": "MLA1632262143",
+        "title": "Soporte Headset Y Joysticks",
+        "category_id": "MLA456571",
+        "variation_id": null,
+        "seller_custom_field": null,
+        "global_price": null,
+        "net_weight": null,
+        "variation_attributes": [],
+        "warranty": null,
+        "condition": "new",
+        "seller_sku": null
+      },
+      "quantity": 1,
+      "unit_price": 19500,
+      "full_unit_price": 19500,
+      "currency_id": "ARS",
+      "manufacturing_days": null,
+      "picked_quantity": null,
+      "requested_quantity": {
+        "measure": "unit",
+        "value": 1
+      },
+      "sale_fee": 6102.5,
+      "listing_type_id": "gold_special",
+      "base_exchange_rate": null,
+      "base_currency_id": null,
+      "bundle": null,
+      "element_id": 1
+    }
+  ],
+  "date_last_updated": "2026-01-23T18:31:39+00:00",
+  "last_updated": "2026-01-23T14:31:38.000-04:00",
+  "comment": null,
+  "pack_id": null,
+  "coupon": {
+    "amount": 0,
+    "id": null
+  },
+  "shipping_cost": null,
+  "date_created": "2026-01-17T15:09:38.000-04:00",
+  "date_created_ttl": null,
+  "pickup_id": null,
+  "status_detail": null,
+  "tags": [
+    "paid",
+    "delivered",
+    "pcj-co-funded"
+  ],
+  "buyer": {
+    "id": 244687331,
+    "nickname": "CAIG6884627"
+  },
+  "seller": {
+    "id": 414444653,
+    "nickname": "YAMIRO"
+  },
+  "total_amount": 19500,
+  "paid_amount": 29815.99,
+  "currency_id": "ARS",
+  "status": "paid",
+  "context": {
+    "application": null,
+    "product_id": null,
+    "channel": "marketplace",
+    "site": "MLA",
+    "flows": [
+      "pcj-co-funded"
+    ]
+  }
+}

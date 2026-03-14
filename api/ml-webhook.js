@@ -420,18 +420,6 @@ async function handleOrder(resource, accessToken, res) {
       if (dbProduct) {
         productId = dbProduct.id;
         productImage = dbProduct.image;
-
-        // Decrement Stock
-        if (dbProduct.stock !== null) {
-          const newStock = Math.max(0, dbProduct.stock - qty);
-          await supabase
-            .from("products")
-            .update({ stock: newStock })
-            .eq("id", dbProduct.id);
-          updatedStockLog.push(
-            `Decreased ${dbProduct.name} stock to ${newStock}`,
-          );
-        }
       }
 
       orderItems.push({
@@ -454,6 +442,17 @@ async function handleOrder(resource, accessToken, res) {
       .maybeSingle();
 
     if (!existingOrder) {
+      // ---> DEDUCT STOCK ONLY ON INITIAL REGISTRATION <---
+      for (const orderItem of orderItems) {
+        if (orderItem.product_id && orderItem.product_id !== 0) {
+           const { data: dbProduct } = await supabase.from("products").select("stock, name").eq("id", orderItem.product_id).single();
+           if (dbProduct && dbProduct.stock !== null) {
+              const newStock = Math.max(0, dbProduct.stock - orderItem.quantity);
+              await supabase.from("products").update({ stock: newStock }).eq("id", orderItem.product_id);
+              updatedStockLog.push(`Decreased ${dbProduct.name} stock to ${newStock}`);
+           }
+        }
+      }
       let initialNotes = `Venta automática desde MercadoLibre. ID: ${order.id}\n[PAGADO TOTAL: $${order.total_amount}]`;
       let initialStatus = "paid";
       
