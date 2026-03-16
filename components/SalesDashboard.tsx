@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 import { Order, Payment, OrderStatus } from '../types';
-import { TrendingUp, Package, DollarSign, Clock, Download, Calendar, CheckCircle, Loader, XCircle, Trash2, RefreshCw, Truck, Edit, AlertCircle, Plus, Wallet, CreditCard, Banknote, History, Printer } from 'lucide-react';
+import { TrendingUp, Package, DollarSign, Clock, Download, Calendar, CheckCircle, Loader, XCircle, Trash2, RefreshCw, Truck, Edit, AlertCircle, Plus, Wallet, CreditCard, Banknote, History, Printer, Calculator } from 'lucide-react';
 
 interface Props {
   orders: Order[];
@@ -21,9 +21,16 @@ type StatusFilter = 'all' | 'completed' | 'processing' | 'pending';
 const SalesDashboard: React.FC<Props> = ({ orders, payments, onUpdateStatus, onEdit, onDelete, onRecordPayment, onRefresh, onPatchOrder, onDeletePayment }) => {
   const [dateFilter, setDateFilter] = useState<DateFilter>('all');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  const [billingFilter, setBillingFilter] = useState<'all' | 'invoiced' | 'pending'>('all');
   const [recordingPaymentId, setRecordingPaymentId] = useState<string | null>(null);
+  const [editingInvoicingId, setEditingInvoicingId] = useState<string | null>(null);
   const [newPayAmount, setNewPayAmount] = useState<string>('');
   const [newPayMethod, setNewPayMethod] = useState<Payment['method']>('efectivo');
+  
+  // Billing local state
+  const [billDni, setBillDni] = useState('');
+  const [billType, setBillType] = useState<'Consumidor Final' | 'A' | 'B' | 'C'>('Consumidor Final');
+  const [invNum, setInvNum] = useState('');
 
   // Helper para parsear info extra de notas de forma robusta
   const getExtraInfo = (notes?: string | null) => {
@@ -55,14 +62,26 @@ const SalesDashboard: React.FC<Props> = ({ orders, payments, onUpdateStatus, onE
     return orders.filter(o => {
       const ts = (o as any).timestamp || (o as any).created_at;
       const orderDate = ts ? new Date(ts) : new Date(0);
-      switch (dateFilter) {
-        case 'today': return orderDate >= todayStart;
-        case 'week': return orderDate >= weekStart;
-        case 'month': return orderDate >= monthStart;
-        default: return true;
-      }
+      
+      const matchesDate = (() => {
+        switch (dateFilter) {
+          case 'today': return orderDate >= todayStart;
+          case 'week': return orderDate >= weekStart;
+          case 'month': return orderDate >= monthStart;
+          default: return true;
+        }
+      })();
+
+      const matchesBilling = (() => {
+        if (billingFilter === 'all') return true;
+        if (billingFilter === 'invoiced') return o.is_invoiced === true;
+        if (billingFilter === 'pending') return !o.is_invoiced;
+        return true;
+      })();
+
+      return matchesDate && matchesBilling;
     });
-  }, [orders, dateFilter]);
+  }, [orders, dateFilter, billingFilter]);
 
   const metrics = useMemo(() => {
     // 1. Filtrar órdenes canceladas
@@ -86,8 +105,14 @@ const SalesDashboard: React.FC<Props> = ({ orders, payments, onUpdateStatus, onE
     });
 
     const totalRealIncomeFromPayments = filteredPayments.reduce((sum, p) => sum + (p.amount || 0), 0);
+    
+    // 3. Monotributo Metrics
+    const invoicedOrders = activeOrders.filter(o => o.is_invoiced);
+    const pendingInvoiceOrders = activeOrders.filter(o => !o.is_invoiced);
+    const invoicedTotal = invoicedOrders.reduce((sum, o) => sum + (o.total || 0), 0);
+    const pendingInvoiceTotal = pendingInvoiceOrders.reduce((sum, o) => sum + (o.total || 0), 0);
 
-    // 3. FALLBACK: Sumar ingresos de órdenes que NO tienen pagos registrados en la nueva tabla (Legacy)
+    // 4. FALLBACK: Sumar ingresos de órdenes que NO tienen pagos registrados en la nueva tabla (Legacy)
     // Esto evita que el dashboard se vea en $0 si el usuario tiene mucha historia en notas.
     let legacyIncome = 0;
     activeOrders.forEach(o => {
@@ -146,7 +171,19 @@ const SalesDashboard: React.FC<Props> = ({ orders, payments, onUpdateStatus, onE
       .sort((a, b) => b.total - a.total)
       .slice(0, 5);
 
-    return { total: totalRealIncome, totalDebt, byMethod, completed, pending, processing, topProducts };
+    return { 
+      total: totalRealIncome, 
+      totalDebt, 
+      byMethod, 
+      completed, 
+      pending, 
+      processing, 
+      topProducts,
+      invoicedTotal,
+      pendingInvoiceTotal,
+      invoicedCount: invoicedOrders.length,
+      pendingInvoiceCount: pendingInvoiceOrders.length
+    };
   }, [filteredOrders, payments, dateFilter]);
 
   const displayedOrders = useMemo(() => {
@@ -365,8 +402,54 @@ const SalesDashboard: React.FC<Props> = ({ orders, payments, onUpdateStatus, onE
         </div>
       </div>
 
-      {/* Métricas principales */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+      {/* Selector de Estado de Facturación (Preparación Monotributo) */}
+      <div className="flex flex-wrap gap-2 bg-slate-100 p-1 rounded-xl w-fit border border-slate-200 shadow-xs">
+          <button 
+            onClick={() => setBillingFilter('all')}
+            className={`px-4 py-2 text-xs font-bold rounded-lg transition-all ${billingFilter === 'all' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}
+          >
+            Todas las Órdenes
+          </button>
+          <button 
+            onClick={() => setBillingFilter('pending')}
+            className={`px-4 py-2 text-xs font-bold rounded-lg transition-all ${billingFilter === 'pending' ? 'bg-white shadow-sm text-amber-600' : 'text-slate-500 hover:text-slate-700'}`}
+          >
+            Pendientes Factura ({metrics.pendingInvoiceCount})
+          </button>
+          <button 
+            onClick={() => setBillingFilter('invoiced')}
+            className={`px-4 py-2 text-xs font-bold rounded-lg transition-all ${billingFilter === 'invoiced' ? 'bg-white shadow-sm text-emerald-600' : 'text-slate-500 hover:text-slate-700'}`}
+          >
+            Facturadas ✅ ({metrics.invoicedCount})
+          </button>
+      </div>
+
+      {/* Métricas principales con Enfoque Monotributo/ARCA */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        {/* Total Facturado (Visión Contable) */}
+        <div className="bg-linear-to-br from-indigo-600 to-indigo-700 rounded-xl p-4 sm:p-6 text-white shadow-lg relative overflow-hidden group">
+           <Calculator className="absolute -bottom-2 -right-2 text-white/10 group-hover:scale-110 transition-transform" size={80} />
+           <div className="flex items-center justify-between mb-2">
+             <DollarSign size={20} className="opacity-80 sm:w-6 sm:h-6" />
+             <CheckCircle size={16} className="text-indigo-200" />
+           </div>
+           <p className="text-[10px] sm:text-xs uppercase font-bold opacity-80 mb-1 tracking-wider">Total Facturado (ARCA)</p>
+           <p className="text-2xl sm:text-3xl font-black">${metrics.invoicedTotal.toLocaleString('es-AR')}</p>
+           <p className="text-[10px] mt-2 bg-white/10 px-2 py-0.5 rounded-full w-fit">{metrics.invoicedCount} facturas emitidas</p>
+        </div>
+
+        {/* Pendiente de Facturación (Visión Contable) */}
+        <div className="bg-linear-to-br from-amber-500 to-orange-600 rounded-xl p-4 sm:p-6 text-white shadow-lg relative overflow-hidden group">
+           <AlertCircle className="absolute -bottom-2 -right-2 text-white/10 group-hover:scale-110 transition-transform" size={80} />
+           <div className="flex items-center justify-between mb-2">
+             <Calendar size={20} className="opacity-80 sm:w-6 sm:h-6" />
+             <Loader size={16} className="text-amber-200 animate-pulse" />
+           </div>
+           <p className="text-[10px] sm:text-xs uppercase font-bold opacity-80 mb-1 tracking-wider">Pendiente Facturar</p>
+           <p className="text-2xl sm:text-3xl font-black">${metrics.pendingInvoiceTotal.toLocaleString('es-AR')}</p>
+           <p className="text-[10px] mt-2 bg-black/10 px-2 py-0.5 rounded-full w-fit">{metrics.pendingInvoiceCount} ventas por registrar</p>
+        </div>
+
         <div className="bg-linear-to-br from-indigo-500 to-indigo-600 rounded-xl p-4 sm:p-6 text-white shadow-lg">
           <div className="flex items-center justify-between mb-2">
             <DollarSign size={20} className="opacity-80 sm:w-6 sm:h-6" />
@@ -662,6 +745,98 @@ const SalesDashboard: React.FC<Props> = ({ orders, payments, onUpdateStatus, onE
                         <div><strong>Teléfono:</strong> {(order as any).customer?.phone || (order as any).customer_phone}</div>
                         <div><strong>Dirección:</strong> {(order as any).customer?.address || (order as any).customer_address || 'N/A'}</div>
                       </div>
+                    </div>
+
+                    {/* Facturación / Monotributo Section */}
+                    <div className={`rounded-lg p-4 mb-3 border ${order.is_invoiced ? 'bg-emerald-50 border-emerald-200' : 'bg-slate-50 border-slate-200'}`}>
+                      <div className="flex items-center justify-between mb-3">
+                         <p className="text-sm font-bold text-slate-700 flex items-center gap-2">
+                           <Calculator size={16} className={order.is_invoiced ? 'text-emerald-600' : 'text-slate-400'} />
+                           Información de Facturación
+                         </p>
+                         {order.is_invoiced ? (
+                           <span className="px-2 py-0.5 bg-emerald-600 text-white text-[10px] font-black rounded-lg shadow-sm">FACTURADO</span>
+                         ) : (
+                           <span className="px-2 py-0.5 bg-slate-200 text-slate-500 text-[10px] font-bold rounded-lg uppercase">Pendiente AFIP</span>
+                         ) }
+                      </div>
+
+                      {editingInvoicingId === order.id ? (
+                        <div className="space-y-3 p-2 bg-white rounded border border-indigo-100 shadow-sm">
+                           <div className="grid grid-cols-2 gap-2">
+                              <div>
+                                <label className="text-[10px] font-bold text-slate-400 uppercase">DNI / CUIT</label>
+                                <input type="text" value={billDni} onChange={e => setBillDni(e.target.value)} className="w-full p-2 text-xs border rounded font-mono" placeholder="20-30405060-7"/>
+                              </div>
+                              <div>
+                                <label className="text-[10px] font-bold text-slate-400 uppercase">Tipo Factura</label>
+                                <select value={billType} onChange={e => setBillType(e.target.value as any)} className="w-full p-2 text-xs border rounded bg-slate-50">
+                                   <option value="Consumidor Final">Cons. Final</option>
+                                   <option value="B">Factura B</option>
+                                   <option value="C">Factura C</option>
+                                   <option value="A">Factura A</option>
+                                </select>
+                              </div>
+                           </div>
+                           <div>
+                              <label className="text-[10px] font-bold text-slate-400 uppercase">Nº de Comprobante / Factura</label>
+                              <input type="text" value={invNum} onChange={e => setInvNum(e.target.value)} className="w-full p-2 text-xs border rounded font-mono" placeholder="00001-00000123"/>
+                           </div>
+                           <div className="flex gap-2 pt-1">
+                             <button 
+                                onClick={() => {
+                                  if (onPatchOrder) {
+                                    onPatchOrder(order.id, {
+                                      is_invoiced: true,
+                                      billing_dni_cuit: billDni,
+                                      billing_type: billType,
+                                      invoice_number: invNum
+                                    });
+                                    setEditingInvoicingId(null);
+                                  }
+                                }}
+                                className="flex-1 py-1.5 bg-emerald-600 text-white rounded text-[10px] font-bold hover:bg-emerald-700"
+                             >
+                               Confirmar Facturado
+                             </button>
+                             <button 
+                                onClick={() => setEditingInvoicingId(null)}
+                                className="px-3 py-1.5 bg-slate-100 text-slate-500 rounded text-[10px] font-bold"
+                             >
+                               Cancelar
+                             </button>
+                           </div>
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                          <div className="text-slate-600">
+                             <p className="text-[9px] uppercase font-bold text-slate-400 mb-0.5">DNI/CUIT Receptor</p>
+                             <p className="font-mono text-xs">{order.billing_dni_cuit || 'No registrado'}</p>
+                          </div>
+                          <div className="text-slate-600">
+                             <p className="text-[9px] uppercase font-bold text-slate-400 mb-0.5">Tipo de Factura</p>
+                             <p className="font-bold text-xs">{order.billing_type || 'Pendiente'}</p>
+                          </div>
+                          {order.invoice_number && (
+                            <div className="col-span-full bg-white p-2 rounded border border-dashed border-emerald-200 text-emerald-800">
+                               <p className="text-[9px] uppercase font-bold text-emerald-400 mb-0.5 text-center">Nº de Factura</p>
+                               <p className="font-mono text-sm font-black text-center">{order.invoice_number}</p>
+                            </div>
+                          )}
+                          <button 
+                            onClick={() => {
+                              setEditingInvoicingId(order.id);
+                              setBillDni(order.billing_dni_cuit || '');
+                              setBillType(order.billing_type || 'Consumidor Final');
+                              setInvNum(order.invoice_number || '');
+                            }}
+                            className="col-span-full py-2 border-2 border-dashed border-slate-300 text-slate-500 rounded-lg hover:border-indigo-400 hover:text-indigo-600 hover:bg-indigo-50 transition-all flex items-center justify-center gap-2 text-xs font-bold"
+                          >
+                             {order.is_invoiced ? <Plus size={14}/> : <Calculator size={14}/>}
+                             {order.is_invoiced ? 'Editar Datos de Factura' : 'Registrar Facturación (AFIP)'}
+                          </button>
+                        </div>
+                      )}
                     </div>
 
                     {/* Items */}

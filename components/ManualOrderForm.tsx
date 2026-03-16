@@ -45,6 +45,12 @@ export const ManualOrderForm: React.FC<Props> = ({ products, initialOrder, onClo
   const [payMethod, setPayMethod] = useState<Payment['method']>('efectivo');
   const [deliveryDate, setDeliveryDate] = useState<string>(''); // Fecha prometida
 
+  // Monotributo / Facturación
+  const [isFacturado, setIsFacturado] = useState(false);
+  const [billingDni, setBillingDni] = useState('');
+  const [billingType, setBillingType] = useState<Order['billing_type']>('Consumidor Final');
+  const [invoiceNumber, setInvoiceNumber] = useState('');
+
   useEffect(() => {
     getMaterials().then(res => {
       if (res.data) setAvailableMaterials(res.data);
@@ -58,6 +64,12 @@ export const ManualOrderForm: React.FC<Props> = ({ products, initialOrder, onClo
       setCustomerName(initialOrder.customer_name || '');
       setCustomerPhone(initialOrder.customer_phone || '');
       setStatus(initialOrder.status);
+      
+      // Facturación
+      setIsFacturado(initialOrder.is_invoiced || false);
+      setBillingDni(initialOrder.billing_dni_cuit || '');
+      setBillingType(initialOrder.billing_type || 'Consumidor Final');
+      setInvoiceNumber(initialOrder.invoice_number || '');
       
       // Parsear notas para recuperar: Notas reales, Seña, Fecha Entrega
       const fullNotes = initialOrder.notes || '';
@@ -212,7 +224,11 @@ export const ManualOrderForm: React.FC<Props> = ({ products, initialOrder, onClo
         total: orderTotal,
         shipping_method: 'retiro' as ShippingMethod,
         notes: finalNotes,
-        status: status // Forzamos el estado calculado
+        status: status, // Forzamos el estado calculado
+        is_invoiced: isFacturado,
+        billing_dni_cuit: billingDni,
+        billing_type: billingType,
+        invoice_number: invoiceNumber
       };
 
       if (initialOrder) {
@@ -692,6 +708,57 @@ export const ManualOrderForm: React.FC<Props> = ({ products, initialOrder, onClo
                       </div>
                   )}
               </div>
+
+               {/* SECCIÓN FISCAL - NUEVO */}
+               <div className="bg-emerald-50 p-4 rounded-xl border border-emerald-100 space-y-3">
+                  <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs font-bold text-emerald-800 uppercase flex items-center gap-1">
+                        <Calculator size={14}/> Datos para Facturar (ARCA)
+                      </span>
+                      <button 
+                        type="button"
+                        onClick={() => setIsFacturado(!isFacturado)}
+                        className={`w-10 h-5 rounded-full transition-colors relative ${isFacturado ? 'bg-emerald-600' : 'bg-slate-300'}`}
+                        title="Marcar como facturado ya mismo"
+                      >
+                         <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${isFacturado ? 'left-6' : 'left-1'}`} />
+                      </button>
+                  </div>
+
+                  <div className="space-y-2">
+                     <div className="flex gap-2">
+                        <input 
+                           type="text" 
+                           placeholder="DNI / CUIT del Cliente" 
+                           className="flex-1 px-3 py-2 border border-emerald-200 rounded-lg focus:ring-2 focus:ring-emerald-500 bg-white text-xs font-mono"
+                           value={billingDni}
+                           onChange={e => setBillingDni(e.target.value)}
+                        />
+                        <select 
+                           className="w-24 px-2 py-2 border border-emerald-200 rounded-lg focus:ring-2 focus:ring-emerald-500 bg-white text-[10px] font-bold"
+                           value={billingType}
+                           onChange={e => setBillingType(e.target.value as any)}
+                        >
+                           <option value="Consumidor Final">C. Final</option>
+                           <option value="B">Fact. B</option>
+                           <option value="C">Fact. C</option>
+                           <option value="A">Fact. A</option>
+                        </select>
+                     </div>
+                     {isFacturado && (
+                        <div className="animate-in fade-in slide-in-from-top-1">
+                           <label className="block text-[9px] font-bold text-emerald-600 uppercase mb-1">Número de Factura emitida</label>
+                           <input 
+                              type="text" 
+                              placeholder="0000X-000000XX" 
+                              className="w-full px-3 py-2 border border-emerald-300 rounded-lg focus:ring-2 focus:ring-emerald-500 bg-white text-xs font-bold font-mono"
+                              value={invoiceNumber}
+                              onChange={e => setInvoiceNumber(e.target.value)}
+                           />
+                        </div>
+                     )}
+                  </div>
+               </div>
 
               <div className="relative group">
                 <FileText className="absolute left-3 top-3 text-slate-400 group-focus-within:text-blue-500 transition-colors" size={18} />

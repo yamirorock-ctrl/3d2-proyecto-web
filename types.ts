@@ -131,6 +131,11 @@ export interface Order {
   payment_status?: string;
   tracking_number?: string;
   notes?: string;
+  // Billing & Tax Info
+  is_invoiced?: boolean;
+  billing_dni_cuit?: string;
+  billing_type?: 'A' | 'B' | 'C' | 'Consumidor Final';
+  invoice_number?: string;
   created_at: string;
   updated_at: string;
 }

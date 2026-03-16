@@ -3,7 +3,7 @@ import { Order, Expense, RawMaterial, Product } from '../types';
 import { 
   TrendingUp, TrendingDown, DollarSign, Calendar, Plus, Trash2, 
   AlertCircle, CheckCircle, Save, X, Filter, Download, Package, Edit2,
-  Settings, Clock
+  Settings, Clock, Calculator
 } from 'lucide-react';
 import SmartImage from './SmartImage';
 import { getExpenses, addExpense, updateExpense, deleteExpense, getMaterials, addMaterial, updateMaterial, deleteMaterial } from '../services/supabaseService';
@@ -211,7 +211,11 @@ const FinancialDashboard: React.FC<Props> = ({ orders, products, onEditProduct }
     const profit = netRevenue - outcome;
     const margin = netRevenue > 0 ? ((profit / netRevenue) * 100) : 0;
 
-    return { salesTotal, debtTotal, mlPending, income, outcome, profit, margin, totalHours };
+    const invoicedTotal = monthlyOrders
+        .filter(o => o.status !== 'cancelled' && o.is_invoiced)
+        .reduce((sum, o) => sum + (o.total || 0), 0);
+
+    return { salesTotal, debtTotal, mlPending, income, outcome, profit, margin, totalHours, invoicedTotal };
   }, [monthlyOrders, monthlyExpenses, products]);
 
   // Handlers Gastos
@@ -533,6 +537,72 @@ const FinancialDashboard: React.FC<Props> = ({ orders, products, onEditProduct }
         </div>
       </div>
 
+      {/* MONOTRIBUTO MONITORING - NUEVO */}
+      <div className="bg-white rounded-xl border border-emerald-200 p-6 shadow-sm mb-8 relative overflow-hidden group">
+         <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-50 rounded-full -mr-16 -mt-16 group-hover:scale-110 transition-transform duration-700 opacity-50" />
+         <div className="relative flex flex-col md:flex-row md:items-center justify-between gap-6">
+            <div className="flex-1">
+               <div className="flex items-center gap-2 mb-2">
+                  <div className="bg-emerald-100 text-emerald-600 p-2 rounded-lg">
+                    <Calculator size={20} />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-black text-slate-800 tracking-tight">Proyección Monotributo</h3>
+                    <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">Control de Facturación (Categoría A)</p>
+                  </div>
+               </div>
+               
+               <div className="mt-4 space-y-4">
+                  <div>
+                     <div className="flex justify-between items-end mb-1">
+                        <span className="text-sm font-bold text-slate-600">Total Facturado (ARCA)</span>
+                        <span className="text-sm font-black text-emerald-600">${financials.invoicedTotal.toLocaleString('es-AR')}</span>
+                     </div>
+                     <div className="w-full bg-slate-100 h-3 rounded-full overflow-hidden border border-slate-200">
+                        <div 
+                           className={`h-full rounded-full transition-all duration-1000 ${
+                             (financials.invoicedTotal / 166000) > 0.9 ? 'bg-rose-500' : 
+                             (financials.invoicedTotal / 166000) > 0.7 ? 'bg-amber-500' : 'bg-emerald-500'
+                           }`}
+                           style={{ width: `${Math.min(100, (financials.invoicedTotal / 166000) * 100)}%` }}
+                        />
+                     </div>
+                     <div className="flex justify-between mt-1 text-[10px] font-bold text-slate-400 uppercase">
+                        <span>$0</span>
+                        <span>Tope Mensual Est.: $166.000 (A)</span>
+                     </div>
+                  </div>
+               </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4 md:w-80">
+               <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
+                  <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Cupo Disponible</p>
+                  <p className="text-lg font-black text-slate-700">${Math.max(0, 166000 - financials.invoicedTotal).toLocaleString('es-AR')}</p>
+               </div>
+               <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
+                  <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Ventas sin Factura</p>
+                  <p className="text-lg font-black text-amber-600">${Math.max(0, financials.salesTotal - financials.invoicedTotal).toLocaleString('es-AR')}</p>
+               </div>
+            </div>
+
+            <div className="flex flex-col gap-2">
+               <div className={`px-4 py-2 rounded-lg text-center border-2 ${
+                 (financials.invoicedTotal / 166000) > 0.8 ? 'bg-rose-50 border-rose-200 text-rose-700' : 'bg-emerald-50 border-emerald-200 text-emerald-700'
+               }`}>
+                  <p className="text-[10px] font-bold uppercase">Estado Fiscal</p>
+                  <p className="text-xs font-black">
+                     {(financials.invoicedTotal / 166000) > 0.9 ? '⚠️ CRÍTICO' : 
+                      (financials.invoicedTotal / 166000) > 0.7 ? '⚡ ATENCIÓN' : '✅ SEGURO'}
+                  </p>
+               </div>
+               <p className="text-[9px] text-slate-400 text-center max-w-[120px] leading-tight">
+                 * Basado en topes vigentes Ene-2024 para Cat. A.
+               </p>
+            </div>
+         </div>
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         
         {/* COLUMNA IZQUIERDA: GESTIÓN DE GASTOS */}
@@ -660,8 +730,7 @@ const FinancialDashboard: React.FC<Props> = ({ orders, products, onEditProduct }
                                 <p className="text-[10px] text-amber-700">El costo se dividirá equitativamente para <b>{quantityToAdd + woodExtraCount}</b> piezas totales.</p>
                              </div>
                          </div>
-                       )}
-
+                        )}
                        {newExpense.category !== 'Madera' && (
                          <div className="flex justify-between items-center mb-2">
                              <label className="text-xs font-bold text-slate-600">Cantidad Comprada:</label>
@@ -674,7 +743,7 @@ const FinancialDashboard: React.FC<Props> = ({ orders, products, onEditProduct }
                                   min="1"
                                  />
                                   <span className="text-xs text-slate-400">
-                                    {newExpense.category === 'Filamento' ? 'kg' : newExpense.category === 'Madera' ? 'placas' : 'unidades'}
+                                    {newExpense.category === 'Filamento' ? 'kg' : 'unidades'}
                                   </span>
                              </div>
                          </div>
