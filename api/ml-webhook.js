@@ -453,6 +453,14 @@ async function handleOrder(resource, accessToken, res) {
            }
         }
       }
+      
+      // Deduct raw materials (consumables like wood, bags, filament)
+      try {
+        await deductRawMaterialsML(orderItems, supabase);
+        console.log("[ML Webhook] Insumos descontados correctamente.");
+      } catch (stockError) {
+        console.error("[ML Webhook] Error descontando insumos:", stockError);
+      }
       let initialNotes = `Venta automática desde MercadoLibre. ID: ${order.id}\n[PAGADO TOTAL: $${order.total_amount}]`;
       let initialStatus = "paid";
       
@@ -618,5 +626,116 @@ async function handleOrder(resource, accessToken, res) {
   } catch (e) {
     console.error("Order Error:", e);
     return res.status(200).json({ error: e.message });
+  }
+}
+
+// ------------------------------------------------------------------
+// UTILS
+// ------------------------------------------------------------------
+
+async function deductRawMaterialsML(items, supabaseClient) {
+  // 1. Get raw materials
+  const { data: materials, error } = await supabaseClient
+    .from('raw_materials')
+    .select('id, name, quantity, unit, category');
+
+  if (error || !materials) return;
+
+  // 2. Get product definitions with consumables
+  const productIds = items.filter(i => i.product_id && i.product_id !== 0).map(i => i.product_id);
+  if (productIds.length === 0) return;
+
+  const { data: productDefinitions } = await supabaseClient
+    .from('products')
+    .select('id, name, weight, consumables, color_percentage') 
+    .in('id', productIds);
+  
+  const productMap = new Map(productDefinitions?.map((p) => [p.id, p]) || []);
+  const updates = new Map();
+
+  const findMaterialIdByName = (searchName, categoryFilter) => {
+    if (!searchName) return null;
+    const lowerSearch = searchName.toLowerCase().trim();
+    let mat = materials.find((m) => m.name.toLowerCase() === lowerSearch);
+    if (mat) return mat;
+    const candidates = materials.filter((m) => {
+        if (categoryFilter && m.category !== categoryFilter) return false;
+        return m.name.toLowerCase().includes(lowerSearch);
+    });
+    return candidates.length > 0 ? candidates[0] : null;
+  };
+
+  const addDeduction = (materialId, amount) => {
+      const current = updates.get(materialId) || 0;
+      updates.set(materialId, current + amount);
+  };
+
+  // 3. Analyze items
+  for (const item of items) {
+    if (!item.product_id) continue;
+    const qty = item.quantity;
+    const productDef = productMap.get(item.product_id);
+    if (!productDef) continue;
+
+    // Fixed Consumables
+    if (productDef.consumables && Array.isArray(productDef.consumables)) {
+        productDef.consumables.forEach((c) => {
+            if (c.material && c.quantity) {
+                const mat = findMaterialIdByName(c.material);
+                if (mat) addDeduction(mat.id, c.quantity * qty);
+            }
+        });
+    }
+
+    // Filament (color Percentage)
+    if (productDef.color_percentage && Array.isArray(productDef.color_percentage)) {
+        productDef.color_percentage.forEach((cp) => {
+            const originalColorName = cp.color;
+            let targetMaterialName = originalColorName;
+            
+            // Si el item tuviese opciones seleccionadas (MercadoLibre raramente las manda exactas aquí, pero cubrimos)
+            const isPredominant = (cp.percentage || 0) > 40 || (productDef.color_percentage.length === 1);
+            if (isPredominant && item.selected_options?.color) {
+                targetMaterialName = item.selected_options.color;
+            }
+
+            const mat = findMaterialIdByName(targetMaterialName, 'Filamento');
+            if (mat) {
+                let amountToDeduct = 0;
+                if (cp.grams) {
+                    amountToDeduct = cp.grams * qty;
+                } else if (cp.percentage && productDef.weight > 0) {
+                    amountToDeduct = (productDef.weight * qty) * (cp.percentage / 100);
+                }
+
+                if (amountToDeduct > 0) {
+                    if (mat.unit && (mat.unit.toLowerCase().includes('kg') || mat.unit.toLowerCase().includes('kilo') || mat.unit.toLowerCase().includes('rollo'))) {
+                        amountToDeduct = amountToDeduct / 1000;
+                    }
+                    addDeduction(mat.id, amountToDeduct);
+                }
+            }
+        });
+    }
+  }
+
+  // 4. Batch Updates
+  if (updates.size > 0) {
+    const promises = Array.from(updates.entries()).map(async ([id, totalDeduct]) => {
+      const mat = materials.find((m) => m.id === id);
+      if (mat) {
+        const currentQty = Number(mat.quantity);
+        const newQty = Math.max(0, currentQty - totalDeduct);
+        const roundedNewQty = Math.round(newQty * 1000) / 1000;
+
+        const { error: updateError } = await supabaseClient
+          .from('raw_materials')
+          .update({ quantity: roundedNewQty })
+          .eq('id', id);
+          
+        if (updateError) console.error(`[Stock ML] Error updating ${mat.name}:`, updateError);
+      }
+    });
+    await Promise.all(promises);
   }
 }
