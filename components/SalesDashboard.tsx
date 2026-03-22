@@ -79,7 +79,9 @@ const SalesDashboard: React.FC<Props> = ({ orders, payments, onUpdateStatus, onE
         return true;
       })();
 
-      return matchesDate && matchesBilling;
+      const isNotAbandonedCart = o.status !== 'payment_pending';
+
+      return matchesDate && matchesBilling && isNotAbandonedCart;
     });
   }, [orders, dateFilter, billingFilter]);
 
