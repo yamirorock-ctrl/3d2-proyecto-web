@@ -141,13 +141,14 @@ export async function createOrder(orderData: {
   total: number;
   shipping_method: ShippingMethod;
   notes?: string;
+  status?: string;
 }): Promise<{ data: Order | null; error: PostgrestError | null }> {
   // 1. Se elimina el uso de `as any` para mayor seguridad de tipos.
   // 2. Se delega la gestión de `created_at` y `updated_at` a la base de datos.
   //    (Requiere configurar `now()` como valor por defecto en las columnas de Supabase).
   const newOrderData = {
     ...orderData,
-    status: 'pending' as OrderStatus,
+    status: (orderData as any).status || 'pending',
   };
 
   const { data, error } = await supabase
@@ -164,10 +165,12 @@ export async function createOrder(orderData: {
   
   // === DESCUENTO DE STOCK DE INSUMOS (MATERIA PRIMA) ===
   // Intentamos descontar insumos automáticamente. Si falla, no bloqueamos la venta, solo logueamos error.
-  try {
-     await deductRawMaterials(newOrderData.items);
-  } catch (stockError) {
-     console.error('Error descontando insumos:', stockError);
+  if (newOrderData.status !== 'payment_pending') {
+    try {
+       await deductRawMaterials(newOrderData.items);
+    } catch (stockError) {
+       console.error('Error descontando insumos:', stockError);
+    }
   }
   
   // === NOTIFICACIÓN A MAKE (WhatsApp) ===

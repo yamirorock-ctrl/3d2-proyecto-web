@@ -129,7 +129,7 @@ const SalesDashboard: React.FC<Props> = ({ orders, payments, onUpdateStatus, onE
           default: inRange = true;
         }
 
-        if (inRange) {
+        if (inRange && o.status !== 'payment_pending' && o.status !== 'cancelled') {
           const { debt } = getExtraInfo(o.notes);
           legacyIncome += Math.max(0, (o.total || 0) - debt);
         }
@@ -159,6 +159,9 @@ const SalesDashboard: React.FC<Props> = ({ orders, payments, onUpdateStatus, onE
     // Productos más vendidos (Ranking por cantidad)
     const productCount: Record<string, { count: number; total: number; name: string }> = {};
     activeOrders.forEach(order => {
+      // Ignorar carritos abandonados para top productos
+      if (order.status === 'payment_pending' || order.status === 'cancelled') return;
+      
       order.items.forEach(item => {
         if (!productCount[item.name]) {
           productCount[item.name] = { count: 0, total: 0, name: item.name };

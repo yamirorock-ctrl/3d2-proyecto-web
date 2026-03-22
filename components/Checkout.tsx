@@ -267,6 +267,7 @@ const Checkout: React.FC<CheckoutProps> = ({ cart, onClearCart }) => {
         total,
         shipping_method: shippingMethod,
         notes: notes || undefined,
+        status: 'payment_pending' as any,
       });
 
 
