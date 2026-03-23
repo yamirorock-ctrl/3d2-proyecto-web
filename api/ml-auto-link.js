@@ -1,13 +1,30 @@
 import { createClient } from "@supabase/supabase-js";
-import fetch from "node-fetch";
 
-const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
-const supabaseKey = process.env.VITE_SUPABASE_ANON || process.env.SUPABASE_ANON_KEY;
-const supabase = createClient(supabaseUrl, supabaseKey);
+const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+const SUPABASE_ANON_KEY = process.env.VITE_SUPABASE_ANON_TOKEN;
+
+let supabase = null;
+if (SUPABASE_URL && SUPABASE_ANON_KEY) {
+  supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+}
 
 export default async function handler(req, res) {
+  // CORS
+  const origin = req.headers.origin || "*";
+  res.setHeader("Access-Control-Allow-Origin", origin);
+  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+
+  if (req.method === "OPTIONS") {
+    return res.status(200).end();
+  }
+
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
   
+  if (!supabase) {
+      return res.status(500).json({ error: 'No Supabase credentials Configured in Vercel' });
+  }
+
   const { userId } = req.body;
   if (!userId) return res.status(400).json({ error: 'Falta userId' });
 
