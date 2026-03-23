@@ -1129,7 +1129,7 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
                    />
                 </div>
                 <div className="sm:col-span-2 mt-2 pt-2 border-t border-blue-200/50">
-                   <label className="block text-xs font-bold text-yellow-700 mb-1 flex items-center gap-1">
+                   <label className="text-xs font-bold text-yellow-700 mb-1 flex items-center gap-1">
                       ID MercadoLibre Vinculado <span className="text-[10px] font-normal text-yellow-600 opacity-70">(Opcional)</span>
                    </label>
                    <div className="flex gap-2">
