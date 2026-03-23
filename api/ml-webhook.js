@@ -407,12 +407,28 @@ async function handleOrder(resource, accessToken, res) {
       const title = item.item.title;
 
       // Find product in Supabase
-      const { data: dbProduct } = await supabase
+      // Intento 1: Por ml_item_id
+      const { data: byId } = await supabase
         .from("products")
         .select("id, name, stock, image")
         .eq("ml_item_id", mlItemId)
         .limit(1)
         .maybeSingle();
+
+      let dbProduct = byId;
+
+      // Intento 2: Por título aproximado (las primeras palabras)
+      if (!dbProduct && title) {
+         // Agarramos las 3 palabras iniciales
+         const searchWords = title.split(' ').slice(0, 3).join('%');
+         const { data: byName } = await supabase
+            .from("products")
+            .select("id, name, stock, image")
+            .ilike("name", `%${searchWords}%`)
+            .limit(1)
+            .maybeSingle();
+         if (byName) dbProduct = byName;
+      }
 
       let productId = null;
       let productImage = "https://via.placeholder.com/150?text=ML";

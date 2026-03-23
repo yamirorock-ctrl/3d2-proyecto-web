@@ -245,11 +245,11 @@ const FinancialDashboard: React.FC<Props> = ({ orders, products, onEditProduct }
             if (newExpense.category === 'Filamento') {
                 materialName = `${filBrand} ${filType} ${filColor}`.trim();
             } else if (newExpense.category === 'Madera') {
-                // Si es madera desde el formulario complejo
+                // Conservar nombre base para no duplicar insumos
                 if (woodType) {
-                   materialName = `${woodType} 40x40`;
+                   materialName = woodType; // ej: "MDF 3mm" en lugar de "MDF 3mm 40x40"
                    if (woodExtraCount > 0) {
-                      secondaryMaterialName = `${woodType} 40x17`;
+                      secondaryMaterialName = `${woodType} (Recorte 40x17)`;
                       secondaryQuantity = woodExtraCount;
                    }
                 }
