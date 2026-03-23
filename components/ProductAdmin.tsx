@@ -1105,10 +1105,10 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
                      placeholder="Ej: Premium v2"
                    />
                 </div>
-                <div>
+                 <div>
                    <label className="block text-xs font-medium text-slate-600 mb-1">
                      Código Universal (GTIN/EAN)
-                     <span className="ml-1 text-[10px] text-slate-400 font-normal">(Opcional para artesanías)</span>
+                     <span className="ml-1 text-[10px] text-slate-400 font-normal">(Opcional)</span>
                    </label>
                    <input
                      type="text"
@@ -1127,6 +1127,24 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
                      className="block w-full rounded-md border-gray-200 text-sm"
                      placeholder="Código interno o de fabricante"
                    />
+                </div>
+                <div className="sm:col-span-2 mt-2 pt-2 border-t border-blue-200/50">
+                   <label className="block text-xs font-bold text-yellow-700 mb-1 flex items-center gap-1">
+                      ID MercadoLibre Vinculado <span className="text-[10px] font-normal text-yellow-600 opacity-70">(Opcional)</span>
+                   </label>
+                   <div className="flex gap-2">
+                       <input
+                         type="text"
+                         value={form.ml_item_id || ''}
+                         onChange={e => handleChange('ml_item_id', e.target.value)}
+                         className="w-full sm:w-1/2 rounded-md border-yellow-300 bg-yellow-50 text-yellow-900 text-sm focus:border-yellow-500 focus:ring-yellow-500"
+                         placeholder="Ej: MLA12345678"
+                       />
+                       <p className="text-[10px] text-slate-500 flex items-center leading-tight max-w-xs">
+                          Colocá el código de la publicación (MLA...) acá para que el sistema reconozca tus ventas externas 
+                          y descuente todos los insumos y materiales definidos en este producto automáticamente de tu stock de inventario.
+                       </p>
+                   </div>
                 </div>
              </div>
 
