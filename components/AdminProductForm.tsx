@@ -19,6 +19,7 @@ const AdminProductForm: React.FC<AdminProductFormProps> = ({ initial = {} as Par
   const [weight, setWeight] = useState(initial.weight || 0);
   const [netWeight, setNetWeight] = useState(initial.netWeight || 0);
   const [printingTime, setPrintingTime] = useState(initial.printingTime || 0);
+  const [mlItemId, setMlItemId] = useState(initial.ml_item_id || '');
 
   // Estados para Recetas y Colores
   const [consumables, setConsumables] = useState<{material: string, quantity: number}[]>(initial.consumables || []);
@@ -85,6 +86,7 @@ const AdminProductForm: React.FC<AdminProductFormProps> = ({ initial = {} as Par
       printingTime: printingTime > 0 ? printingTime : undefined,
       consumables,
       colorPercentage: colors,
+      ml_item_id: mlItemId || undefined,
     } as Product;
 
     onSave(product);
@@ -142,7 +144,12 @@ const AdminProductForm: React.FC<AdminProductFormProps> = ({ initial = {} as Par
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Peso Envío (g)</label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">ID MercadoLibre (Opcional)</label>
+          <input type="text" className="w-full border rounded px-3 py-2" value={mlItemId} onChange={e=>setMlItemId(e.target.value)} placeholder="Ej: MLA12345678" />
+          <p className="text-xs text-gray-500 mt-1">Para descontar automáticamente insumos.</p>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Peso Envío ML (g)</label>
           <input type="number" min={0} className="w-full border rounded px-3 py-2" value={weight} onChange={e=>setWeight(Number(e.target.value))} placeholder="ML" />
         </div>
         <div>
