@@ -1384,6 +1384,10 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
                         setIsSyncing(false);
                         if(res.ok) {
                             toast.success('¡Sincronización enviada con éxito!');
+                            if (res.data.ml_id) {
+                               // Force UI refresh with newly acquired ML ID
+                               handleChange('ml_item_id', res.data.ml_id);
+                            }
                             if (res.data.permalink) {
                                 console.log('ML Link:', res.data.permalink);
                             }

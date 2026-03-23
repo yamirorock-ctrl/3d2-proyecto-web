@@ -555,18 +555,40 @@ const AdminPage: React.FC<Props> = ({ products, onAdd, onEdit, onDelete }) => {
                   <Bot size={16} className="text-indigo-600" /> Configurar Cerebro (Prompt)
                 </button>
 
-                <div className="h-px bg-gray-100 my-1" />
                 <div className="text-xs font-semibold text-slate-400 px-3 py-2 uppercase tracking-wider">Integraciones</div>
 
                 {(() => {
                   const url = getAuthUrl();
                   return (
+                    <>
                     <button
                       onClick={() => { if (url) window.location.href = url; else toast.error('Falta configuración de ML en .env'); }}
                       className="w-full text-left px-3 py-2 rounded-lg text-sm text-slate-700 hover:bg-gray-50 flex items-center gap-2"
                     >
                       <ShoppingBag size={16} className="text-yellow-500" /> Conectar MercadoLibre
                     </button>
+                    <button
+                      onClick={async () => {
+                         if (!user?.id) return toast.error('No autenticado');
+                         toast.info('Buscando coincidencias mágicas en MercadoLibre...', { duration: 4000 });
+                         const { autoLinkMLIds } = await import('../services/mlService');
+                         const res = await autoLinkMLIds(user.id);
+                         if (res.ok) {
+                            if (res.data.linked > 0) {
+                                toast.success(`${res.data.message}\n¡Se vincularon ${res.data.linked} productos!\n${res.data.logs?.join('\n')}`, { duration: 10000 });
+                                (window as any).__forceSyncProducts && (window as any).__forceSyncProducts();
+                            } else {
+                                toast.info(res.data.message + '\nNo se encontraron nuevas coincidencias exactas.', { duration: 6000 });
+                            }
+                         } else {
+                            toast.error(`Error de vinculación: ${res.data?.error || 'Desconocido'}`);
+                         }
+                      }}
+                      className="w-full text-left px-3 py-2 rounded-lg text-sm text-slate-700 hover:bg-yellow-50 flex items-center gap-2"
+                    >
+                      <Sparkles size={16} className="text-purple-600" /> Auto-Vincular IDs (Mágico)
+                    </button>
+                    </>
                   );
                 })()}
 

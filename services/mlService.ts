@@ -67,3 +67,18 @@ export async function syncProductToML(productId: number, userId: string, markupP
     return { ok: false, data: { error: error.message } };
   }
 }
+
+export async function autoLinkMLIds(userId: string) {
+  const endpoint = `${window.location.origin}/api/ml-auto-link`;
+  try {
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId })
+    });
+    const data = await response.json();
+    return { ok: response.ok, data };
+  } catch (error) {
+    return { ok: false, data: { error: error.message } };
+  }
+}
