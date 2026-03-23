@@ -29,12 +29,11 @@ export default async function handler(req, res) {
   if (!userId) return res.status(400).json({ error: 'Falta userId' });
 
   try {
-    // 1. Get ML Token
+    // 1. Get ML Token (Single Tenant Assumption like sync product)
     const { data: dbToken, error: tokenError } = await supabase
       .from('ml_tokens')
       .select('*')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false })
+      .order('updated_at', { ascending: false })
       .limit(1)
       .maybeSingle();
 
@@ -42,7 +41,7 @@ export default async function handler(req, res) {
       return res.status(401).json({ error: 'No hay token de ML vinculado. Conecta tu cuenta primero.' });
     }
 
-    const mlUserId = dbToken.ml_user_id;
+    const mlUserId = dbToken.user_id; // in ml_tokens, user_id is the MercadoLibre ID
 
     // 2. Fetch User's Active Items from ML
     const searchRes = await fetch(`https://api.mercadolibre.com/users/${mlUserId}/items/search?status=active`, {
