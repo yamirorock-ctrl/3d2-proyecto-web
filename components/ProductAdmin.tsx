@@ -787,7 +787,9 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
               />
             </div>
             <div>
-              <label className="block text-xs font-bold text-slate-500 uppercase">Tiempo (hs)</label>
+              <label className="block text-xs font-bold text-slate-500 uppercase">
+                Tiempo {technology === 'Láser' ? 'Máquina' : 'Impresión'} (hs)
+              </label>
               <input
                 type="number"
                 step="0.1"
@@ -1153,11 +1155,11 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
           {/* SECCIÓN DE CONSUMIBLES (RECETA) */}
           <div className="sm:col-span-2 border-t pt-4 mt-2">
              <h4 className="font-semibold text-slate-800 mb-2 flex items-center gap-2">
-                <span className="bg-slate-100 text-slate-700 px-2 py-0.5 rounded text-xs">Producción</span>
-                Consumibles / Receta
+                <span className="bg-slate-100 text-slate-700 px-2 py-0.5 rounded text-xs">{technology === 'Láser' ? 'Material y Envío' : 'Producción'}</span>
+                {technology === 'Láser' ? 'Materia Prima y Consumibles' : 'Consumibles / Receta'}
              </h4>
              <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
-                <p className="text-xs text-slate-500 mb-3">Define qué se gasta del inventario al vender este producto.</p>
+                <p className="text-xs text-slate-500 mb-3">Define qué se gasta del inventario al vender este producto (placas, cajas, cintas).</p>
                 
                 <div className="space-y-2 mb-3">
                   {(form.consumables || []).map((c, idx) => (
@@ -1199,6 +1201,7 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
           </div>
 
           {/* SECCIÓN DE COLORES (ESTIMACIÓN) */}
+          {technology === '3D' && (
           <div className="sm:col-span-2 border-t pt-4 mt-2">
              <h4 className="font-semibold text-slate-800 mb-2 flex items-center gap-2">
                 <span className="bg-rose-100 text-rose-700 px-2 py-0.5 rounded text-xs">Filamento</span>
@@ -1277,6 +1280,7 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
                 </div>
              </div>
           </div>
+          )}
 
           <div className="sm:col-span-2 border-t pt-4 mt-2">
             <h4 className="font-semibold text-slate-800 mb-2 flex items-center gap-2">
