@@ -64,8 +64,12 @@ const Checkout: React.FC<CheckoutProps> = ({ cart, onClearCart }) => {
   const [shippingConfig, setShippingConfig] = useState<any>(null);
   const [mlShippingCost, setMlShippingCost] = useState<number | null>(null);
   const [mlShippingLoading, setMlShippingLoading] = useState(false);
-    const [mlEstimatedDelivery, setMlEstimatedDelivery] = useState<string | null>(null);
+  const [mlEstimatedDelivery, setMlEstimatedDelivery] = useState<string | null>(null);
   
+  // Estado de facturación (Nuevo)
+  const [billingType, setBillingType] = useState<'Consumidor Final' | 'Factura A' | 'Factura B'>('Consumidor Final');
+  const [billingDni, setBillingDni] = useState('');
+
   // Estado de procesamiento
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState('');
@@ -253,6 +257,12 @@ const Checkout: React.FC<CheckoutProps> = ({ cart, onClearCart }) => {
         image: item.image,
       }));
 
+      // Concatenar datos de facturación en las notas
+      let finalNotes = notes || '';
+      if (billingType || billingDni) {
+        finalNotes += `\n[FACTURACIÓN: ${billingType} | DNI/CUIT: ${billingDni || 'NO DECLARADO'}]`;
+      }
+
       const { data: order, error: orderError } = await createOrder({
         customer_name: customerName,
         customer_email: customerEmail,
@@ -266,7 +276,7 @@ const Checkout: React.FC<CheckoutProps> = ({ cart, onClearCart }) => {
         shipping_cost: shippingCost,
         total,
         shipping_method: shippingMethod,
-        notes: notes || undefined,
+        notes: finalNotes || undefined,
         status: 'payment_pending' as any,
       });
 
@@ -330,7 +340,10 @@ const Checkout: React.FC<CheckoutProps> = ({ cart, onClearCart }) => {
         {/* Formulario */}
         <div>
           <form onSubmit={handleSubmit} className="space-y-4">
-
+            {/* SECCIÓN DATOS DE CONTACTO */}
+            <div>
+              <h2 className="text-xl font-semibold mb-4">Datos de Contacto</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Nombre completo *
@@ -423,6 +436,58 @@ const Checkout: React.FC<CheckoutProps> = ({ cart, onClearCart }) => {
                     </p>
                   )}
                 </div>
+              </div>
+            </div>
+
+            {/* SECCIÓN FACTURACIÓN NUEVA */}
+            <div>
+              <h2 className="text-xl font-semibold mb-4">Datos de Facturación</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-gray-50 p-4 rounded-xl border border-gray-200">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Tipo de Comprobante
+                  </label>
+                  <select
+                    value={billingType}
+                    onChange={(e) => setBillingType(e.target.value as 'Consumidor Final' | 'Factura A' | 'Factura B')}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 bg-white"
+                  >
+                    <option value="Consumidor Final">Consumidor Final (Ticket/Factura B)</option>
+                    <option value="Factura A">Factura A (Responsable Inscripto)</option>
+                    <option value="Factura B">Factura B (Exento/Monotributo)</option>
+                  </select>
+                </div>
+
+                {billingType !== 'Consumidor Final' ? (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      CUIT *
+                    </label>
+                    <input
+                      type="text"
+                      value={billingDni}
+                      onChange={(e) => setBillingDni(e.target.value.replace(/\D/g, ''))}
+                      placeholder="Sin guiones"
+                      required
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                    />
+                  </div>
+                ) : (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      DNI (Opcional)
+                    </label>
+                    <input
+                      type="text"
+                      value={billingDni}
+                      onChange={(e) => setBillingDni(e.target.value.replace(/\D/g, ''))}
+                      placeholder="Ej: 40123456"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
 
             {/* Método de envío */}
             <div>
