@@ -1130,7 +1130,12 @@ const FinancialDashboard: React.FC<Props> = ({ orders, products, onEditProduct }
                                 // es casi seguro que el precio es por rollo/kg aunque diga "unidad"
                                 const isBulkUnit = ['kg', 'kilos', 'kilogramos', 'rollos', 'bobina', 'bobinas', 'unidad', 'unidades'].some(u => unit.includes(u));
                                 
-                                if (isBulkUnit && mat.last_cost > 1000) {
+                                if (mat.category === 'Madera' || mat.category === 'Insumos') {
+                                    // PREVENCIÓN DE ERROR: Si el usuario agregó una placa o caja a la distribución 
+                                    // de filamento por error, el precio no debe multiplicarse por gramo (generando millones).
+                                    // Ya se cobra arriba en la sección de Consumibles.
+                                    pricePerGram = 0;
+                                } else if (isBulkUnit && mat.last_cost > 1000) {
                                     pricePerGram = mat.last_cost / 1000;
                                 } else if (['kg', 'kilos', 'kilogramos', 'rollos', 'bobina', 'bobinas'].some(u => unit.includes(u))) {
                                     pricePerGram = mat.last_cost / 1000;
