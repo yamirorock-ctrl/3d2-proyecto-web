@@ -213,6 +213,11 @@ export const ManualOrderForm: React.FC<Props> = ({ products, initialOrder, onClo
         finalNotes += `\n[ENTREGA: ${d}/${m}/${y}]`;
       }
 
+      // Concatenar datos de facturación si los hay para evitar crash por columnas inexistentes
+      if (isFacturado || billingDni || invoiceNumber) {
+        finalNotes += `\n[FACTURACIÓN: ${billingType || 'A/B/C'} | DNI/CUIT: ${billingDni || 'N/A'} | N°: ${invoiceNumber || 'Pendiente'}]`;
+      }
+
       // Payload base
       const commonData = {
         customer_name: customerName,
@@ -225,10 +230,6 @@ export const ManualOrderForm: React.FC<Props> = ({ products, initialOrder, onClo
         shipping_method: 'retiro' as ShippingMethod,
         notes: finalNotes,
         status: status, // Forzamos el estado calculado
-        is_invoiced: isFacturado,
-        billing_dni_cuit: billingDni,
-        billing_type: billingType,
-        invoice_number: invoiceNumber
       };
 
       if (initialOrder) {
