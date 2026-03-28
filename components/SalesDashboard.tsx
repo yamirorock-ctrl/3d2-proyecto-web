@@ -1061,6 +1061,22 @@ const SalesDashboard: React.FC<Props> = ({ orders, payments, onUpdateStatus, onE
                       </button>
                     )}
 
+                    {/* Botón Liquidar ML */}
+                    {order.notes?.includes('Venta automática desde MercadoLibre') && !order.notes?.includes('[LIQUIDADO]') && onPatchOrder && onRecordPayment && (
+                      <button
+                        onClick={() => {
+                          if (window.confirm('¿Confirmar que MercadoLibre liberó el dinero? Esto moverá el dinero a tu caja registrando un pago de MercadoPago.')) {
+                            onRecordPayment(order.id, order.total, 'mercadopago');
+                            onPatchOrder(order.id, { notes: (order.notes || '') + '\n[LIQUIDADO]' });
+                          }
+                        }}
+                        className="px-4 py-2 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-md text-sm hover:bg-emerald-100 transition-colors flex items-center justify-center gap-2"
+                      >
+                        <DollarSign size={14} />
+                        Marcar Liquidado (ML)
+                      </button>
+                    )}
+
                     {/* Botones de estado solo si onUpdateStatus existe */}
                     {onUpdateStatus && (
                       <>

@@ -187,7 +187,9 @@ const FinancialDashboard: React.FC<Props> = ({ orders, products, onEditProduct }
 
         // Si es venta automática de ML, la plata siempre está "a liquidar" y no físicamente en caja inmediata.
         if (o.notes && o.notes.includes('Venta automática desde MercadoLibre')) {
-           mlPending += (o.total || 0);
+           if (!o.notes.includes('[LIQUIDADO]')) {
+               mlPending += (o.total || 0);
+           }
         } else {
            debtTotal += getDebt(o.notes);
         }
