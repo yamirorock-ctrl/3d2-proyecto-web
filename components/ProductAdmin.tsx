@@ -169,10 +169,10 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
     const publishedPrice = Math.round(basePrice * (1 + (markup / 100)));
 
     const FREE_SHIPPING_THRESHOLD = 30000;
-    const FIXED_FEE = publishedPrice < FREE_SHIPPING_THRESHOLD ? 1500 : 0;
-    const CLASSIC_PERCENT = 0.15;
-    const PREMIUM_PERCENT = 0.31;
-    const EST_SHIPPING = publishedPrice >= FREE_SHIPPING_THRESHOLD ? 6500 : 0;
+    const FIXED_FEE = publishedPrice < FREE_SHIPPING_THRESHOLD ? 2950 : 0;
+    const CLASSIC_PERCENT = 0.165;
+    const PREMIUM_PERCENT = 0.35;
+    const EST_SHIPPING = publishedPrice >= FREE_SHIPPING_THRESHOLD ? 10122 : 0;
 
     const calculateNet = (percent: number) => {
         const comm = Math.round(publishedPrice * percent);
@@ -475,7 +475,7 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
                        <p className="text-2xl font-black text-blue-600">${Math.round(mlProjection.classic.net).toLocaleString('es-AR')}</p>
                        <div className="mt-3 space-y-1 border-t pt-2 border-slate-100">
                           <p className="text-[10px] text-slate-500 flex justify-between">
-                             <span>Cargo por vender (15%):</span>
+                             <span>Cargo por vender (16.5%):</span>
                              <span className="font-bold text-rose-400">-${mlProjection.classic.breakdown.comm.toLocaleString('es-AR')}</span>
                           </p>
                           {mlProjection.classic.breakdown.fixed > 0 && (
@@ -500,7 +500,7 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
                        <p className="text-2xl font-black text-amber-600">${Math.round(mlProjection.premium.net).toLocaleString('es-AR')}</p>
                        <div className="mt-3 space-y-1 border-t pt-2 border-slate-100">
                           <p className="text-[10px] text-slate-500 flex justify-between">
-                             <span>Cargo por vender (31%):</span>
+                             <span>Cargo por vender (35%):</span>
                              <span className="font-bold text-rose-400">-${mlProjection.premium.breakdown.comm.toLocaleString('es-AR')}</span>
                           </p>
                           {mlProjection.premium.breakdown.fixed > 0 && (
