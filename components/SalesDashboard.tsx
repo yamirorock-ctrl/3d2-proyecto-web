@@ -996,7 +996,14 @@ const SalesDashboard: React.FC<Props> = ({ orders, payments, onUpdateStatus, onE
 
                     {/* Total */}
                     <div className="flex justify-between items-center pt-3 border-t">
-                      <span className="text-sm font-medium text-slate-700">Total:</span>
+                      <div className="flex flex-col">
+                        <span className="text-sm font-medium text-slate-700">Total:</span>
+                        {order.notes?.includes('[LIQUIDADO]') && (
+                          <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-100 mt-1 flex items-center gap-1 w-fit">
+                            <CheckCircle size={10} /> ML LIQUIDADO
+                          </span>
+                        )}
+                      </div>
                       <span className="text-xl font-bold text-indigo-600">${order.total.toFixed(2)}</span>
                     </div>
                   </div>
@@ -1062,18 +1069,17 @@ const SalesDashboard: React.FC<Props> = ({ orders, payments, onUpdateStatus, onE
                     )}
 
                     {/* Botón Liquidar ML */}
-                    {order.notes?.includes('Venta automática desde MercadoLibre') && !order.notes?.includes('[LIQUIDADO]') && onPatchOrder && onRecordPayment && (
+                    {order.notes?.includes('Venta automática desde MercadoLibre') && !order.notes?.includes('[LIQUIDADO]') && onPatchOrder && (
                       <button
                         onClick={() => {
-                          if (window.confirm('¿Confirmar que MercadoLibre liberó el dinero? Esto moverá el dinero a tu caja registrando un pago de MercadoPago.')) {
-                            onRecordPayment(order.id, order.total, 'mercadopago');
-                            onPatchOrder(order.id, { notes: (order.notes || '') + '\n[LIQUIDADO]' });
+                          if (window.confirm('¿Confirmar que MercadoLibre ya te pagó esta venta? Esto la sacará de "Pendientes de Liquidar" en el Dashboard.')) {
+                            onPatchOrder(order.id, { notes: (order.notes || '').trim() + '\n[LIQUIDADO]' });
                           }
                         }}
-                        className="px-4 py-2 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-md text-sm hover:bg-emerald-100 transition-colors flex items-center justify-center gap-2"
+                        className="px-4 py-2 bg-emerald-600 text-white rounded-md text-sm hover:bg-emerald-700 shadow-sm transition-colors flex items-center justify-center gap-2"
                       >
                         <DollarSign size={14} />
-                        Marcar Liquidado (ML)
+                        Marcar como Liquidado
                       </button>
                     )}
 
