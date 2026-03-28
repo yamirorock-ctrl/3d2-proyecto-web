@@ -160,6 +160,30 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
     setForm(prev => ({ ...prev, [k]: v }));
   };
 
+  const mlProjection = useMemo(() => {
+    const price = form.price || 0;
+    if (price <= 0) return null;
+    const FREE_SHIPPING_THRESHOLD = 30000;
+    const FIXED_FEE = price < FREE_SHIPPING_THRESHOLD ? 1500 : 0;
+    const CLASSIC_PERCENT = 0.15;
+    const PREMIUM_PERCENT = 0.31;
+    const EST_SHIPPING = price >= FREE_SHIPPING_THRESHOLD ? 6500 : 0;
+    const calculateNet = (percent: number) => {
+        const comm = price * percent;
+        const net = price - comm - FIXED_FEE - EST_SHIPPING;
+        return {
+            net: Math.max(0, net),
+            fees: comm + FIXED_FEE,
+            shipping: EST_SHIPPING
+        };
+    };
+    return {
+        classic: calculateNet(CLASSIC_PERCENT),
+        premium: calculateNet(PREMIUM_PERCENT),
+        isFreeShipping: price >= FREE_SHIPPING_THRESHOLD
+    };
+  }, [form.price]);
+
   // Images helpers
   const handleFile = async (file?: File, opts?: { color?: string; batch?: boolean }) => {
     if (!file) return;
@@ -410,14 +434,14 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
             {/* Selector de Plantilla */}
             <div className="bg-yellow-50 p-3 rounded-md border border-yellow-100 mb-3">
                <label className="block text-xs font-medium text-yellow-800 mb-1">Tipo de Producto (Plantilla ML)</label>
-               <select 
-                 className="block w-full rounded-md border-yellow-200 text-sm"
-                 value={mlTemplate} 
-                 onChange={(e) => {
-                     setMlTemplate(e.target.value);
-                     handleChange('ml_attributes', { ...form.ml_attributes, TEMPLATE: e.target.value });
-                 }}
-               >
+                <select 
+                  className="block w-full rounded-md border-yellow-200 text-sm"
+                  value={mlTemplate} 
+                  onChange={(e) => {
+                      setMlTemplate(e.target.value);
+                      handleChange('ml_attributes', { ...form.ml_attributes, TEMPLATE: e.target.value });
+                  }}
+                >
                   <option value="">-- Seleccionar para ver campos requeridos --</option>
                   <option value="Mates">Mates y Accesorios</option>
                   <option value="Muñecos">Muñecos y Figuras</option>
@@ -427,9 +451,51 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
                   <option value="Adornos">Adornos y Decoración</option>
                   <option value="Bebés">Artículos para Bebés</option>
                   <option value="Vasos">Vasos y Chopps</option>
-               </select>
-               
-               {/* Campos Dinámicos según Categoría */}
+                </select>
+                
+                {/* Simulador de Costos ML (New!) */}
+                {mlProjection && (
+                  <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div className="bg-white p-3 rounded-lg border border-yellow-200 relative">
+                       <div className="absolute top-0 right-0 bg-blue-500 text-white text-[10px] px-2 py-0.5 rounded-bl font-bold uppercase tracking-wider">Clásica</div>
+                       <p className="text-xs text-slate-400 font-bold uppercase mb-1 font-sans">Ingreso Neto (ML)</p>
+                       <p className="text-2xl font-black text-blue-600">${Math.round(mlProjection.classic.net).toLocaleString('es-AR')}</p>
+                       <div className="mt-2 space-y-1">
+                          <p className="text-[10px] text-slate-500 flex justify-between">
+                             <span>Tasa + Cargo Fijo:</span>
+                             <span className="font-bold">-${Math.round(mlProjection.classic.fees).toLocaleString('es-AR')}</span>
+                          </p>
+                          {mlProjection.isFreeShipping && (
+                            <p className="text-[10px] text-indigo-500 flex justify-between">
+                               <span>Envío a tu cargo:</span>
+                               <span className="font-bold">-${Math.round(mlProjection.classic.shipping).toLocaleString('es-AR')}</span>
+                            </p>
+                          )}
+                       </div>
+                    </div>
+
+                    <div className="bg-white p-3 rounded-lg border border-amber-200 relative">
+                       <div className="absolute top-0 right-0 bg-amber-500 text-white text-[10px] px-2 py-0.5 rounded-bl font-bold uppercase tracking-wider">Premium</div>
+                       <p className="text-xs text-slate-400 font-bold uppercase mb-1 font-sans">Ingreso Neto (ML)</p>
+                       <p className="text-2xl font-black text-amber-600">${Math.round(mlProjection.premium.net).toLocaleString('es-AR')}</p>
+                       <div className="mt-2 space-y-1">
+                          <p className="text-[10px] text-slate-500 flex justify-between">
+                             <span>Tasa Premium:</span>
+                             <span className="font-bold">-${Math.round(mlProjection.premium.fees).toLocaleString('es-AR')}</span>
+                          </p>
+                          {mlProjection.isFreeShipping && (
+                            <p className="text-[10px] text-indigo-500 flex justify-between">
+                               <span>Envío a tu cargo:</span>
+                               <span className="font-bold">-${Math.round(mlProjection.premium.shipping).toLocaleString('es-AR')}</span>
+                            </p>
+                          )}
+                       </div>
+                    </div>
+                  </div>
+                )}
+             </div>
+                
+                {/* Campos Dinámicos según Categoría */}
                <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
                   
                   {/* MATES */}
@@ -967,7 +1033,6 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
                   </div>
                 </div>
               )}
-            </div>
             </div>
           </div>
 
