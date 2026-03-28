@@ -481,6 +481,16 @@ async function handleOrder(resource, accessToken, res) {
       let initialStatus = "paid";
       
       // Fetch shipping info right away to get delivery estimates for the Calendar
+      let mlFee = 0;
+      let mlShipCost = 0;
+
+      // Extract fees from payments
+      if (order.payments && Array.isArray(order.payments)) {
+        order.payments.forEach(p => {
+           mlFee += (p.marketplace_fee || 0);
+        });
+      }
+
       if (order.shipping && order.shipping.id) {
          try {
            const shipRes = await fetch(`https://api.mercadolibre.com/shipments/${order.shipping.id}`, {
@@ -489,6 +499,9 @@ async function handleOrder(resource, accessToken, res) {
            if (shipRes.ok) {
              const shipData = await shipRes.json();
              
+             // Extract seller shipping cost (if any)
+             mlShipCost = shipData.sender_shipping_cost || 0;
+
              const mapStatus = {
                 pending: "processing", handling: "preparing", ready_to_ship: "preparing",
                 shipped: "shipped", delivered: "delivered", cancelled: "cancelled",
@@ -507,6 +520,9 @@ async function handleOrder(resource, accessToken, res) {
            }
          } catch(e) { console.error("[ML Webhook] Error fetching initial shipping:", e); }
       }
+
+      const mlNet = (order.total_amount || 0) - mlFee - mlShipCost;
+      initialNotes += `\n[NETO ML: $${Math.round(mlNet)}] [COSTOS ML: Comis -$${Math.round(mlFee)}, Envío -$${Math.round(mlShipCost)}]`;
 
       const newOrder = {
         order_number: orderNumber,

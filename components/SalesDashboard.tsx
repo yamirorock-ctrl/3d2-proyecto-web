@@ -997,14 +997,41 @@ const SalesDashboard: React.FC<Props> = ({ orders, payments, onUpdateStatus, onE
                     {/* Total */}
                     <div className="flex justify-between items-center pt-3 border-t">
                       <div className="flex flex-col">
-                        <span className="text-sm font-medium text-slate-700">Total:</span>
-                        {order.notes?.includes('[LIQUIDADO]') && (
-                          <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-100 mt-1 flex items-center gap-1 w-fit">
-                            <CheckCircle size={10} /> ML LIQUIDADO
-                          </span>
+                        {order.notes?.includes('[NETO ML: $') ? (
+                          <>
+                            <span className="text-xs font-bold text-slate-400 uppercase">Total Bruto</span>
+                            <span className="text-sm font-bold text-slate-500 line-through opacity-50">${order.total.toFixed(2)}</span>
+                          </>
+                        ) : (
+                          <span className="text-sm font-medium text-slate-700">Total:</span>
                         )}
                       </div>
-                      <span className="text-xl font-bold text-indigo-600">${order.total.toFixed(2)}</span>
+                      
+                      <div className="text-right flex flex-col items-end">
+                        {order.notes?.includes('[NETO ML: $') ? (
+                          <>
+                            <span className="text-[10px] font-bold text-indigo-400 uppercase mb-0.5">Neto Real en Mano</span>
+                            <span className="text-xl font-black text-indigo-600">
+                              ${order.notes.match(/\[NETO ML: \$([\d\.,\s]+)\]/i)?.[1] || order.total.toFixed(2)}
+                            </span>
+                          </>
+                        ) : (
+                          <span className="text-xl font-bold text-indigo-600">${order.total.toFixed(2)}</span>
+                        )}
+
+                        <div className="flex gap-2 mt-1">
+                          {order.notes?.includes('[LIQUIDADO]') && (
+                            <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-100 flex items-center gap-1 w-fit">
+                              <CheckCircle size={10} /> ML LIQUIDADO
+                            </span>
+                          )}
+                          {order.notes?.includes('[COSTOS ML:') && (
+                            <span className="text-[10px] font-medium text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-100 flex items-center gap-1 w-fit cursor-help" title={order.notes.match(/\[COSTOS ML: (.*?)\]/)?.[1]}>
+                              <Calculator size={10} /> Ver Comisiones
+                            </span>
+                          )}
+                        </div>
+                      </div>
                     </div>
                   </div>
 

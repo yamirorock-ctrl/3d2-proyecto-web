@@ -175,6 +175,16 @@ const FinancialDashboard: React.FC<Props> = ({ orders, products, onEditProduct }
     return 0;
   };
 
+  const getNetFromNotes = (notes?: string | null, defaultValue: number = 0) => {
+    if (!notes) return defaultValue;
+    const match = notes.match(/\[NETO ML: \$([\d\.,\s]+)\]/i);
+    if (match) {
+       const clean = match[1].replace(/\./g, '').replace(',', '.').replace(/\s/g, '');
+       return parseFloat(clean) || defaultValue;
+    }
+    return defaultValue;
+  };
+
   // Cálculos Financieros
   const financials = useMemo(() => {
     let salesTotal = 0; // Lo facturado total
@@ -183,12 +193,15 @@ const FinancialDashboard: React.FC<Props> = ({ orders, products, onEditProduct }
     let totalHours = 0; // Total de horas máquina del mes
     
     monthlyOrders.forEach(o => {
-        salesTotal += (o.total || 0);
+        const isML = o.notes && o.notes.includes('Venta automática desde MercadoLibre');
+        const netTotal = isML ? getNetFromNotes(o.notes, o.total || 0) : (o.total || 0);
+        
+        salesTotal += netTotal;
 
         // Si es venta automática de ML, la plata siempre está "a liquidar" y no físicamente en caja inmediata.
-        if (o.notes && o.notes.includes('Venta automática desde MercadoLibre')) {
+        if (isML) {
            if (!o.notes.includes('[LIQUIDADO]')) {
-               mlPending += (o.total || 0);
+               mlPending += netTotal;
            }
         } else {
            debtTotal += getDebt(o.notes);
