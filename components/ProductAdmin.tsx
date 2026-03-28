@@ -467,7 +467,44 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
                 
                 {/* Simulador de Costos ML (New!) */}
                 {mlProjection && (
-                  <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="mt-4 bg-white/50 p-2 border border-yellow-200 border-dashed rounded-lg mb-4">
+                     <p className="text-xs font-bold text-slate-600 mb-2">Simula tu ganancia ajustando el precio o margen manual:</p>
+                     <div className="flex gap-4 items-center flex-wrap">
+                        <div className="flex flex-col">
+                           <label className="text-[10px] uppercase text-slate-500 font-bold">Precio en tu Web</label>
+                           <p className="text-sm font-semibold">${(form.price || 0).toLocaleString('es-AR')}</p>
+                        </div>
+                        <div className="flex flex-col">
+                           <label className="text-[10px] uppercase font-bold text-yellow-700">Margen P/ ML (%)</label>
+                           <input 
+                              type="number" 
+                              className="w-20 text-sm border-yellow-300 rounded focus:ring-yellow-500 py-1"
+                              value={mlMarkup}
+                              onChange={e => setMlMarkup(e.target.value)}
+                           />
+                        </div>
+                        <div className="flex flex-col">
+                           <label className="text-[10px] uppercase text-blue-700 font-bold">Precio a Publicar (ML)</label>
+                           <div className="flex items-center">
+                              <span className="text-sm text-slate-500 mr-1">$</span>
+                              <input 
+                                 type="number" 
+                                 className="w-24 text-sm border-blue-300 rounded focus:ring-blue-500 py-1 font-bold text-blue-700"
+                                 value={mlProjection.classic.publishedPrice} // Es el mismo para ambos
+                                 onChange={e => {
+                                    const newPubPrice = Number(e.target.value);
+                                    const base = form.price || 1;
+                                    const newMarkup = ((newPubPrice / base) - 1) * 100;
+                                    setMlMarkup(Math.round(newMarkup).toString());
+                                 }}
+                              />
+                           </div>
+                        </div>
+                     </div>
+                  </div>
+                )}
+                {mlProjection && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div className="bg-white p-3 rounded-lg border border-yellow-200 relative">
                        <div className="absolute top-0 right-0 bg-blue-500 text-white text-[10px] px-2 py-0.5 rounded-bl font-bold uppercase tracking-wider">Clásica</div>
                        <p className="text-[10px] text-slate-500 font-bold uppercase mb-1">Precio Publicado: ${mlProjection.classic.publishedPrice.toLocaleString('es-AR')}</p>
