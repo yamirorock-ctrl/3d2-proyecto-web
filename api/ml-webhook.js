@@ -560,10 +560,10 @@ async function handleOrder(resource, accessToken, res) {
         if (insertedOrder) {
           await supabase.from("payments").insert({
             order_id: insertedOrder.id,
-            amount: order.total_amount,
+            amount: Math.round(mlNet),
             method: "mercadopago",
             date: new Date().toISOString(),
-            notes: "Pago automático ML",
+            notes: `Pago automático ML (Neto Real)`,
           });
         }
       }
