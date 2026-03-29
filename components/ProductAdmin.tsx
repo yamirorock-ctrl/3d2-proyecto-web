@@ -160,6 +160,8 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
     setForm(prev => ({ ...prev, [k]: v }));
   };
 
+  const [mlInstallments, setMlInstallments] = useState(3);
+
   const mlProjection = useMemo(() => {
     const basePrice = form.price || 0;
     if (basePrice <= 0) return null;
@@ -171,10 +173,15 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
     const FREE_SHIPPING_THRESHOLD = 30000;
     const FIXED_FEE = publishedPrice < FREE_SHIPPING_THRESHOLD ? 2950 : 0;
     const CLASSIC_PERCENT = 0.165;
-    const PREMIUM_PERCENT = 0.35;
+    let cuotasMarkup = 0;
+    if (mlInstallments === 3) cuotasMarkup = 0.0928;
+    else if (mlInstallments === 6) cuotasMarkup = 0.1488;
+    else if (mlInstallments === 9) cuotasMarkup = 0.2035;
+    else if (mlInstallments === 12) cuotasMarkup = 0.2333;
+    const PREMIUM_PERCENT = CLASSIC_PERCENT + cuotasMarkup;
     const EST_SHIPPING = publishedPrice >= FREE_SHIPPING_THRESHOLD ? 10122 : 0;
 
-    const calculateNet = (percent: number) => {
+    const calculateNet = (percent: number, cuotasFeePercent = 0) => {
         const comm = Math.round(publishedPrice * percent);
         const net = publishedPrice - comm - FIXED_FEE - EST_SHIPPING;
         return {
@@ -190,11 +197,11 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
     };
 
     return {
-        classic: calculateNet(CLASSIC_PERCENT),
-        premium: calculateNet(PREMIUM_PERCENT),
+        classic: calculateNet(CLASSIC_PERCENT, 0),
+        premium: calculateNet(PREMIUM_PERCENT, cuotasMarkup),
         isFreeShipping: publishedPrice >= FREE_SHIPPING_THRESHOLD
     };
-  }, [form.price, mlMarkup]);
+  }, [form.price, mlMarkup, mlInstallments]);
 
   // Images helpers
   const handleFile = async (file?: File, opts?: { color?: string; batch?: boolean }) => {
