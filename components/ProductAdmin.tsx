@@ -172,9 +172,9 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
 
     const FREE_SHIPPING_THRESHOLD = 30000;
     const FIXED_FEE = publishedPrice < FREE_SHIPPING_THRESHOLD ? 2950 : 0;
-    const CLASSIC_PERCENT = 0.165;
+    const CLASSIC_PERCENT = 0.1435;
     let cuotasMarkup = 0;
-    if (mlInstallments === 3) cuotasMarkup = 0.0928;
+    if (mlInstallments === 3) cuotasMarkup = 0.09;
     else if (mlInstallments === 6) cuotasMarkup = 0.1488;
     else if (mlInstallments === 9) cuotasMarkup = 0.2035;
     else if (mlInstallments === 12) cuotasMarkup = 0.2333;
@@ -182,14 +182,17 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
     const EST_SHIPPING = publishedPrice >= FREE_SHIPPING_THRESHOLD ? 10122 : 0;
 
     const calculateNet = (percent: number, cuotasFeePercent = 0) => {
-        const comm = Math.round(publishedPrice * percent);
-        const net = publishedPrice - comm - FIXED_FEE - EST_SHIPPING;
+        const commBase = Math.round((publishedPrice * percent) - (publishedPrice * cuotasFeePercent));
+        const commCuotas = Math.round(publishedPrice * cuotasFeePercent);
+        const commTotal = Math.round(publishedPrice * percent);
+        const net = publishedPrice - commTotal - FIXED_FEE - EST_SHIPPING;
         return {
             publishedPrice,
             net: Math.max(0, net),
-            fees: comm + FIXED_FEE,
+            fees: commTotal + FIXED_FEE,
             breakdown: {
-                comm,
+                comm: commBase,
+                cuotas: commCuotas,
                 fixed: FIXED_FEE
             },
             shipping: EST_SHIPPING
@@ -1379,7 +1382,7 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
                        <p className="text-2xl font-black text-blue-600">${Math.round(mlProjection.classic.net).toLocaleString('es-AR')}</p>
                        <div className="mt-3 space-y-1 border-t pt-2 border-slate-100">
                           <p className="text-[10px] text-slate-500 flex justify-between">
-                             <span>Cargo por vender (16.5%):</span>
+                             <span>Cargo por vender (Clásico):</span>
                              <span className="font-bold text-rose-400">-${mlProjection.classic.breakdown.comm.toLocaleString('es-AR')}</span>
                           </p>
                           {mlProjection.classic.breakdown.fixed > 0 && (
@@ -1404,8 +1407,12 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
                        <p className="text-2xl font-black text-amber-600">${Math.round(mlProjection.premium.net).toLocaleString('es-AR')}</p>
                        <div className="mt-3 space-y-1 border-t pt-2 border-slate-100">
                           <p className="text-[10px] text-slate-500 flex justify-between">
-                             <span>Cargo por vender <select className="ml-1 text-[10px] bg-transparent border-b border-rose-300 py-0 pl-0 pr-4 focus:ring-0 w-24" value={mlInstallments} onChange={e=>setMlInstallments(Number(e.target.value))}><option value={3}>3 cuotas</option><option value={6}>6 cuotas</option><option value={9}>9 cuotas</option><option value={12}>12 cuotas</option></select>:</span>
-                             <span className="font-bold text-rose-400">-${(mlProjection.premium.breakdown.comm + mlProjection.premium.breakdown.cuotas).toLocaleString('es-AR')}</span>
+                             <span>Cargo por vender:</span>
+                             <span className="font-bold text-rose-400">-${mlProjection.premium.breakdown.comm.toLocaleString('es-AR')}</span>
+                          </p>
+                          <p className="text-[10px] text-slate-500 flex justify-between mt-1">
+                             <span>Costo por ofrecer cuotas <select className="ml-1 text-[10px] bg-transparent border-b border-rose-300 py-0 pl-0 pr-2 focus:ring-0 w-20" value={mlInstallments} onChange={e=>setMlInstallments(Number(e.target.value))}><option value={3}>3 cuotas</option><option value={6}>6 cuotas</option><option value={9}>9 cuotas</option><option value={12}>12 cuotas</option></select>:</span>
+                             <span className="font-bold text-rose-400">-${mlProjection.premium.breakdown.cuotas.toLocaleString('es-AR')}</span>
                           </p>
                           {mlProjection.premium.breakdown.fixed > 0 && (
                             <p className="text-[10px] text-slate-500 flex justify-between">
