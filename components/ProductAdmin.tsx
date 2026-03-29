@@ -465,97 +465,6 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
                   <option value="Vasos">Vasos y Chopps</option>
                 </select>
                 
-                {/* Simulador de Costos ML (New!) */}
-                {mlProjection && (
-                  <div className="mt-4 bg-white/50 p-2 border border-yellow-200 border-dashed rounded-lg mb-4">
-                     <p className="text-xs font-bold text-slate-600 mb-2">Simula tu ganancia ajustando el precio o margen manual:</p>
-                     <div className="flex gap-4 items-center flex-wrap">
-                        <div className="flex flex-col">
-                           <label className="text-[10px] uppercase text-slate-500 font-bold">Precio en tu Web</label>
-                           <p className="text-sm font-semibold">${(form.price || 0).toLocaleString('es-AR')}</p>
-                        </div>
-                        <div className="flex flex-col">
-                           <label className="text-[10px] uppercase font-bold text-yellow-700">Margen P/ ML (%)</label>
-                           <input 
-                              type="number" 
-                              className="w-20 text-sm border-yellow-300 rounded focus:ring-yellow-500 py-1"
-                              value={mlMarkup}
-                              onChange={e => setMlMarkup(e.target.value)}
-                           />
-                        </div>
-                        <div className="flex flex-col">
-                           <label className="text-[10px] uppercase text-blue-700 font-bold">Precio a Publicar (ML)</label>
-                           <div className="flex items-center">
-                              <span className="text-sm text-slate-500 mr-1">$</span>
-                              <input 
-                                 type="number" 
-                                 className="w-24 text-sm border-blue-300 rounded focus:ring-blue-500 py-1 font-bold text-blue-700"
-                                 value={mlProjection.classic.publishedPrice} // Es el mismo para ambos
-                                 onChange={e => {
-                                    const newPubPrice = Number(e.target.value);
-                                    const base = form.price || 1;
-                                    const newMarkup = ((newPubPrice / base) - 1) * 100;
-                                    setMlMarkup(Math.round(newMarkup).toString());
-                                 }}
-                              />
-                           </div>
-                        </div>
-                     </div>
-                  </div>
-                )}
-                {mlProjection && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <div className="bg-white p-3 rounded-lg border border-yellow-200 relative">
-                       <div className="absolute top-0 right-0 bg-blue-500 text-white text-[10px] px-2 py-0.5 rounded-bl font-bold uppercase tracking-wider">Clásica</div>
-                       <p className="text-[10px] text-slate-500 font-bold uppercase mb-1">Precio Publicado: ${mlProjection.classic.publishedPrice.toLocaleString('es-AR')}</p>
-                       <p className="text-xs text-slate-400 font-bold uppercase mb-0 mt-3 font-sans">Ingreso Neto (ML)</p>
-                       <p className="text-2xl font-black text-blue-600">${Math.round(mlProjection.classic.net).toLocaleString('es-AR')}</p>
-                       <div className="mt-3 space-y-1 border-t pt-2 border-slate-100">
-                          <p className="text-[10px] text-slate-500 flex justify-between">
-                             <span>Cargo por vender (16.5%):</span>
-                             <span className="font-bold text-rose-400">-${mlProjection.classic.breakdown.comm.toLocaleString('es-AR')}</span>
-                          </p>
-                          {mlProjection.classic.breakdown.fixed > 0 && (
-                            <p className="text-[10px] text-slate-500 flex justify-between">
-                               <span>Costo fijo unitario:</span>
-                               <span className="font-bold text-rose-400">-${mlProjection.classic.breakdown.fixed.toLocaleString('es-AR')}</span>
-                            </p>
-                          )}
-                          {mlProjection.isFreeShipping && (
-                            <p className="text-[10px] text-indigo-500 flex justify-between">
-                               <span>Envío a tu cargo:</span>
-                               <span className="font-bold text-indigo-400">-${Math.round(mlProjection.classic.shipping).toLocaleString('es-AR')}</span>
-                            </p>
-                          )}
-                       </div>
-                    </div>
-
-                    <div className="bg-white p-3 rounded-lg border border-amber-200 relative">
-                       <div className="absolute top-0 right-0 bg-amber-500 text-white text-[10px] px-2 py-0.5 rounded-bl font-bold uppercase tracking-wider">Premium</div>
-                       <p className="text-[10px] text-slate-500 font-bold uppercase mb-1">Precio Publicado: ${mlProjection.premium.publishedPrice.toLocaleString('es-AR')}</p>
-                       <p className="text-xs text-slate-400 font-bold uppercase mb-0 mt-3 font-sans">Ingreso Neto (ML)</p>
-                       <p className="text-2xl font-black text-amber-600">${Math.round(mlProjection.premium.net).toLocaleString('es-AR')}</p>
-                       <div className="mt-3 space-y-1 border-t pt-2 border-slate-100">
-                          <p className="text-[10px] text-slate-500 flex justify-between">
-                             <span>Cargo por vender (35%):</span>
-                             <span className="font-bold text-rose-400">-${mlProjection.premium.breakdown.comm.toLocaleString('es-AR')}</span>
-                          </p>
-                          {mlProjection.premium.breakdown.fixed > 0 && (
-                            <p className="text-[10px] text-slate-500 flex justify-between">
-                               <span>Costo fijo unitario:</span>
-                               <span className="font-bold text-rose-400">-${mlProjection.premium.breakdown.fixed.toLocaleString('es-AR')}</span>
-                            </p>
-                          )}
-                          {mlProjection.isFreeShipping && (
-                            <p className="text-[10px] text-indigo-500 flex justify-between">
-                               <span>Envío a tu cargo:</span>
-                               <span className="font-bold text-indigo-400">-${Math.round(mlProjection.premium.shipping).toLocaleString('es-AR')}</span>
-                            </p>
-                          )}
-                       </div>
-                    </div>
-                  </div>
-                )}
              </div>
                 
                 {/* Campos Dinámicos según Categoría */}
@@ -1411,6 +1320,104 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
           )}
 
           <div className="sm:col-span-2 border-t pt-4 mt-2">
+          <div className="sm:col-span-2 border-t pt-4 mt-0">
+             <h4 className="font-semibold text-slate-800 mb-2 flex items-center gap-2">
+                 <span className="bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded text-xs">MercadoLibre</span>
+                 Simulador de Rentabilidad
+             </h4>
+                {/* Simulador de Costos ML (New!) */}
+                {mlProjection && (
+                  <div className="mt-4 bg-white/50 p-2 border border-yellow-200 border-dashed rounded-lg mb-4">
+                     <p className="text-xs font-bold text-slate-600 mb-2">Simula tu ganancia ajustando el precio o margen manual:</p>
+                     <div className="flex gap-4 items-center flex-wrap">
+                        <div className="flex flex-col">
+                           <label className="text-[10px] uppercase text-slate-500 font-bold">Precio en tu Web</label>
+                           <p className="text-sm font-semibold">${(form.price || 0).toLocaleString('es-AR')}</p>
+                        </div>
+                        <div className="flex flex-col">
+                           <label className="text-[10px] uppercase font-bold text-yellow-700">Margen P/ ML (%)</label>
+                           <input 
+                              type="number" 
+                              className="w-20 text-sm border-yellow-300 rounded focus:ring-yellow-500 py-1"
+                              value={mlMarkup}
+                              onChange={e => setMlMarkup(e.target.value)}
+                           />
+                        </div>
+                        <div className="flex flex-col">
+                           <label className="text-[10px] uppercase text-blue-700 font-bold">Precio a Publicar (ML)</label>
+                           <div className="flex items-center">
+                              <span className="text-sm text-slate-500 mr-1">$</span>
+                              <input 
+                                 type="number" 
+                                 className="w-24 text-sm border-blue-300 rounded focus:ring-blue-500 py-1 font-bold text-blue-700"
+                                 value={mlProjection.classic.publishedPrice} // Es el mismo para ambos
+                                 onChange={e => {
+                                    const newPubPrice = Number(e.target.value);
+                                    const base = form.price || 1;
+                                    const newMarkup = ((newPubPrice / base) - 1) * 100;
+                                    setMlMarkup(Math.round(newMarkup).toString());
+                                 }}
+                              />
+                           </div>
+                        </div>
+                     </div>
+                  </div>
+                )}
+                {mlProjection && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div className="bg-white p-3 rounded-lg border border-yellow-200 relative">
+                       <div className="absolute top-0 right-0 bg-blue-500 text-white text-[10px] px-2 py-0.5 rounded-bl font-bold uppercase tracking-wider">Clásica</div>
+                       <p className="text-[10px] text-slate-500 font-bold uppercase mb-1">Precio Publicado: ${mlProjection.classic.publishedPrice.toLocaleString('es-AR')}</p>
+                       <p className="text-xs text-slate-400 font-bold uppercase mb-0 mt-3 font-sans">Ingreso Neto (ML)</p>
+                       <p className="text-2xl font-black text-blue-600">${Math.round(mlProjection.classic.net).toLocaleString('es-AR')}</p>
+                       <div className="mt-3 space-y-1 border-t pt-2 border-slate-100">
+                          <p className="text-[10px] text-slate-500 flex justify-between">
+                             <span>Cargo por vender (16.5%):</span>
+                             <span className="font-bold text-rose-400">-${mlProjection.classic.breakdown.comm.toLocaleString('es-AR')}</span>
+                          </p>
+                          {mlProjection.classic.breakdown.fixed > 0 && (
+                            <p className="text-[10px] text-slate-500 flex justify-between">
+                               <span>Costo fijo unitario:</span>
+                               <span className="font-bold text-rose-400">-${mlProjection.classic.breakdown.fixed.toLocaleString('es-AR')}</span>
+                            </p>
+                          )}
+                          {mlProjection.isFreeShipping && (
+                            <p className="text-[10px] text-indigo-500 flex justify-between">
+                               <span>Envío a tu cargo:</span>
+                               <span className="font-bold text-indigo-400">-${Math.round(mlProjection.classic.shipping).toLocaleString('es-AR')}</span>
+                            </p>
+                          )}
+                       </div>
+                    </div>
+
+                    <div className="bg-white p-3 rounded-lg border border-amber-200 relative">
+                       <div className="absolute top-0 right-0 bg-amber-500 text-white text-[10px] px-2 py-0.5 rounded-bl font-bold uppercase tracking-wider">Premium</div>
+                       <p className="text-[10px] text-slate-500 font-bold uppercase mb-1">Precio Publicado: ${mlProjection.premium.publishedPrice.toLocaleString('es-AR')}</p>
+                       <p className="text-xs text-slate-400 font-bold uppercase mb-0 mt-3 font-sans">Ingreso Neto (ML)</p>
+                       <p className="text-2xl font-black text-amber-600">${Math.round(mlProjection.premium.net).toLocaleString('es-AR')}</p>
+                       <div className="mt-3 space-y-1 border-t pt-2 border-slate-100">
+                          <p className="text-[10px] text-slate-500 flex justify-between">
+                             <span>Cargo por vender <select className="ml-1 text-[10px] bg-transparent border-b border-rose-300 py-0 pl-0 pr-4 focus:ring-0 w-24" value={mlInstallments} onChange={e=>setMlInstallments(Number(e.target.value))}><option value={3}>3 cuotas</option><option value={6}>6 cuotas</option><option value={9}>9 cuotas</option><option value={12}>12 cuotas</option></select>:</span>
+                             <span className="font-bold text-rose-400">-${(mlProjection.premium.breakdown.comm + mlProjection.premium.breakdown.cuotas).toLocaleString('es-AR')}</span>
+                          </p>
+                          {mlProjection.premium.breakdown.fixed > 0 && (
+                            <p className="text-[10px] text-slate-500 flex justify-between">
+                               <span>Costo fijo unitario:</span>
+                               <span className="font-bold text-rose-400">-${mlProjection.premium.breakdown.fixed.toLocaleString('es-AR')}</span>
+                            </p>
+                          )}
+                          {mlProjection.isFreeShipping && (
+                            <p className="text-[10px] text-indigo-500 flex justify-between">
+                               <span>Envío a tu cargo:</span>
+                               <span className="font-bold text-indigo-400">-${Math.round(mlProjection.premium.shipping).toLocaleString('es-AR')}</span>
+                            </p>
+                          )}
+                       </div>
+                    </div>
+                  </div>
+                )}
+          </div>
+
             <h4 className="font-semibold text-slate-800 mb-2 flex items-center gap-2">
                 <span className="bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded text-xs">MercadoLibre</span>
                 Optimización para Venta
