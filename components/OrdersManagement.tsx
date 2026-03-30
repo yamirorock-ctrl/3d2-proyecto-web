@@ -178,6 +178,7 @@ const OrdersManagement: React.FC = () => {
           <p style="font-weight: bold; color: #333; margin-bottom: 5px;">¡Gracias por confiar en 3D2!</p>
           <p>Para dudas o reclamos sobre tu pedido:</p>
           <p style="margin-top: 5px;">
+            <strong>Web:</strong> www.creart3d2.com &nbsp; | &nbsp; 
             <strong>WhatsApp:</strong> 11 7128-5516 &nbsp; | &nbsp; 
             <strong>Instagram:</strong> @3d2_creart
           </p>
