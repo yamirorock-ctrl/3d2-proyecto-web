@@ -9,6 +9,7 @@ import { useAuth } from '../context/AuthContext';
 import { Sparkles, Wand2 } from 'lucide-react';
 // import { upsertProduct } from '../services/productService'; // Removed to avoid double save
 import { compressImage } from '../utils/imageCompression';
+import { getMLConfig, type MLConfig } from '../services/configService';
 
 interface Props {
   onClose: () => void;
@@ -161,6 +162,11 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
   };
 
   const [mlInstallments, setMlInstallments] = useState(3);
+  const [mlConfig, setMlConfig] = useState<MLConfig | null>(null);
+
+  useEffect(() => {
+    getMLConfig().then(res => setMlConfig(res));
+  }, []);
 
   const mlProjection = useMemo(() => {
     const basePrice = form.price || 0;
@@ -204,7 +210,7 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
         premium: calculateNet(PREMIUM_PERCENT, cuotasMarkup),
         isFreeShipping: publishedPrice >= FREE_SHIPPING_THRESHOLD
     };
-  }, [form.price, mlMarkup, mlInstallments]);
+  }, [form.price, mlMarkup, mlInstallments, mlConfig]);
 
   // Images helpers
   const handleFile = async (file?: File, opts?: { color?: string; batch?: boolean }) => {

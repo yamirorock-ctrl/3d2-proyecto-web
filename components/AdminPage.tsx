@@ -17,6 +17,7 @@ import AIMonitor from './AIMonitor';
 import AdminPromptEditor from './AdminPromptEditor';
 import { useAdminNotifications } from '../hooks/useAdminNotifications';
 import PreSalesManager from './PreSalesManager';
+import AdminConfig from './AdminConfig';
 
 interface Props {
   products: Product[];
@@ -29,7 +30,7 @@ const AdminPage: React.FC<Props> = ({ products, onAdd, onEdit, onDelete }) => {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isManualOrderOpen, setIsManualOrderOpen] = useState(false);
   const [editing, setEditing] = useState<Product | null>(null);
-  const [activeTab, setActiveTab] = useState<'products' | 'orders' | 'sales' | 'calendar' | 'finances' | 'ai_monitor' | 'ai_brain' | 'pre_sales'>('products');
+  const [activeTab, setActiveTab] = useState<'products' | 'orders' | 'sales' | 'calendar' | 'finances' | 'ai_monitor' | 'ai_brain' | 'pre_sales' | 'ml_config'>('products');
 
   const [customOrders, setCustomOrders] = useState<CustomOrder[]>([]);
   const [salesOrders, setSalesOrders] = useState<Order[]>([]);
@@ -524,6 +525,13 @@ const AdminPage: React.FC<Props> = ({ products, onAdd, onEdit, onDelete }) => {
                 <button onClick={handleMigrateProducts} className="w-full text-left px-3 py-2 rounded-lg text-sm text-slate-700 hover:bg-gray-50 flex items-center gap-2">
                   <Wrench size={16} className="text-orange-500" /> Corregir Datos (Migrar)
                 </button>
+
+                <button 
+                  onClick={() => { setActiveTab('ml_config'); setShowSettings(false); }} 
+                  className="w-full text-left px-3 py-2 rounded-lg text-sm text-slate-700 hover:bg-gray-50 flex items-center gap-2"
+                >
+                  <TrendingUp size={16} className="text-yellow-600" /> Configurar Simulador ML
+                </button>
                 
                 <div className="h-px bg-gray-100 my-1" />
                 <div className="text-xs font-semibold text-slate-400 px-3 py-2 uppercase tracking-wider">Base de Datos</div>
@@ -911,6 +919,10 @@ const AdminPage: React.FC<Props> = ({ products, onAdd, onEdit, onDelete }) => {
 
               {activeTab === 'ai_brain' && (
                 <AdminPromptEditor />
+              )}
+
+              {activeTab === 'ml_config' && (
+                <AdminConfig />
               )}
             </>
           );
