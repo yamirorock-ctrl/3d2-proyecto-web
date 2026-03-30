@@ -347,7 +347,15 @@ const SalesDashboard: React.FC<Props> = ({ orders, payments, onUpdateStatus, onE
         ` : ''}
 
         <div class="footer">
-          ¡Gracias por confiar en 3D2! Si tienes dudas con tu pedido comunícate con nosotros.
+          <p style="font-weight: bold; color: #333; margin-bottom: 5px;">¡Gracias por confiar en 3D2!</p>
+          <p>Para dudas o reclamos sobre tu pedido:</p>
+          <p style="margin-top: 5px;">
+            <strong>WhatsApp:</strong> 11 7128-5516 &nbsp; | &nbsp; 
+            <strong>Instagram:</strong> @3d2_creart
+          </p>
+          <div style="margin-top: 10px; font-size: 9px; color: #bbb;">
+            © ${new Date().getFullYear()} 3D2 - Impresión 3D & Corte Láser
+          </div>
         </div>
         
         <script>
