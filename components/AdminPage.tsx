@@ -575,29 +575,50 @@ const AdminPage: React.FC<Props> = ({ products, onAdd, onEdit, onDelete }) => {
                     >
                       <ShoppingBag size={16} className="text-yellow-500" /> Conectar MercadoLibre
                     </button>
-                    <button
-                      onClick={async () => {
-                         if (!user?.id) return toast.error('No autenticado');
-                         toast.info('Buscando coincidencias mágicas en MercadoLibre...', { duration: 4000 });
-                         const { autoLinkMLIds } = await import('../services/mlService');
-                         const res = await autoLinkMLIds(user.id);
-                         if (res.ok) {
-                            if (res.data.linked > 0) {
-                                toast.success(`${res.data.message}\n¡Se vincularon ${res.data.linked} productos!\n${res.data.logs?.join('\n')}`, { duration: 10000 });
-                                (window as any).__forceSyncProducts && (window as any).__forceSyncProducts();
-                            } else {
-                                toast.info(res.data.message + '\nNo se encontraron nuevas coincidencias exactas.', { duration: 6000 });
-                            }
-                         } else {
-                            toast.error(`Error de vinculación: ${res.data?.error || 'Desconocido'}`);
-                         }
-                      }}
-                      className="w-full text-left px-3 py-2 rounded-lg text-sm text-slate-700 hover:bg-yellow-50 flex items-center gap-2"
-                    >
-                      <Sparkles size={16} className="text-purple-600" /> Auto-Vincular IDs (Mágico)
-                    </button>
-                    </>
-                  );
+                      <button
+                        onClick={async () => {
+                           if (!user?.id) return toast.error('No autenticado');
+                           if (!confirm('Se enviará el stock local de todos los productos vinculados a MercadoLibre. ¿Continuar?')) return;
+                           
+                           toast.loading('Iniciando sincronización masiva de stock...', { id: 'bulk-sync' });
+                           const { bulkSyncStocks } = await import('../services/mlService');
+                           const res = await bulkSyncStocks(user.id, []);
+                           
+                           if (res.ok) {
+                              toast.success(`Sincronización completada: ${res.data.summary.success} ítems actualizados.`, { id: 'bulk-sync' });
+                              setShowSettings(false);
+                           } else {
+                              toast.error(`Error de sincronización: ${res.data?.error || 'Desconocido'}`, { id: 'bulk-sync' });
+                           }
+                        }}
+                        className="w-full text-left px-3 py-2 rounded-lg text-sm text-slate-700 hover:bg-blue-50 flex items-center gap-2"
+                      >
+                        <RefreshCw size={16} className="text-blue-500" /> Sincronizar Stock Completo
+                      </button>
+                      <button
+                        onClick={async () => {
+                           if (!user?.id) return toast.error('No autenticado');
+                           toast.info('Buscando coincidencias mágicas en MercadoLibre...', { duration: 4000 });
+                           const { autoLinkMLIds } = await import('../services/mlService');
+                           const res = await autoLinkMLIds(user.id);
+                           if (res.ok) {
+                              if (res.data.linked > 0) {
+                                  toast.success(`${res.data.message}\n¡Se vincularon ${res.data.linked} productos!\n${res.data.logs?.join('\n')}`, { duration: 10000 });
+                                  (window as any).__forceSyncProducts && (window as any).__forceSyncProducts();
+                                  setShowSettings(false);
+                              } else {
+                                  toast.info(res.data.message + '\nNo se encontraron nuevas coincidencias exactas.', { duration: 6000 });
+                              }
+                           } else {
+                              toast.error(`Error de vinculación: ${res.data?.error || 'Desconocido'}`);
+                           }
+                        }}
+                        className="w-full text-left px-3 py-2 rounded-lg text-sm text-slate-700 hover:bg-yellow-50 flex items-center gap-2"
+                      >
+                        <Sparkles size={16} className="text-purple-600" /> Auto-Vincular IDs (Mágico)
+                      </button>
+                      </>
+                    );
                 })()}
 
               </div>

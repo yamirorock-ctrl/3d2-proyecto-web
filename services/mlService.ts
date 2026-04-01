@@ -45,11 +45,7 @@ export async function predictCategory(title: string) {
  * @param productData Unsaved form data to use in place of stale database records
  */
 export async function syncProductToML(productId: number, userId: string, markupPercentage: number = 25, productData?: any) {
-  const apiUrl = (import.meta as any).env.VITE_API_URL || '/api'; // Fallback to relative /api if not set
-  
-  // Usually in Vercel dev, it's just /api/ml-sync-product
-  // In production, also relative.
-  const endpoint = `${window.location.origin}/api/ml-sync-product`;
+  const endpoint = `${window.location.origin}/api/ml-manager`;
 
   try {
     const response = await fetch(endpoint, {
@@ -57,7 +53,7 @@ export async function syncProductToML(productId: number, userId: string, markupP
       headers: {
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ productId, userId, markupPercentage, productData })
+      body: JSON.stringify({ action: 'sync-product', productId, userId, markupPercentage, productData })
     });
 
     const data = await response.json();
@@ -69,12 +65,27 @@ export async function syncProductToML(productId: number, userId: string, markupP
 }
 
 export async function autoLinkMLIds(userId: string) {
-  const endpoint = `${window.location.origin}/api/ml-auto-link`;
+  const endpoint = `${window.location.origin}/api/ml-manager`;
   try {
     const response = await fetch(endpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId })
+      body: JSON.stringify({ action: 'auto-link', userId })
+    });
+    const data = await response.json();
+    return { ok: response.ok, data };
+  } catch (error) {
+    return { ok: false, data: { error: error.message } };
+  }
+}
+
+export async function bulkSyncStocks(userId: string, productIds: number[]) {
+  const endpoint = `${window.location.origin}/api/ml-manager`;
+  try {
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'bulk-sync-stock', userId, productIds })
     });
     const data = await response.json();
     return { ok: response.ok, data };

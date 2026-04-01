@@ -702,7 +702,7 @@ async function deductRawMaterialsWEB(items, supabaseClient) {
 
   const { data: productDefinitions } = await supabaseClient
     .from('products')
-    .select('id, name, weight, consumables, color_percentage') 
+    .select('id, name, weight, net_weight, consumables, color_percentage') 
     .in('id', productIds);
   
   const productMap = new Map(productDefinitions?.map((p) => [p.id, p]) || []);
@@ -711,12 +711,28 @@ async function deductRawMaterialsWEB(items, supabaseClient) {
   const findMaterialIdByName = (searchName, categoryFilter) => {
     if (!searchName) return null;
     const lowerSearch = searchName.toLowerCase().trim();
+    
+    // 1. Exact match
     let mat = materials.find((m) => m.name.toLowerCase() === lowerSearch);
     if (mat) return mat;
-    const candidates = materials.filter((m) => {
+
+    // 2. Fuzzy words
+    const searchWords = lowerSearch.split(/\s+/).filter(w => w.length > 2);
+    let candidates = materials.filter((m) => {
         if (categoryFilter && m.category !== categoryFilter) return false;
-        return m.name.toLowerCase().includes(lowerSearch);
+        const matName = m.name.toLowerCase();
+        return searchWords.every(word => matName.includes(word));
     });
+
+    if (candidates.length > 0) return candidates[0];
+
+    // 3. Inverse support
+    candidates = materials.filter((m) => {
+        if (categoryFilter && m.category !== categoryFilter) return false;
+        const matName = m.name.toLowerCase();
+        return matName.includes(lowerSearch) || lowerSearch.includes(matName);
+    });
+    
     return candidates.length > 0 ? candidates[0] : null;
   };
 
@@ -771,8 +787,11 @@ async function deductRawMaterialsWEB(items, supabaseClient) {
                 let amountToDeduct = 0;
                 if (cp.grams) {
                     amountToDeduct = cp.grams * qty;
-                } else if (cp.percentage && productDef.weight > 0) {
-                    amountToDeduct = (productDef.weight * qty) * (cp.percentage / 100);
+                } else if (cp.percentage) {
+                    const referenceWeight = productDef.net_weight || productDef.weight || 0;
+                    if (referenceWeight > 0) {
+                        amountToDeduct = (referenceWeight * qty) * (cp.percentage / 100);
+                    }
                 }
 
                 if (amountToDeduct > 0) {

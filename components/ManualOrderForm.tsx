@@ -4,7 +4,8 @@ import { Product, Order, OrderItem, ShippingMethod, OrderStatus, Payment, RawMat
 import { createOrder, updateOrder } from '../services/orderService';
 import { updateProductStock } from '../services/productService';
 import { getMaterials } from '../services/supabaseService';
-import { Search, Calculator, Check, Plus, X, User, Phone, FileText, ShoppingCart, DollarSign, Trash2, Edit, AlertCircle, Package } from 'lucide-react';
+import { Search, Calculator, Check, Plus, X, User, Phone, FileText, ShoppingCart, DollarSign, Trash2, Edit, AlertCircle, Package, RefreshCw } from 'lucide-react';
+import { useProducts } from '../context/ProductContext';
 
 interface Props {
   products: Product[];
@@ -14,6 +15,7 @@ interface Props {
 }
 
 export const ManualOrderForm: React.FC<Props> = ({ products, initialOrder, onClose, onOrderCreated }) => {
+  const { updateStock } = useProducts();
   // Estado del "Carrito Manual"
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
   
@@ -23,6 +25,7 @@ export const ManualOrderForm: React.FC<Props> = ({ products, initialOrder, onClo
   const [customNameItem, setCustomNameItem] = useState('');
   const [quantity, setQuantity] = useState(1);
   const [customPrice, setCustomPrice] = useState<string>(''); // Precio TOTAL del ítem actual (unitario * cantidad)
+  const [saleType, setSaleType] = useState<'retail' | 'pack' | 'wholesale'>('retail');
 
   // Insumos personalizados para orden manual
   const [availableMaterials, setAvailableMaterials] = useState<RawMaterial[]>([]);
@@ -135,16 +138,36 @@ export const ManualOrderForm: React.FC<Props> = ({ products, initialOrder, onClo
   // Cuando cambia el producto seleccionado o cantidad, calcular precio SUGERIDO actual
   useEffect(() => {
     if (selectedProduct) {
-      const suggested = selectedProduct.price * quantity;
+      let unitPrice = selectedProduct.price;
+      
+      if (saleType === 'pack' && selectedProduct.packEnabled && selectedProduct.packDiscount) {
+        unitPrice = selectedProduct.price * (1 - selectedProduct.packDiscount / 100);
+      } else if (saleType === 'wholesale' && selectedProduct.mayoristaEnabled && selectedProduct.wholesaleDiscount) {
+        unitPrice = selectedProduct.price * (1 - selectedProduct.wholesaleDiscount / 100);
+      }
+      
+      const suggested = Math.round(unitPrice * quantity);
       setCustomPrice(suggested.toString());
     }
-  }, [selectedProduct, quantity]);
+  }, [selectedProduct, quantity, saleType]);
 
   const handleProductSelect = (p: Product) => {
     setSelectedProduct(p);
-    setQuantity(1);
-    setCustomPrice(p.price.toString());
     setSearchTerm('');
+    
+    // Auto-detectar mejor modo inicial si el minorista está deshabilitado
+    if (p.unitEnabled === false) {
+      if (p.packEnabled) {
+          setSaleType('pack');
+          setQuantity(p.unitsPerPack || 2);
+      } else if (p.mayoristaEnabled) {
+          setSaleType('wholesale');
+          setQuantity(p.wholesaleUnits || 12);
+      }
+    } else {
+      setSaleType('retail');
+      setQuantity(1);
+    }
   };
 
   const handleAddItem = () => {
@@ -155,9 +178,15 @@ export const ManualOrderForm: React.FC<Props> = ({ products, initialOrder, onClo
     const priceTotal = Number(customPrice);
     const unitPrice = quantity > 0 ? priceTotal / quantity : 0;
 
+    let displayName = isCustomProductMode ? `[ESPECIAL] ${customNameItem}` : selectedProduct!.name;
+    if (!isCustomProductMode) {
+      if (saleType === 'pack') displayName += ` (Pack x${selectedProduct?.unitsPerPack || 2})`;
+      else if (saleType === 'wholesale') displayName += ` (Mayorista/Crudo)`;
+    }
+
     const newItem: OrderItem = {
       product_id: selectedProduct?.id || 0, // 0 o null para productos personalizados
-      name: isCustomProductMode ? `[ESPECIAL] ${customNameItem}` : selectedProduct!.name,
+      name: displayName,
       price: unitPrice,
       quantity: quantity,
       image: selectedProduct?.image || selectedProduct?.images?.[0]?.url || 'https://via.placeholder.com/150?text=Personalizado',
@@ -260,7 +289,7 @@ export const ManualOrderForm: React.FC<Props> = ({ products, initialOrder, onClo
         // Stock solo se descuenta en creación
         for (const item of orderItems) {
           if (item.product_id) {
-            await updateProductStock(item.product_id, item.quantity);
+            await updateStock(item.product_id, item.quantity);
           }
         }
         
@@ -498,6 +527,38 @@ export const ManualOrderForm: React.FC<Props> = ({ products, initialOrder, onClo
                     </div>
                   </div>
                 </div>
+
+                {/* Selectores de Tipo de Venta */}
+                <div className="flex gap-2 p-1 bg-slate-200 rounded-lg">
+                   {selectedProduct.unitEnabled !== false && (
+                    <button 
+                      type="button"
+                      onClick={() => { setSaleType('retail'); setQuantity(1); }}
+                      className={`flex-1 py-1 text-xs font-bold rounded-md transition-all ${saleType === 'retail' ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                    >
+                      Unidad
+                    </button>
+                   )}
+                   {selectedProduct.packEnabled && (
+                    <button 
+                      type="button"
+                      onClick={() => { setSaleType('pack'); setQuantity(selectedProduct.unitsPerPack || 2); }}
+                      className={`flex-1 py-1 text-xs font-bold rounded-md transition-all ${saleType === 'pack' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                    >
+                      Pack x{selectedProduct.unitsPerPack}
+                    </button>
+                   )}
+                   {selectedProduct.mayoristaEnabled && (
+                    <button 
+                      type="button"
+                      onClick={() => { setSaleType('wholesale'); setQuantity(selectedProduct.wholesaleUnits || 12); }}
+                      className={`flex-1 py-1 text-xs font-bold rounded-md transition-all ${saleType === 'wholesale' ? 'bg-white text-purple-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                    >
+                      Mayorista
+                    </button>
+                   )}
+                </div>
+
                 <button
                   type="button"
                   onClick={handleAddItem}

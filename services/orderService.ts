@@ -394,7 +394,7 @@ async function deductRawMaterials(items: OrderItem[]) {
   // Nota: Consultamos tanto camelCase como snake_case por si acaso, aunque en JSONB suele preservarse
   const { data: productDefinitions } = await supabase
     .from('products')
-    .select('id, name, weight, consumables, colorPercentage:color_percentage') 
+    .select('id, name, weight, net_weight, consumables, colorPercentage:color_percentage') 
     .in('id', productIds);
   
   // Mapa de productos para acceso rápido
@@ -411,17 +411,24 @@ async function deductRawMaterials(items: OrderItem[]) {
     let mat = materials.find((m: any) => m.name.toLowerCase() === lowerSearch);
     if (mat) return mat;
 
-    // 2. Búsqueda Parcial Intelligente (ej: "Rojo" -> "Grilon PLA Rojo")
-    // Filtramos por categoría si se provee (ej: 'Filamento')
-    const candidates = materials.filter((m: any) => {
+    // 2. Búsqueda por palabras (ej: "Llavero Argolla" matchea con "Argollas Llavero")
+    const searchWords = lowerSearch.split(/\s+/).filter(w => w.length > 2);
+    let candidates = materials.filter((m: any) => {
         if (categoryFilter && m.category !== categoryFilter) return false;
-        return m.name.toLowerCase().includes(lowerSearch);
+        const matName = m.name.toLowerCase();
+        return searchWords.every(word => matName.includes(word));
     });
 
-    if (candidates.length > 0) {
-        // Preferir el más corto que contenga la palabra (heurística simple) o el primero
-        return candidates[0];
-    }
+    if (candidates.length > 0) return candidates[0];
+
+    // 3. Búsqueda Inversa (ej: "Argolla" matchea con "Argolla Llavero")
+    candidates = materials.filter((m: any) => {
+        if (categoryFilter && m.category !== categoryFilter) return false;
+        const matName = m.name.toLowerCase();
+        return matName.includes(lowerSearch) || lowerSearch.includes(matName);
+    });
+
+    if (candidates.length > 0) return candidates[0];
 
     return null;
   };
@@ -496,9 +503,12 @@ async function deductRawMaterials(items: OrderItem[]) {
                 if (cp.grams) {
                     // Si tenemos los gramos exactos, los usamos (convertidos a la unidad del inventario)
                     amountToDeduct = cp.grams * qty;
-                } else if (cp.percentage && productDef.weight > 0) {
-                    // Si no, usamos el porcentaje sobre el peso total
-                    amountToDeduct = (productDef.weight * qty) * (cp.percentage / 100);
+                } else if (cp.percentage) {
+                    // Priorizar net_weight sobre weight para el cálculo de filamento
+                    const referenceWeight = productDef.net_weight || productDef.weight || 0;
+                    if (referenceWeight > 0) {
+                        amountToDeduct = (referenceWeight * qty) * (cp.percentage / 100);
+                    }
                 }
 
                 if (amountToDeduct > 0) {

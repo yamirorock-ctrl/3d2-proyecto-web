@@ -1,12 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { getMLConfig, saveMLConfig, MLConfig } from '../services/configService';
-import { Save, RefreshCw, AlertTriangle } from 'lucide-react';
+import { Save, RefreshCw, AlertTriangle, Link2, ArrowUpRight } from 'lucide-react';
+import { bulkSyncStocks, autoLinkMLIds } from '../services/mlService';
+import { useProducts } from '../context/ProductContext';
+import { useAuth } from '../context/AuthContext';
 
 const AdminConfig: React.FC = () => {
     const [config, setConfig] = useState<MLConfig | null>(null);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
+    const [syncing, setSyncing] = useState(false);
+    
+    const { products, refreshProducts } = useProducts();
+    const { user } = useAuth();
 
     useEffect(() => {
         loadConfig();
@@ -31,6 +38,55 @@ const AdminConfig: React.FC = () => {
         }
         setSaving(false);
     };
+
+    const handleBulkSync = async () => {
+        if (!user) {
+            toast.error('Debes estar autenticado como admin.');
+            return;
+        }
+        
+        const linkedCount = products.filter(p => !!p.ml_item_id).length;
+        if (linkedCount === 0) {
+            toast.error('No hay productos vinculados con MercadoLibre para sincronizar.');
+            return;
+        }
+
+        if (!confirm(`Se enviará el stock local de ${linkedCount} productos a MercadoLibre. ¿Continuar?`)) return;
+
+        setSyncing(true);
+        try {
+            const res = await bulkSyncStocks(user.id, []);
+            if (res.ok) {
+                toast.success(`Sincronización completada: ${res.data.summary.success} ítems actualizados.`);
+            } else {
+                toast.error('Error en la sincronización: ' + (res.data.error || 'Servidor no responde'));
+            }
+        } catch (e) {
+            toast.error('Error inesperado.');
+        } finally {
+            setSyncing(false);
+        }
+    };
+
+    const handleAutoLink = async () => {
+        if (!user) return;
+        if (!confirm('Este proceso intentará vincular productos de ML con los locales por nombre. ¿Continuar?')) return;
+        
+        setSyncing(true);
+        try {
+            const res = await autoLinkMLIds(user.id);
+            if (res.ok) {
+                toast.success('Auto-vinculación completada. Recargando productos...');
+                await refreshProducts();
+            } else {
+                toast.error('Error: ' + res.data.error);
+            }
+        } catch (e) {
+            toast.error('Error.');
+        } finally {
+            setSyncing(false);
+        }
+    }
 
     if (loading) return (
         <div className="p-8 flex justify-center items-center gap-2 text-slate-500">
@@ -175,6 +231,54 @@ const AdminConfig: React.FC = () => {
                     <p className="font-bold mb-1">¡Cuidado al modificar estos valores!</p>
                     <p>Estos cambios afectan a la visualización de rentabilidad de todos los productos en el administrador. Asegurate de usar puntos para los decimales (ej: 14.35) y no comas.</p>
                 </div>
+            </div>
+
+            {/* Sincronización Masiva */}
+            <div className="mt-8 pt-8 border-t border-slate-200">
+                 <h2 className="text-xl font-bold text-slate-800 mb-2">Herramientas de Sincronización</h2>
+                 <p className="text-sm text-slate-500 mb-6 font-medium">Forzá la integración de stock y vinculación manual/automática.</p>
+                 
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="bg-slate-50 p-5 rounded-xl border border-slate-200 hover:border-blue-200 transition-colors group">
+                        <div className="flex items-center gap-3 mb-3">
+                            <div className="p-2 bg-blue-100 text-blue-600 rounded-lg group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                                <ArrowUpRight size={20} />
+                            </div>
+                            <h3 className="font-bold text-slate-800">Forzar Stock Local → ML</h3>
+                        </div>
+                        <p className="text-xs text-slate-500 mb-4 leading-relaxed">
+                            Envía el stock actual de tu inventario local a todas las publicaciones sincronizadas de MercadoLibre. Útil para resolver desvíos de inventario.
+                        </p>
+                        <button 
+                            disabled={syncing}
+                            onClick={handleBulkSync}
+                            className="w-full py-2 bg-white border border-slate-200 text-slate-700 font-bold rounded-lg hover:bg-blue-50 hover:border-blue-200 hover:text-blue-700 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                        >
+                            {syncing ? <RefreshCw size={16} className="animate-spin" /> : <RefreshCw size={16} />}
+                            Sincronizar Stock Completo
+                        </button>
+                    </div>
+
+                    <div className="bg-slate-50 p-5 rounded-xl border border-slate-200 hover:border-emerald-200 transition-colors group">
+                        <div className="flex items-center gap-3 mb-3">
+                            <div className="p-2 bg-emerald-100 text-emerald-600 rounded-lg group-hover:bg-emerald-600 group-hover:text-white transition-colors">
+                                <Link2 size={20} />
+                            </div>
+                            <h3 className="font-bold text-slate-800">Auto-Vincular Ítems ML</h3>
+                        </div>
+                        <p className="text-xs text-slate-500 mb-4 leading-relaxed">
+                            Busca publicaciones en tu cuenta de ML que coincidan en nombre con tus productos locales y guarda el ID para futuras sincronizaciones.
+                        </p>
+                        <button 
+                            disabled={syncing}
+                            onClick={handleAutoLink}
+                            className="w-full py-2 bg-white border border-slate-200 text-slate-700 font-bold rounded-lg hover:bg-emerald-50 hover:border-emerald-200 hover:text-emerald-700 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                        >
+                            {syncing ? <RefreshCw size={16} className="animate-spin" /> : <Link2 size={16} />}
+                            Auto-Vincular IDs de ML
+                        </button>
+                    </div>
+                 </div>
             </div>
         </div>
     );

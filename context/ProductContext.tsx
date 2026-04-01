@@ -76,7 +76,7 @@ interface ProductContextType {
   addProduct: (product: Product) => Promise<void>;
   editProduct: (product: Product) => Promise<void>;
   removeProduct: (id: number) => Promise<void>;
-  updateStock: (id: number, quantity: number) => void;
+  updateStock: (id: number, quantity: number, skipML?: boolean) => Promise<void>;
   refreshProducts: () => Promise<void>;
   loading: boolean;
   selectedCategory: string;
@@ -233,6 +233,18 @@ export const ProductProvider: React.FC<{ children: ReactNode }> = ({ children })
     setProducts(prev => prev.map(p => p.id === prod.id ? prod : p));
     const { error } = await upsertProduct(prod);
     if (error) console.warn('Supabase error:', error.message);
+    
+    // Si tiene ID de ML, sincronizar stock automáticamente
+    if (prod.ml_item_id && !error) {
+       const userStr = localStorage.getItem('sb-fowzphjqzqzvqzvqzvqz-auth-token'); // Reemplazar con ID real si es posible
+       let userId = '';
+       try { if(userStr) userId = JSON.parse(userStr).user?.id || ''; } catch(e){}
+       
+       if (userId) {
+          console.log(`[Sync] Triggering ML Sync for product ${prod.id} (Manual Update)`);
+          import('../services/mlService').then(m => m.syncProductToML(prod.id, userId));
+       }
+    }
   };
 
   const removeProduct = async (id: number) => {
@@ -241,16 +253,32 @@ export const ProductProvider: React.FC<{ children: ReactNode }> = ({ children })
     if (error) console.warn('Supabase error:', error.message);
   };
 
-  const updateStock = (id: number, quantity: number) => {
+  const updateStock = async (id: number, quantity: number, skipML = false) => {
+      // Optimistic update
+      let productRef: Product | undefined;
       setProducts(prev => prev.map(product => {
         if (product.id === id && product.stock !== undefined) {
-             return {
-                ...product,
-                stock: Math.max(0, product.stock - quantity)
-             };
+             const newStock = Math.max(0, product.stock - quantity);
+             productRef = { ...product, stock: newStock };
+             return productRef;
         }
         return product;
       }));
+
+      // Persist to DB
+      const { updateProductStock } = await import('../services/productService');
+      const { success } = await updateProductStock(id, quantity);
+      
+      if (success && !skipML && productRef?.ml_item_id) {
+         const userStr = localStorage.getItem('sb-fowzphjqzqzvqzvqzvqz-auth-token'); 
+         let userId = '';
+         try { if(userStr) userId = JSON.parse(userStr).user?.id || ''; } catch(e){}
+         
+         if (userId) {
+            console.log(`[Sync] Triggering ML Sync for product ${id} (Stock Sale)`);
+            import('../services/mlService').then(m => m.syncProductToML(id, userId));
+         }
+      }
   };
 
   return (
