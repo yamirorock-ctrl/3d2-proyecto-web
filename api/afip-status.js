@@ -3,43 +3,34 @@ const axios = require('axios');
 
 export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  
   try {
     const certRaw = process.env.AFIP_CERTIFICATE || '';
     const keyRaw = process.env.AFIP_PRIVATE_KEY || '';
 
-    if (!certRaw || !keyRaw) {
-      return res.status(200).json({ online: false, message: 'Credenciales faltantes' });
-    }
+    if (!certRaw || !keyRaw) return res.json({ online: false, message: 'Credenciales NULL' });
 
     const decodePEM = (raw, type) => {
       let c = raw.trim().split('\\\\n').join('\n').split('\\n').join('\n');
-      if (!c.includes('-----BEGIN')) {
-        c = `-----BEGIN ${type}-----\n${c}\n-----END ${type}-----`;
-      }
+      if (!c.includes('-----BEGIN')) c = `-----BEGIN ${type}-----\n${c}\n-----END ${type}-----`;
       return c;
     };
 
     const cert = decodePEM(certRaw, 'CERTIFICATE');
     const key = decodePEM(keyRaw, 'RSA PRIVATE KEY');
 
-    // AJUSTE DE RELOJ: AFIP rechaza tickets generados en el "futuro"
-    // Ponemos el tick 1 minuto atrás para evitar desincronización de Vercel
-    const now = new Date();
-    const genTime = new Date(now.getTime() - 60000).toISOString().replace(/\.\d+Z$/, '');
-    const expTime = new Date(now.getTime() + 600000).toISOString().replace(/\.\d+Z$/, '');
-
     const tra = `<?xml version="1.0" encoding="UTF-8"?>
     <loginTicketRequest version="1.0">
       <header>
         <uniqueId>${Math.floor(Date.now() / 1000)}</uniqueId>
-        <generationTime>${genTime}</generationTime>
-        <expirationTime>${expTime}</expirationTime>
+        <generationTime>${new Date(Date.now() - 60000).toISOString().replace(/\.\d+Z$/, '')}</generationTime>
+        <expirationTime>${new Date(Date.now() + 600000).toISOString().replace(/\.\d+Z$/, '')}</expirationTime>
       </header>
       <service>wsfe</service>
     </loginTicketRequest>`;
 
     const p7 = forge.pkcs7.createSignedData();
-    p7.content = forge.util.createBuffer(tra, 'utf8');
+    p7.content = forge.util.createBuffer(tra, 'utf-8');
     p7.addCertificate(cert);
     p7.addSigner({
       key: forge.pki.privateKeyFromPem(key),
@@ -55,25 +46,31 @@ export default async function handler(req, res) {
       <SOAP-ENV:Body><ns1:loginCms><ns1:in0>${cms}</ns1:in0></ns1:loginCms></SOAP-ENV:Body>
     </SOAP-ENV:Envelope>`;
 
-    const response = await axios.post('https://wsaa.afip.gov.ar/ws/services/LoginCms', soapMsg, {
-      headers: { 'Content-Type': 'text/xml;charset=UTF-8' },
-      timeout: 15000
-    });
+    // PROBAR 2 SERVIDORES (Prod y Homo)
+    const endpoints = [
+      'https://wsaa.afip.gov.ar/ws/services/LoginCms',
+      'https://wsaahomo.afip.gov.ar/ws/services/LoginCms'
+    ];
 
-    if (response.data.includes('token')) {
-      return res.status(200).json({ online: true, message: '¡CONEXIÓN EXITOSA!' });
-    } else {
-      const fault = response.data.match(/<faultstring>(.*?)<\/faultstring>/)?.[1] || 'AFIP Falló';
-      return res.status(200).json({ online: false, message: 'AFIP Rechazó Ticket', detail: fault });
+    let resultMsg = 'AFIP Fuera de Línea';
+    let detailMsg = 'Error en servidores AFIP (DIP/IP Blocked?)';
+    
+    for (const url of endpoints) {
+       try {
+         const resp = await axios.post(url, soapMsg, { headers: { 'Content-Type': 'text/xml' }, timeout: 8000 });
+         if (resp.data.includes('token')) {
+           return res.json({ online: true, message: `¡CONECTADO! (${url.includes('homo') ? 'TEST' : 'PROD'})` });
+         } else {
+           detailMsg = resp.data.match(/<faultstring>(.*?)<\/faultstring>/)?.[1] || 'Error en Credencial';
+         }
+       } catch (e) {
+          console.error(`Fallo en ${url}:`, e.message);
+       }
     }
 
+    res.json({ online: false, message: resultMsg, detail: detailMsg });
+
   } catch (err) {
-    // Si Axios falla, capturamos el XML de error real de AFIP si está disponible
-    const afipError = err.response?.data ? String(err.response.data) : err.message;
-    return res.status(200).json({ 
-      online: false, 
-      message: 'Error de Red con AFIP', 
-      detail: afipError.includes('faultstring') ? afipError.match(/<faultstring>(.*?)<\/faultstring>/)?.[1] : afipError
-    });
+    res.json({ online: false, message: 'Fallo Handshake', detail: err.message });
   }
 }
