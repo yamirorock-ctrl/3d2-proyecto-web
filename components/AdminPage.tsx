@@ -18,6 +18,7 @@ import AdminPromptEditor from './AdminPromptEditor';
 import { useAdminNotifications } from '../hooks/useAdminNotifications';
 import PreSalesManager from './PreSalesManager';
 import AdminConfig from './AdminConfig';
+import { ArcaPanel } from './ArcaPanel';
 
 interface Props {
   products: Product[];
@@ -30,7 +31,7 @@ const AdminPage: React.FC<Props> = ({ products, onAdd, onEdit, onDelete }) => {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isManualOrderOpen, setIsManualOrderOpen] = useState(false);
   const [editing, setEditing] = useState<Product | null>(null);
-  const [activeTab, setActiveTab] = useState<'products' | 'orders' | 'sales' | 'calendar' | 'finances' | 'ai_monitor' | 'ai_brain' | 'pre_sales' | 'ml_config'>('products');
+  const [activeTab, setActiveTab] = useState<'products' | 'orders' | 'sales' | 'calendar' | 'finances' | 'ai_monitor' | 'ai_brain' | 'pre_sales' | 'ml_config' | 'arca'>('products');
 
   const [customOrders, setCustomOrders] = useState<CustomOrder[]>([]);
   const [salesOrders, setSalesOrders] = useState<Order[]>([]);
@@ -713,6 +714,15 @@ const AdminPage: React.FC<Props> = ({ products, onAdd, onEdit, onDelete }) => {
         </button>
           {/* Users tab removed as it is now managed via Supabase Dashboard */}
           {/* Security tab logic simplified or removed as Supabase logs audit events */}
+        <button
+          onClick={() => setActiveTab('arca')}
+          className={`px-4 py-3 font-medium flex items-center gap-2 border-b-2 transition-colors whitespace-nowrap ${
+            activeTab === 'arca' ? 'border-amber-600 text-amber-600' : 'border-transparent text-slate-500 hover:text-slate-700'
+          }`}
+        >
+          <ShieldAlert size={20} />
+          ARCA (AFIP)
+        </button>
       </div>
 
       {/* Products Tab */}
@@ -839,6 +849,8 @@ const AdminPage: React.FC<Props> = ({ products, onAdd, onEdit, onDelete }) => {
           )}
         </div>
       )}
+
+      {activeTab === 'arca' && <ArcaPanel />}
 
       {/* Sales Tab */}
       {activeTab === 'sales' && (
