@@ -17,7 +17,7 @@ export const ArcaPanel: React.FC = () => {
         toast.success('¡ARCA Conectado!');
       } else {
         setStatus('offline');
-        setMessage(data.message || 'Fallo la conexión');
+        setMessage(data.detail || data.message || 'Fallo la conexión');
         toast.error('AFIP no responde');
       }
     } catch (err) {
