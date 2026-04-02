@@ -8,6 +8,7 @@ import { useAuth } from '../context/AuthContext';
 
 const AdminConfig: React.FC = () => {
     const [config, setConfig] = useState<MLConfig | null>(null);
+    const [afipStatus, setAfipStatus] = useState<'idle' | 'loading' | 'online' | 'error'>('idle');
     const [fiscal, setFiscal] = useState<FiscalConfig | null>(null);
     const [activeTab, setActiveTab] = useState<'ml' | 'fiscal'>('ml');
     const [loading, setLoading] = useState(true);
@@ -353,6 +354,52 @@ const AdminConfig: React.FC = () => {
                                         className="w-full bg-slate-50 border-slate-200 rounded-xl font-bold text-slate-700 focus:ring-emerald-500 focus:border-emerald-500"
                                     />
                                     <p className="text-[10px] text-slate-400 mt-2">Sólo las ventas desde esta fecha sumarán para el progreso del Monotributo.</p>
+                                </div>
+
+                                <div className="border-t border-slate-100 pt-6 mt-4">
+                                    <label className="block text-sm font-black text-slate-800 uppercase mb-4 tracking-tighter">Facturación Electrónica (Web Service)</label>
+                                    
+                                    <div className="flex flex-col gap-3">
+                                        <div className="flex items-center justify-between bg-slate-50 p-3 rounded-xl border border-slate-200">
+                                            <div className="flex items-center gap-3">
+                                                <div className={`w-3 h-3 rounded-full ${afipStatus === 'online' ? 'bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]' : afipStatus === 'error' ? 'bg-rose-500' : 'bg-slate-300'} animate-pulse`}></div>
+                                                <span className="text-xs font-bold text-slate-600">
+                                                    Estado: {afipStatus === 'online' ? 'Conectado' : afipStatus === 'error' ? 'Error AFIP' : 'Desconectado'}
+                                                </span>
+                                            </div>
+                                            <button 
+                                                onClick={async () => {
+                                                    const { toast } = await import('sonner');
+                                                    setAfipStatus('loading');
+                                                    toast.info('Probando conexión con AFIP...');
+                                                    
+                                                    try {
+                                                        const response = await fetch('/api/afip-status');
+                                                        const data = await response.json();
+                                                        
+                                                        if (data.online) {
+                                                            setAfipStatus('online');
+                                                            toast.success('¡Conectado exitosamente con AFIP!');
+                                                        } else {
+                                                            setAfipStatus('error');
+                                                            toast.error(`Error: ${data.message || 'No se pudo conectar'}`);
+                                                        }
+                                                    } catch (e) {
+                                                        setAfipStatus('error');
+                                                        toast.error('Error de servidor al intentar conectar.');
+                                                    }
+                                                }}
+                                                disabled={afipStatus === 'loading'}
+                                                className={`text-[10px] ${afipStatus === 'online' ? 'bg-emerald-600' : 'bg-slate-600'} hover:opacity-90 text-white font-black px-3 py-1.5 rounded-lg transition-all disabled:opacity-50`}
+                                            >
+                                                {afipStatus === 'loading' ? 'CARGANDO...' : 'PROBAR API'}
+                                            </button>
+                                        </div>
+                                        <p className="text-[10px] text-slate-400 uppercase leading-relaxed font-semibold">
+                                            Modo: <strong className="text-slate-600 mr-2">Homologación (Pruebas)</strong>
+                                            Punto de Venta: <strong className="text-slate-600">00002</strong>
+                                        </p>
+                                    </div>
                                 </div>
                             </div>
 
