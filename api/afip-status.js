@@ -7,10 +7,10 @@ export default async function handler(req, res) {
     const keyRaw = process.env.AFIP_PRIVATE_KEY || '';
 
     if (!certRaw || !keyRaw) {
-      return res.status(200).json({ online: false, message: 'Faltan credenciales (Vercel ENV NULL)' });
+      return res.status(200).json({ online: false, message: 'CRÍTICO: No detecto tus variables de entorno en Vercel.' });
     }
 
-    // LIMPIEZA EXTREMA PARA VERCEL (Convierte el texto escapado en PEM real)
+    // 1. Limpieza Robusta (Single Line to Multi Line)
     const formatPEM = (raw, type) => {
       let cleaned = raw.trim().replace(/\\n/g, '\n');
       if (!cleaned.includes('-----BEGIN')) {
@@ -24,20 +24,19 @@ export default async function handler(req, res) {
     const cert = formatPEM(certRaw, 'CERTIFICATE');
     const key = formatPEM(keyRaw, 'RSA PRIVATE KEY');
 
-    // 1. Generar CMS (Firma)
-    console.log('--- 🛡️ FIRMANDO TICKET DE ACCESO ---');
-    const tra = `<?xml version="1.0" encoding="UTF-8"?>
-    <loginTicketRequest version="1.0">
-      <header>
-        <uniqueId>${Math.floor(Date.now() / 1000)}</uniqueId>
-        <generationTime>${new Date().toISOString()}</generationTime>
-        <expirationTime>${new Date(Date.now() + 600000).toISOString()}</expirationTime>
-      </header>
-      <service>wsfe</service>
-    </loginTicketRequest>`;
-
+    // 2. Diagnóstico de FIRMA (Vercel Test)
     let cms;
     try {
+      const tra = `<?xml version="1.0" encoding="UTF-8"?>
+      <loginTicketRequest version="1.0">
+        <header>
+          <uniqueId>${Math.floor(Date.now() / 1000)}</uniqueId>
+          <generationTime>${new Date().toISOString()}</generationTime>
+          <expirationTime>${new Date(Date.now() + 600000).toISOString()}</expirationTime>
+        </header>
+        <service>wsfe</service>
+      </loginTicketRequest>`;
+
       const p7 = forge.pkcs7.createSignedData();
       p7.content = forge.util.createBuffer(tra, 'utf8');
       p7.addCertificate(cert);
@@ -53,40 +52,56 @@ export default async function handler(req, res) {
       });
       p7.sign();
       cms = forge.util.encode64(forge.asn1.toDer(p7.toAsn1()).getBytes());
-      console.log('✅ FIRMA CMS GENERADA');
-    } catch (signErr) {
+      console.log('--- 🛡️ DIAGNÓSTICO: FIRMA CMS EXITOSA ---');
+    } catch (err) {
       return res.status(200).json({ 
         online: false, 
-        message: 'Fallo al firmar con Private Key', 
-        detail: signErr.message 
+        message: 'ERROR DE CARGA: Vercel deforma tus secretos al leerlos.',
+        detail: `Fallo en el servidor al intentar firmar: ${err.message}` 
       });
     }
 
-    // 2. Comunicar con AFIP (Intento en Producción Real)
-    console.log('--- 🚀 LLAMANDO AD AFIP WSAA PROD ---');
+    // 3. Consulta a AFIP (Preguntarle qué problema tiene)
     const soapMsg = `<?xml version="1.0" encoding="UTF-8"?>
     <SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/" xmlns:ns1="http://wsaa.afip.gov.ar/ws/services/LoginCms">
       <SOAP-ENV:Body><ns1:loginCms><ns1:in0>${cms}</ns1:in0></ns1:loginCms></SOAP-ENV:Body>
     </SOAP-ENV:Envelope>`;
 
-    const response = await axios.post('https://wsaa.afip.gov.ar/ws/services/LoginCms', soapMsg, {
-      headers: { 'Content-Type': 'text/xml;charset=UTF-8' },
-      timeout: 15000
-    });
+    try {
+      const response = await axios.post('https://wsaa.afip.gov.ar/ws/services/LoginCms', soapMsg, {
+        headers: { 'Content-Type': 'text/xml;charset=UTF-8' },
+        timeout: 10000
+      });
 
-    if (response.data.includes('token')) {
-      return res.status(200).json({ online: true, message: '¡Handshake Exitoso!' });
-    } else if (response.data.includes('error')) {
-      return res.status(200).json({ online: false, message: 'AFIP rechazó credenciales', detail: response.data.substring(0, 200) });
-    } else {
-      return res.status(200).json({ online: false, message: 'Respuesta inesperada de AFIP' });
+      if (response.data.includes('token')) {
+        return res.status(200).json({ 
+          online: true, 
+          message: '¡CONEXIÓN EXITOSA! AFIP Reconoció tus credenciales.' 
+        });
+      } else {
+        // Extraer el error real de AFIP del XML
+        const errorDetail = response.data.match(/<faultstring>(.*?)<\/faultstring>/)?.[1] || 'AFIP Rechazó tus llaves';
+        return res.status(200).json({ 
+          online: false, 
+          message: 'AFIP RECHAZÓ EL PERMISO',
+          detail: `Respuesta Real de AFIP: "${errorDetail}"`
+        });
+      }
+    } catch (err) {
+      if (err.response) {
+         return res.status(200).json({ 
+           online: false, 
+           message: 'AFIP NO ESTA AUTORIZANDO TU CUIT',
+           detail: `AFIP nos contestó un error de permiso: ${err.response.status}.`
+         });
+      }
+      throw err;
     }
 
   } catch (err) {
-    console.error('ERROR AFIP API:', err.message);
     return res.status(200).json({ 
       online: false, 
-      message: 'Fallo Handshake AFIP',
+      message: 'Mantenimiento en AFIP o Timeout',
       detail: err.message
     });
   }
