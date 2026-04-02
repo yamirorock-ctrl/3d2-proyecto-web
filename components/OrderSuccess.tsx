@@ -31,8 +31,8 @@ const OrderSuccess: React.FC = () => {
 
         // Obtener orden
         const foundOrder = await getOrderById(orderId);
-        if (foundOrder) {
-          setOrder(foundOrder);
+        if (foundOrder.data) {
+          setOrder(foundOrder.data);
         }
 
         // Limpiar carrito solo si el estado viene aprobado

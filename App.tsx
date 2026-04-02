@@ -46,7 +46,7 @@ const MainLayout: React.FC = () => {
   } = useCart();
   
   // useAuth for checking admin or user state if needed at App level
-  const { } = useAuth();
+  useAuth();
   const { 
     updateStock, 
     refreshProducts, 
@@ -163,8 +163,6 @@ const MainLayout: React.FC = () => {
          onConfirmOrder={handleConfirmOrder}
        />
 
-       <ChatAssistant products={products} />
-       
        <ChatAssistant products={products} />
        
        <Footer />

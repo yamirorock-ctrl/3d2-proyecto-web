@@ -94,7 +94,7 @@ const Checkout: React.FC<CheckoutProps> = ({ cart, onClearCart }) => {
   // Calcular costo de envío cuando cambia el método
   useEffect(() => {
     const updateShippingCost = async () => {
-      if (!shippingMethod || shippingMethod === '') {
+      if (!shippingMethod) {
         setShippingCost(0);
         return;
       }

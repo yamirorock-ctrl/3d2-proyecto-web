@@ -20,14 +20,15 @@ export default function BotToggle() {
   const fetchStatus = async () => {
     const { data, error } = await supabase
       .from("app_settings")
-      .select("bot_enabled")
-      .eq("id", 1)
+      .select("value")
+      .eq("key", "bot_enabled")
       .single();
 
-    if (data) {
-      setIsEnabled(data.bot_enabled);
+    if (data && data.value) {
+      setIsEnabled(data.value.enabled);
     } else {
-      console.warn("Table app_settings not found or empty (run SQL script first)");
+      console.warn("Conf 'bot_enabled' no encontrada en app_settings. Se asume APAGADO por defecto.");
+      setIsEnabled(false);
     }
   };
 
@@ -37,14 +38,18 @@ export default function BotToggle() {
     const newState = !isEnabled;
 
     try {
+      // Upsert para asegurar que la fila existe si no estaba
       const { error } = await supabase
         .from("app_settings")
-        .update({ bot_enabled: newState })
-        .eq("id", 1);
+        .upsert({ 
+          key: "bot_enabled", 
+          value: { enabled: newState },
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'key' });
 
       if (error) throw error;
       setIsEnabled(newState);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Failed to toggle bot:", err);
       alert("Error al cambiar estado: " + err.message);
     } finally {

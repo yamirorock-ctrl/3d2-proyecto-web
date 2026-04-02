@@ -10,6 +10,7 @@ export const afipService = {
   
   getAfip() {
     return new Afip({
+      access_token: process.env.VITE_AFIP_ACCESS_TOKEN || "",
       CUIT: parseInt(process.env.VITE_AFIP_CUIT || AFIP_CUIT),
       cert: process.env.VITE_AFIP_CERT || "",
       key: process.env.VITE_AFIP_KEY || "",

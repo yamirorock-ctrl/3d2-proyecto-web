@@ -92,7 +92,7 @@ export interface CartItem extends Product {
 
 export type OrderStatus = 'pending' | 'payment_pending' | 'paid' | 'preparing' | 'shipped' | 'delivered' | 'cancelled' | 'to_coordinate' | 'processing' | 'completed';
 
-export type ShippingMethod = 'moto' | 'correo' | 'retiro' | 'to_coordinate';
+export type ShippingMethod = 'moto' | 'correo' | 'retiro' | 'to_coordinate' | 'caba' | 'gba';
 
 export interface OrderItem {
   product_id: number;

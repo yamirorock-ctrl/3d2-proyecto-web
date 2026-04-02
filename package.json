@@ -10,6 +10,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@afipsdk/afip.js": "^1.2.3",
     "@emailjs/browser": "^4.4.1",
     "@fontsource/inter": "^5.2.8",
     "@google/generative-ai": "^0.24.1",

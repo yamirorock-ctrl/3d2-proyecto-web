@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { X, CreditCard, Banknote, DollarSign, MapPin, FileText, CheckCircle } from 'lucide-react';
-import { CartItem, Order } from '../types';
+import { CartItem, Order, ShippingMethod } from '../types';
 
 interface CheckoutModalProps {
   isOpen: boolean;
@@ -25,7 +25,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
     address: '',
     notes: '',
     paymentMethod: 'transferencia' as 'transferencia' | 'efectivo' | 'mercadopago',
-    shippingMethod: 'retiro' as 'caba' | 'gba' | 'retiro',
+    shippingMethod: 'retiro' as ShippingMethod,
     shippingCost: 0
   });
 
