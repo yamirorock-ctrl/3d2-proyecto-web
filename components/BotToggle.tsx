@@ -1,13 +1,6 @@
-
 import React, { useEffect, useState } from "react";
-import { createClient } from "@supabase/supabase-js";
+import { supabase } from "../services/supabaseService";
 // using custom UI
-// Using custom HTML checkbox for now or simple buttons.
-
-const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL,
-  import.meta.env.VITE_SUPABASE_ANON_TOKEN
-);
 
 export default function BotToggle() {
   const [isEnabled, setIsEnabled] = useState<boolean | null>(null);
@@ -18,8 +11,7 @@ export default function BotToggle() {
   }, []);
 
   const fetchStatus = async () => {
-    const { data, error } = await supabase
-      .from("app_settings")
+    const { data, error } = await (supabase.from("app_settings") as any)
       .select("value")
       .eq("key", "bot_enabled")
       .single();
@@ -39,8 +31,7 @@ export default function BotToggle() {
 
     try {
       // Upsert para asegurar que la fila existe si no estaba
-      const { error } = await supabase
-        .from("app_settings")
+      const { error } = await (supabase.from("app_settings") as any)
         .upsert({ 
           key: "bot_enabled", 
           value: { enabled: newState },
