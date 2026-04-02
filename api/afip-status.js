@@ -2,22 +2,22 @@ const forge = require('node-forge');
 const axios = require('axios');
 
 export default async function handler(req, res) {
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
   try {
     const certRaw = process.env.AFIP_CERTIFICATE || '';
     const keyRaw = process.env.AFIP_PRIVATE_KEY || '';
 
     if (!certRaw || !keyRaw) {
-      return res.status(200).json({ online: false, message: 'Faltan credenciales PEM en Vercel' });
+      return res.status(200).json({ 
+        online: false, 
+        message: 'Faltan credenciales PEM en Vercel', 
+        now: new Date().toISOString() 
+      });
     }
 
-    // DECODIFICADOR ULTRA-ROBUSTO (Blindaje contra Vercel String Escaping)
     const decodeVercelPEM = (raw, type) => {
-      // 1. Limpiar espacios y comillas accidentales
       let cleaned = raw.trim();
-      // 2. Convertir la doble barra \\n (que vimos en el espía) en un salto de línea real \n
       cleaned = cleaned.split('\\\\n').join('\n').split('\\n').join('\n');
-      
-      // 3. Si no tiene el formato PEM, forzarlo (Protección extra)
       if (!cleaned.includes('-----BEGIN')) {
         const header = `-----BEGIN ${type}-----`;
         const footer = `-----END ${type}-----`;
@@ -29,7 +29,6 @@ export default async function handler(req, res) {
     const cert = decodeVercelPEM(certRaw, 'CERTIFICATE');
     const key = decodeVercelPEM(keyRaw, 'RSA PRIVATE KEY');
 
-    // TEST DE FIRMA (Diagnóstico Interno)
     const tra = `<?xml version="1.0" encoding="UTF-8"?>
     <loginTicketRequest version="1.0">
       <header>
@@ -52,7 +51,6 @@ export default async function handler(req, res) {
     p7.sign();
     const cms = forge.util.encode64(forge.asn1.toDer(p7.toAsn1()).getBytes());
 
-    // CONSULTA A AFIP PRODUCCIÓN
     const soapMsg = `<?xml version="1.0" encoding="UTF-8"?>
     <SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/" xmlns:ns1="http://wsaa.afip.gov.ar/ws/services/LoginCms">
       <SOAP-ENV:Body><ns1:loginCms><ns1:in0>${cms}</ns1:in0></ns1:loginCms></SOAP-ENV:Body>
@@ -64,17 +62,27 @@ export default async function handler(req, res) {
     });
 
     if (response.data.includes('token')) {
-      return res.status(200).json({ online: true, message: '¡CONEXIÓN EXITOSA!' });
+      return res.status(200).json({ 
+        online: true, 
+        message: '¡CONEXIÓN EXITOSA!', 
+        now: new Date().toISOString() 
+      });
     } else {
       const fault = response.data.match(/<faultstring>(.*?)<\/faultstring>/)?.[1] || 'Error en AFIP';
-      return res.status(200).json({ online: false, message: 'AFIP Rechazó Credenciales', detail: fault });
+      return res.status(200).json({ 
+        online: false, 
+        message: 'AFIP Rechazó Credenciales', 
+        detail: fault, 
+        now: new Date().toISOString() 
+      });
     }
 
   } catch (err) {
     return res.status(200).json({ 
       online: false, 
       message: 'Fallo Handshake Proceso',
-      detail: err.message
+      detail: err.message,
+      now: new Date().toISOString()
     });
   }
 }
