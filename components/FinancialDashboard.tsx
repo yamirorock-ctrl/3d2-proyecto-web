@@ -203,12 +203,14 @@ const FinancialDashboard: React.FC<Props> = ({ orders, products, onEditProduct }
     let totalHours = 0; // Total de horas máquina del mes
     
     monthlyOrders.forEach(o => {
-        const isML = o.notes && o.notes.includes('Venta automática desde MercadoLibre');
-        const netTotal = isML ? getNetFromNotes(o.notes, o.total || 0) : (o.total || 0);
+        const isML = !!(o.notes && o.notes.includes('Venta automática desde MercadoLibre'));
+        // El bruto es siempre el total que pagó el cliente (lo que ve AFIP)
+        const brutoTotal = o.total || 0;
+        // El neto es lo que queda después de comisiones/envío (lo que entra a caja)
+        const netTotal = isML ? getNetFromNotes(o.notes, brutoTotal) : brutoTotal;
         
-        salesTotal += netTotal;
+        salesTotal += brutoTotal;
 
-        // Si es venta automática de ML, la plata siempre está "a liquidar" y no físicamente en caja inmediata.
         if (isML) {
            if (!o.notes.includes('[LIQUIDADO]')) {
                mlPending += netTotal;
@@ -235,16 +237,43 @@ const FinancialDashboard: React.FC<Props> = ({ orders, products, onEditProduct }
         }
     });
 
-    const income = salesTotal - debtTotal - mlPending; // Ingreso Real Fisico (Caja)
-    // El profit lo calculamos con TODAS las ventas netas del mes (Caja + ML a liquidar)
-    const netRevenue = salesTotal - debtTotal; 
-    const outcome = monthlyExpenses.reduce((sum, e) => sum + (e.amount || 0), 0);
-    const profit = netRevenue - outcome;
-    const margin = netRevenue > 0 ? ((profit / netRevenue) * 100) : 0;
+    // El ingreso REAL en mano hoy (Caja) se compone de:
+    // 1. Ventas manuales cobradas (manualSales - debtTotal)
+    // 2. Ventas de ML que ya fueron liquidadas (marcadas con [LIQUIDADO])
+    let manualSalesTotal = 0;
+    let mlLiquidatedTotal = 0;
+    
+    monthlyOrders.forEach(o => {
+      const isML = !!(o.notes && o.notes.includes('Venta automática desde MercadoLibre'));
+      const brutoTotal = o.total || 0;
+      const netTotal = isML ? getNetFromNotes(o.notes, brutoTotal) : brutoTotal;
+      
+      if (isML) {
+        if (o.notes?.includes('[LIQUIDADO]')) {
+           mlLiquidatedTotal += netTotal;
+        }
+      } else {
+        manualSalesTotal += netTotal;
+      }
+    });
 
+    const income = (manualSalesTotal - debtTotal) + mlLiquidatedTotal;
+    // El lucro (profit) considera lo facturado neto de todo el mes
+    const netRevenue = (manualSalesTotal - debtTotal) + (salesTotal - manualSalesTotal) - (salesTotal - (manualSalesTotal + mlPending + mlLiquidatedTotal)); 
+    
+    // Mejor simplificar: Profit = (Ingresos Netos Totales del Mes) - Gastos
+    const totalNetRevenue = (manualSalesTotal - debtTotal) + (salesTotal - manualSalesTotal) - (salesTotal - (manualSalesTotal + mlPending + mlLiquidatedTotal));
+    // Refactorizo el profit para que sea: (Ventas Netas Totales - Gastos)
+    
+    // El 'invoicedTotal' ahora usa el Bruto para ser legalmente correcto ante la barra de progreso
     const invoicedTotal = monthlyOrders
         .filter(o => {
-          if (o.status === 'cancelled' || !o.is_invoiced) return false;
+          if (o.status === 'cancelled') return false;
+          const isML = !!(o.notes && o.notes.includes('Venta automática desde MercadoLibre'));
+          const isManualInvoiced = !!o.is_invoiced;
+          
+          if (!(isML || isManualInvoiced)) return false;
+
           if (fiscalConfig?.start_date) {
             const orderDate = new Date((o as any).timestamp || (o as any).created_at);
             const startDate = new Date(fiscalConfig.start_date);
@@ -254,8 +283,12 @@ const FinancialDashboard: React.FC<Props> = ({ orders, products, onEditProduct }
         })
         .reduce((sum, o) => sum + (o.total || 0), 0);
 
+    const outcome = monthlyExpenses.reduce((sum, e) => sum + (e.amount || 0), 0);
+    const profit = totalNetRevenue - outcome;
+    const margin = totalNetRevenue > 0 ? ((profit / totalNetRevenue) * 100) : 0;
+
     return { salesTotal, debtTotal, mlPending, income, outcome, profit, margin, totalHours, invoicedTotal, retailTotal, packTotal, wholesaleTotal };
-  }, [monthlyOrders, monthlyExpenses, products]);
+  }, [monthlyOrders, monthlyExpenses, products, fiscalConfig]);
 
   // Handlers Gastos
   const handleAddExpense = async () => {
