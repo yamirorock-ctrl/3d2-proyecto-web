@@ -100,6 +100,7 @@ export interface OrderItem {
   price: number;
   quantity: number;
   image: string;
+  sale_type?: 'retail' | 'pack' | 'wholesale'; // Minorista, Pack o Mayorista
   selected_options?: {
     model?: string;
     color?: string;

@@ -11,6 +11,13 @@ export interface MLConfig {
   installment_12: number;
 }
 
+export interface FiscalConfig {
+  monotributo_category: string;
+  monthly_limit: number;
+  is_active: boolean;
+  start_date?: string;
+}
+
 const DEFAULT_CONFIG: MLConfig = {
   classic_fee: 0.1435,
   fixed_fee_unit: 2950,
@@ -20,6 +27,13 @@ const DEFAULT_CONFIG: MLConfig = {
   installment_6: 0.1488,
   installment_9: 0.2035,
   installment_12: 0.2333
+};
+
+const DEFAULT_FISCAL: FiscalConfig = {
+    monotributo_category: 'A',
+    monthly_limit: 537500,
+    is_active: true,
+    start_date: '2026-04-01'
 };
 
 export async function getMLConfig(): Promise<MLConfig> {
@@ -32,7 +46,6 @@ export async function getMLConfig(): Promise<MLConfig> {
       .single();
 
     if (error || !data) {
-      console.warn('[configService] Usando valores por defecto:', error?.message);
       return DEFAULT_CONFIG;
     }
     return { ...DEFAULT_CONFIG, ...data.value };
@@ -55,7 +68,32 @@ export async function saveMLConfig(config: MLConfig): Promise<boolean> {
     if (error) throw error;
     return true;
   } catch (e) {
-    console.error('[configService] Error guardando config:', e);
     return false;
   }
+}
+
+export async function getFiscalConfig(): Promise<FiscalConfig> {
+    const client = getClient();
+    try {
+        const { data, error } = await (client.from('app_settings') as any).select('value').eq('key', 'fiscal_config').single();
+        if (error || !data) return DEFAULT_FISCAL;
+        return { ...DEFAULT_FISCAL, ...data.value };
+    } catch (e) {
+        return DEFAULT_FISCAL;
+    }
+}
+
+export async function saveFiscalConfig(config: FiscalConfig): Promise<boolean> {
+    const client = getClient();
+    try {
+        const { error } = await (client.from('app_settings') as any).upsert({ 
+            key: 'fiscal_config', 
+            value: config, 
+            updated_at: new Date().toISOString()
+        }, { onConflict: 'key' });
+        if (error) throw error;
+        return true;
+    } catch (e) {
+        return false;
+    }
 }

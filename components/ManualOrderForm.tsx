@@ -190,6 +190,7 @@ export const ManualOrderForm: React.FC<Props> = ({ products, initialOrder, onClo
       price: unitPrice,
       quantity: quantity,
       image: selectedProduct?.image || selectedProduct?.images?.[0]?.url || 'https://via.placeholder.com/150?text=Personalizado',
+      sale_type: saleType,
       consumables: isCustomProductMode && customConsumables.length > 0 ? [...customConsumables] : undefined
     };
 
@@ -437,6 +438,31 @@ export const ManualOrderForm: React.FC<Props> = ({ products, initialOrder, onClo
                           />
                         </div>
                       </div>
+                   </div>
+
+                   {/* Selectores de Tipo de Venta para Personalizado */}
+                   <div className="flex gap-2 p-1 bg-blue-100/50 rounded-lg">
+                        <button 
+                            type="button"
+                            onClick={() => setSaleType('retail')}
+                            className={`flex-1 py-1 text-[10px] font-bold rounded-md transition-all ${saleType === 'retail' ? 'bg-white text-blue-700 shadow-xs' : 'text-blue-400 hover:text-blue-600'}`}
+                        >
+                            Minorista
+                        </button>
+                        <button 
+                            type="button"
+                            onClick={() => setSaleType('pack')}
+                            className={`flex-1 py-1 text-[10px] font-bold rounded-md transition-all ${saleType === 'pack' ? 'bg-white text-blue-700 shadow-xs' : 'text-blue-400 hover:text-blue-600'}`}
+                        >
+                            Pack
+                        </button>
+                        <button 
+                            type="button"
+                            onClick={() => setSaleType('wholesale')}
+                            className={`flex-1 py-1 text-[10px] font-bold rounded-md transition-all ${saleType === 'wholesale' ? 'bg-white text-blue-700 shadow-xs' : 'text-blue-400 hover:text-blue-600'}`}
+                        >
+                            Mayorista
+                        </button>
                    </div>
                    
                    {/* Sección Consumibles / Insumos Dinámicos */}

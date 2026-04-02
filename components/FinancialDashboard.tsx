@@ -3,10 +3,11 @@ import { Order, Expense, RawMaterial, Product } from '../types';
 import { 
   TrendingUp, TrendingDown, DollarSign, Calendar, Plus, Trash2, 
   AlertCircle, CheckCircle, Save, X, Filter, Download, Package, Edit2,
-  Settings, Clock, Calculator
+  Settings, Clock, Calculator, PieChart
 } from 'lucide-react';
 import SmartImage from './SmartImage';
 import { getExpenses, addExpense, updateExpense, deleteExpense, getMaterials, addMaterial, updateMaterial, deleteMaterial } from '../services/supabaseService';
+import { getFiscalConfig, FiscalConfig } from '../services/configService';
 import { toast } from 'sonner';
 
 interface Props {
@@ -43,6 +44,7 @@ const MinusCircleIcon = ({ className }: { className?: string }) => (
 const FinancialDashboard: React.FC<Props> = ({ orders, products, onEditProduct }) => {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [materials, setMaterials] = useState<RawMaterial[]>([]);
+  const [fiscalConfig, setFiscalConfig] = useState<FiscalConfig | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
@@ -133,7 +135,11 @@ const FinancialDashboard: React.FC<Props> = ({ orders, products, onEditProduct }
 
   const loadData = async () => {
     setLoading(true);
-    const [expensesRes, materialsRes] = await Promise.all([getExpenses(), getMaterials()]);
+    const [expensesRes, materialsRes, fiscalRes] = await Promise.all([
+        getExpenses(), 
+        getMaterials(),
+        getFiscalConfig()
+    ]);
     
     if (expensesRes.error) toast.error('Error cargando gastos');
     else setExpenses(expensesRes.data as Expense[] || []);
@@ -141,6 +147,7 @@ const FinancialDashboard: React.FC<Props> = ({ orders, products, onEditProduct }
     if (materialsRes.error) toast.error('Error cargando stock');
     else setMaterials(materialsRes.data as RawMaterial[] || []);
     
+    setFiscalConfig(fiscalRes);
     setLoading(false);
   };
 
@@ -190,6 +197,9 @@ const FinancialDashboard: React.FC<Props> = ({ orders, products, onEditProduct }
     let salesTotal = 0; // Lo facturado total
     let debtTotal = 0;  // Lo que falta cobrar
     let mlPending = 0;  // A liquidar en ML
+    let retailTotal = 0;
+    let packTotal = 0;
+    let wholesaleTotal = 0;
     let totalHours = 0; // Total de horas máquina del mes
     
     monthlyOrders.forEach(o => {
@@ -207,9 +217,15 @@ const FinancialDashboard: React.FC<Props> = ({ orders, products, onEditProduct }
            debtTotal += getDebt(o.notes);
         }
 
-        // Calcular horas máquina consumidas por esta orden
+        // Calcular distribución por tipo de venta
         if (o.items && Array.isArray(o.items)) {
           o.items.forEach(item => {
+            const itemTotal = item.price * item.quantity;
+            const type = (item as any).sale_type || 'retail';
+            if (type === 'pack') packTotal += itemTotal;
+            else if (type === 'wholesale') wholesaleTotal += itemTotal;
+            else retailTotal += itemTotal;
+
             // Buscamos el producto por ID (numeric o string)
             const prod = products.find(p => p.id.toString() === item.product_id?.toString());
             if (prod && prod.printingTime) {
@@ -227,10 +243,18 @@ const FinancialDashboard: React.FC<Props> = ({ orders, products, onEditProduct }
     const margin = netRevenue > 0 ? ((profit / netRevenue) * 100) : 0;
 
     const invoicedTotal = monthlyOrders
-        .filter(o => o.status !== 'cancelled' && o.is_invoiced)
+        .filter(o => {
+          if (o.status === 'cancelled' || !o.is_invoiced) return false;
+          if (fiscalConfig?.start_date) {
+            const orderDate = new Date((o as any).timestamp || (o as any).created_at);
+            const startDate = new Date(fiscalConfig.start_date);
+            return orderDate >= startDate;
+          }
+          return true;
+        })
         .reduce((sum, o) => sum + (o.total || 0), 0);
 
-    return { salesTotal, debtTotal, mlPending, income, outcome, profit, margin, totalHours, invoicedTotal };
+    return { salesTotal, debtTotal, mlPending, income, outcome, profit, margin, totalHours, invoicedTotal, retailTotal, packTotal, wholesaleTotal };
   }, [monthlyOrders, monthlyExpenses, products]);
 
   // Handlers Gastos
@@ -544,15 +568,34 @@ const FinancialDashboard: React.FC<Props> = ({ orders, products, onEditProduct }
           <span className="text-xs bg-white/20 px-2 py-0.5 rounded mt-2 inline-block">Margen: {financials.margin.toFixed(1)}%</span>
         </div>
 
-        <div className="p-6 rounded-xl bg-linear-to-br from-indigo-700 to-purple-800 text-white shadow-lg relative overflow-hidden">
-          <div className="absolute top-0 right-0 p-4 opacity-20"><Clock size={48} /></div>
-          <p className="text-indigo-100 text-sm font-medium mb-1">Carga de Trabajo</p>
-          <h3 className="text-3xl font-bold">{Math.round(financials.totalHours)} <span className="text-lg font-normal">hs</span></h3>
-          <span className="text-xs bg-black/20 px-2 py-0.5 rounded mt-2 inline-block">Producidas este mes</span>
+        <div className="p-6 rounded-xl bg-white border border-slate-200 shadow-sm relative overflow-hidden flex flex-col justify-between group">
+          <div className="absolute top-0 right-0 p-4 text-slate-100 group-hover:text-indigo-50 transition-colors"><PieChart size={48} /></div>
+          <div>
+              <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mb-2">Canales de Venta</p>
+              <div className="space-y-2">
+                 <div className="flex justify-between items-center text-xs">
+                    <span className="text-slate-500 flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-500"></span> Minorista</span>
+                    <span className="font-bold text-slate-700">${financials.retailTotal.toLocaleString('es-AR')}</span>
+                 </div>
+                 <div className="flex justify-between items-center text-xs">
+                    <span className="text-slate-500 flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-blue-500"></span> Packs</span>
+                    <span className="font-bold text-slate-700">${financials.packTotal.toLocaleString('es-AR')}</span>
+                 </div>
+                 <div className="flex justify-between items-center text-xs">
+                    <span className="text-slate-500 flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-purple-500"></span> Mayorista</span>
+                    <span className="font-bold text-slate-700">${financials.wholesaleTotal.toLocaleString('es-AR')}</span>
+                 </div>
+              </div>
+          </div>
+          <div className="mt-4 pt-3 border-t border-slate-100 flex justify-between items-end">
+             <span className="text-[10px] font-bold text-slate-400 uppercase">Carga Trabajo</span>
+             <span className="text-sm font-black text-slate-600">{Math.round(financials.totalHours)} hs</span>
+          </div>
         </div>
       </div>
 
-      {/* MONOTRIBUTO MONITORING - NUEVO */}
+      {/* MONOTRIBUTO MONITORING - DINÁMICO */}
+      {fiscalConfig?.is_active && (
       <div className="bg-white rounded-xl border border-emerald-200 p-6 shadow-sm mb-8 relative overflow-hidden group">
          <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-50 rounded-full -mr-16 -mt-16 group-hover:scale-110 transition-transform duration-700 opacity-50" />
          <div className="relative flex flex-col md:flex-row md:items-center justify-between gap-6">
@@ -563,7 +606,7 @@ const FinancialDashboard: React.FC<Props> = ({ orders, products, onEditProduct }
                   </div>
                   <div>
                     <h3 className="text-lg font-black text-slate-800 tracking-tight">Proyección Monotributo</h3>
-                    <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">Control de Facturación (Categoría A)</p>
+                    <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">Control de Facturación (Categoría {fiscalConfig.monotributo_category})</p>
                   </div>
                </div>
                
@@ -576,15 +619,15 @@ const FinancialDashboard: React.FC<Props> = ({ orders, products, onEditProduct }
                      <div className="w-full bg-slate-100 h-3 rounded-full overflow-hidden border border-slate-200">
                         <div 
                            className={`h-full rounded-full transition-all duration-1000 ${
-                             (financials.invoicedTotal / 166000) > 0.9 ? 'bg-rose-500' : 
-                             (financials.invoicedTotal / 166000) > 0.7 ? 'bg-amber-500' : 'bg-emerald-500'
+                             (financials.invoicedTotal / fiscalConfig.monthly_limit) > 0.9 ? 'bg-rose-500' : 
+                             (financials.invoicedTotal / fiscalConfig.monthly_limit) > 0.7 ? 'bg-amber-500' : 'bg-emerald-500'
                            }`}
-                           style={{ width: `${Math.min(100, (financials.invoicedTotal / 166000) * 100)}%` }}
+                           style={{ width: `${Math.min(100, (financials.invoicedTotal / fiscalConfig.monthly_limit) * 100)}%` }}
                         />
                      </div>
                      <div className="flex justify-between mt-1 text-[10px] font-bold text-slate-400 uppercase">
                         <span>$0</span>
-                        <span>Tope Mensual Est.: $166.000 (A)</span>
+                        <span>Tope Mensual Categoría: ${fiscalConfig.monthly_limit.toLocaleString('es-AR')}</span>
                      </div>
                   </div>
                </div>
@@ -593,7 +636,7 @@ const FinancialDashboard: React.FC<Props> = ({ orders, products, onEditProduct }
             <div className="grid grid-cols-2 gap-4 md:w-80">
                <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
                   <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Cupo Disponible</p>
-                  <p className="text-lg font-black text-slate-700">${Math.max(0, 166000 - financials.invoicedTotal).toLocaleString('es-AR')}</p>
+                  <p className="text-lg font-black text-slate-700">${Math.max(0, fiscalConfig.monthly_limit - financials.invoicedTotal).toLocaleString('es-AR')}</p>
                </div>
                <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
                   <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Ventas sin Factura</p>
@@ -603,20 +646,24 @@ const FinancialDashboard: React.FC<Props> = ({ orders, products, onEditProduct }
 
             <div className="flex flex-col gap-2">
                <div className={`px-4 py-2 rounded-lg text-center border-2 ${
-                 (financials.invoicedTotal / 166000) > 0.8 ? 'bg-rose-50 border-rose-200 text-rose-700' : 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                 (financials.invoicedTotal / fiscalConfig.monthly_limit) > 0.8 ? 'bg-rose-50 border-rose-200 text-rose-700' : 'bg-emerald-50 border-emerald-200 text-emerald-700'
                }`}>
                   <p className="text-[10px] font-bold uppercase">Estado Fiscal</p>
                   <p className="text-xs font-black">
-                     {(financials.invoicedTotal / 166000) > 0.9 ? '⚠️ CRÍTICO' : 
-                      (financials.invoicedTotal / 166000) > 0.7 ? '⚡ ATENCIÓN' : '✅ SEGURO'}
+                     {(financials.invoicedTotal / fiscalConfig.monthly_limit) > 0.9 ? '⚠️ CRÍTICO' : 
+                      (financials.invoicedTotal / fiscalConfig.monthly_limit) > 0.7 ? '⚡ ATENCIÓN' : '✅ SEGURO'}
                   </p>
                </div>
-               <p className="text-[9px] text-slate-400 text-center max-w-[120px] leading-tight">
-                 * Basado en topes vigentes Ene-2024 para Cat. A.
-               </p>
+               <button 
+                  onClick={() => loadData()}
+                  className="text-[9px] text-slate-400 hover:text-indigo-600 transition-colors uppercase font-bold text-center underline decoration-dotted"
+               >
+                 Actualizar Datos
+               </button>
             </div>
          </div>
       </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         

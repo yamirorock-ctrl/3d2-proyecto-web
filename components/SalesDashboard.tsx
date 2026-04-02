@@ -1,7 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 import { Order, Payment, OrderStatus } from '../types';
-import { TrendingUp, Package, DollarSign, Clock, Download, Calendar, CheckCircle, Loader, XCircle, Trash2, RefreshCw, Truck, Edit, AlertCircle, Plus, Wallet, CreditCard, Banknote, History, Printer, Calculator } from 'lucide-react';
+import { getFiscalConfig, FiscalConfig } from '../services/configService';
+import { TrendingUp, Package, DollarSign, Clock, Download, Calendar, CheckCircle, Loader, XCircle, Trash2, RefreshCw, Truck, Edit, AlertCircle, Plus, Wallet, CreditCard, Banknote, History, Printer, Calculator, ShieldCheck, Info } from 'lucide-react';
 
 interface Props {
   orders: Order[];
@@ -26,6 +27,11 @@ const SalesDashboard: React.FC<Props> = ({ orders, payments, onUpdateStatus, onE
   const [editingInvoicingId, setEditingInvoicingId] = useState<string | null>(null);
   const [newPayAmount, setNewPayAmount] = useState<string>('');
   const [newPayMethod, setNewPayMethod] = useState<Payment['method']>('efectivo');
+  const [fiscalConfig, setFiscalConfig] = useState<FiscalConfig | null>(null);
+
+  React.useEffect(() => {
+    getFiscalConfig().then(setFiscalConfig);
+  }, []);
   
   // Billing local state
   const [billDni, setBillDni] = useState('');
@@ -109,8 +115,24 @@ const SalesDashboard: React.FC<Props> = ({ orders, payments, onUpdateStatus, onE
     const totalRealIncomeFromPayments = filteredPayments.reduce((sum, p) => sum + (p.amount || 0), 0);
     
     // 3. Monotributo Metrics
-    const invoicedOrders = activeOrders.filter(o => o.is_invoiced);
-    const pendingInvoiceOrders = activeOrders.filter(o => !o.is_invoiced);
+    const invoicingStartDate = fiscalConfig?.start_date ? new Date(fiscalConfig.start_date) : new Date('2026-04-01');
+    
+    const invoicedOrders = activeOrders.filter(o => {
+      const orderDate = new Date((o as any).timestamp || (o as any).created_at);
+      if (orderDate < invoicingStartDate) return false;
+      
+      const isML = o.notes?.includes('Venta automática desde MercadoLibre');
+      return o.is_invoiced || isML;
+    });
+
+    const pendingInvoiceOrders = activeOrders.filter(o => {
+      const orderDate = new Date((o as any).timestamp || (o as any).created_at);
+      if (orderDate < invoicingStartDate) return false;
+      
+      const isML = o.notes?.includes('Venta automática desde MercadoLibre');
+      return !o.is_invoiced && !isML;
+    });
+    
     const invoicedTotal = invoicedOrders.reduce((sum, o) => sum + (o.total || 0), 0);
     const pendingInvoiceTotal = pendingInvoiceOrders.reduce((sum, o) => sum + (o.total || 0), 0);
 
@@ -823,32 +845,44 @@ const SalesDashboard: React.FC<Props> = ({ orders, payments, onUpdateStatus, onE
                         </div>
                       ) : (
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-                          <div className="text-slate-600">
-                             <p className="text-[9px] uppercase font-bold text-slate-400 mb-0.5">DNI/CUIT Receptor</p>
-                             <p className="font-mono text-xs">{order.billing_dni_cuit || 'No registrado'}</p>
-                          </div>
-                          <div className="text-slate-600">
-                             <p className="text-[9px] uppercase font-bold text-slate-400 mb-0.5">Tipo de Factura</p>
-                             <p className="font-bold text-xs">{order.billing_type || 'Pendiente'}</p>
-                          </div>
-                          {order.invoice_number && (
-                            <div className="col-span-full bg-white p-2 rounded border border-dashed border-emerald-200 text-emerald-800">
-                               <p className="text-[9px] uppercase font-bold text-emerald-400 mb-0.5 text-center">Nº de Factura</p>
-                               <p className="font-mono text-sm font-black text-center">{order.invoice_number}</p>
+                          {order.notes?.includes('Venta automática desde MercadoLibre') ? (
+                            <div className="col-span-full bg-blue-50 border border-blue-200 p-3 rounded-lg flex items-center gap-3">
+                              <ShieldCheck className="text-blue-600 shrink-0" size={24} />
+                              <div>
+                                <p className="text-[10px] font-black text-blue-900 uppercase">Facturación Protegida</p>
+                                <p className="text-[11px] text-blue-700 leading-tight">Configurada en MercadoLibre. Factura generada automáticamente.</p>
+                              </div>
                             </div>
+                          ) : (
+                            <>
+                              <div className="text-slate-600">
+                                 <p className="text-[9px] uppercase font-bold text-slate-400 mb-0.5">DNI/CUIT Receptor</p>
+                                 <p className="font-mono text-xs">{order.billing_dni_cuit || 'No registrado'}</p>
+                              </div>
+                              <div className="text-slate-600">
+                                 <p className="text-[9px] uppercase font-bold text-slate-400 mb-0.5">Tipo de Factura</p>
+                                 <p className="font-bold text-xs">{order.billing_type || 'Pendiente'}</p>
+                              </div>
+                              {order.invoice_number && (
+                                <div className="col-span-full bg-white p-2 rounded border border-dashed border-emerald-200 text-emerald-800">
+                                   <p className="text-[9px] uppercase font-bold text-emerald-400 mb-0.5 text-center">Nº de Factura</p>
+                                   <p className="font-mono text-sm font-black text-center">{order.invoice_number}</p>
+                                </div>
+                              )}
+                              <button 
+                                onClick={() => {
+                                  setEditingInvoicingId(order.id);
+                                  setBillDni(order.billing_dni_cuit || '');
+                                  setBillType(order.billing_type || 'Consumidor Final');
+                                  setInvNum(order.invoice_number || '');
+                                }}
+                                className="col-span-full py-2 border-2 border-dashed border-slate-300 text-slate-500 rounded-lg hover:border-indigo-400 hover:text-indigo-600 hover:bg-indigo-50 transition-all flex items-center justify-center gap-2 text-xs font-bold"
+                              >
+                                 {order.is_invoiced ? <Plus size={14}/> : <Calculator size={14}/>}
+                                 {order.is_invoiced ? 'Editar Datos de Factura' : 'Registrar Facturación (AFIP)'}
+                              </button>
+                            </>
                           )}
-                          <button 
-                            onClick={() => {
-                              setEditingInvoicingId(order.id);
-                              setBillDni(order.billing_dni_cuit || '');
-                              setBillType(order.billing_type || 'Consumidor Final');
-                              setInvNum(order.invoice_number || '');
-                            }}
-                            className="col-span-full py-2 border-2 border-dashed border-slate-300 text-slate-500 rounded-lg hover:border-indigo-400 hover:text-indigo-600 hover:bg-indigo-50 transition-all flex items-center justify-center gap-2 text-xs font-bold"
-                          >
-                             {order.is_invoiced ? <Plus size={14}/> : <Calculator size={14}/>}
-                             {order.is_invoiced ? 'Editar Datos de Factura' : 'Registrar Facturación (AFIP)'}
-                          </button>
                         </div>
                       )}
                     </div>
