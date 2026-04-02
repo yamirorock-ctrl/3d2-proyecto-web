@@ -488,7 +488,28 @@ const AdminPage: React.FC<Props> = ({ products, onAdd, onEdit, onDelete }) => {
           </div>
         </div>
 
-        <div className="flex items-center gap-2 w-full sm:w-auto pb-0" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center gap-2 w-full sm:w-auto" onClick={(e) => e.stopPropagation()}>
+          {/* BOTÓN CONTROL PRINTY */}
+          <button 
+            onClick={async () => {
+              try {
+                // Obtenemos estado actual de localStorage o variable
+                const isOff = localStorage.getItem('printy_disabled') === 'true';
+                localStorage.setItem('printy_disabled', String(!isOff));
+                toast.success(`Printy (IA) ${!isOff ? 'Desactivado' : 'Activado'}`);
+                window.location.reload(); // Recarga para aplicar cambios en hooks
+              } catch (e) { toast.error('Error al cambiar estado de IA'); }
+            }}
+            className={`px-3 py-2 rounded-lg flex items-center gap-2 text-xs font-bold transition-all shadow-xs ${
+              localStorage.getItem('printy_disabled') === 'true' 
+              ? 'bg-rose-50 text-rose-600 border border-rose-100 hover:bg-rose-100' 
+              : 'bg-emerald-50 text-emerald-600 border border-emerald-100 hover:bg-emerald-100'
+            }`}
+          >
+            <Bot size={14} />
+            {localStorage.getItem('printy_disabled') === 'true' ? 'IA: OFF' : 'IA: ON'}
+          </button>
+
           {activeTab === 'products' && (
             <>
               <button onClick={() => setIsCreateOpen(true)} className="whitespace-nowrap px-4 py-2 bg-indigo-600 text-white rounded-lg flex items-center gap-2 text-sm font-medium hover:bg-indigo-700 shadow-md transform hover:-translate-y-0.5 transition-all">
