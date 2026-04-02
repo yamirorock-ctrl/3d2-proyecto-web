@@ -1,11 +1,14 @@
-const { createClient } = require('@supabase/supabase-js');
-const axios = require('axios');
+import { createClient } from '@supabase/supabase-js';
 
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.VITE_SUPABASE_ANON_TOKEN;
-const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-module.exports = async (req, res) => {
+let supabase = null;
+if (SUPABASE_URL && SUPABASE_ANON_KEY) {
+  supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+}
+
+export default async function handler(req, res) {
   const origin = req.headers.origin || "*";
   res.setHeader("Access-Control-Allow-Origin", origin);
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
@@ -13,6 +16,8 @@ module.exports = async (req, res) => {
 
   if (req.method === "OPTIONS") return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+
+  if (!supabase) return res.status(500).json({ error: 'Supabase not configured' });
 
   const { action, userId } = req.body;
   if (!action || !userId) return res.status(400).json({ error: 'Missing action or userId' });
@@ -39,23 +44,31 @@ module.exports = async (req, res) => {
     const expiresAt = new Date(dbToken.expires_at || 0);
     if (now >= expiresAt || (expiresAt - now < 1800000)) {
       console.log(`[ML Manager] Refreshing token for action: ${action}`);
-      const refreshResp = await axios.post('https://api.mercadolibre.com/oauth/token', {
-        grant_type: 'refresh_token',
-        client_id: String(client_id),
-        client_secret: String(client_secret),
-        refresh_token: dbToken.refresh_token
+      
+      const refreshResp = await fetch('https://api.mercadolibre.com/oauth/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          grant_type: 'refresh_token',
+          client_id: String(client_id),
+          client_secret: String(client_secret),
+          refresh_token: dbToken.refresh_token
+        })
       });
 
-      if (refreshResp.status === 200) {
-        accessToken = refreshResp.data.access_token;
-        const newExpiresAt = new Date(Date.now() + refreshResp.data.expires_in * 1000).toISOString();
+      if (refreshResp.ok) {
+        const refreshData = await refreshResp.json();
+        accessToken = refreshData.access_token;
+        const newExpiresAt = new Date(Date.now() + refreshData.expires_in * 1000).toISOString();
         await supabase.from('ml_tokens').update({
           access_token: accessToken,
-          refresh_token: refreshResp.data.refresh_token,
+          refresh_token: refreshData.refresh_token,
           expires_at: newExpiresAt,
           updated_at: new Date().toISOString()
         }).eq('id', dbToken.id);
       } else {
+         const errData = await refreshResp.json();
+         console.error("[ML Manager] Refresh error:", errData);
          return res.status(401).json({ error: 'Sesión de ML expirada. Por favor reconecta tu cuenta.' });
       }
     }
@@ -64,16 +77,18 @@ module.exports = async (req, res) => {
     switch (action) {
       case 'auto-link': {
         const mlUserId = dbToken.user_id;
-        const searchRes = await axios.get(`https://api.mercadolibre.com/users/${mlUserId}/items/search?status=active`, {
+        const searchRes = await fetch(`https://api.mercadolibre.com/users/${mlUserId}/items/search?status=active`, {
             headers: { Authorization: `Bearer ${accessToken}` }
         });
-        const mlIds = searchRes.data.results || [];
+        const searchData = await searchRes.json();
+        const mlIds = searchData.results || [];
         if (mlIds.length === 0) return res.status(200).json({ message: 'No hay publicaciones activas', linked: 0 });
 
-        const detailsRes = await axios.get(`https://api.mercadolibre.com/items?ids=${mlIds.join(',')}`, {
+        const detailsRes = await fetch(`https://api.mercadolibre.com/items?ids=${mlIds.join(',')}`, {
             headers: { Authorization: `Bearer ${accessToken}` }
         });
-        const mlItems = detailsRes.data.map(d => d.body).filter(Boolean);
+        const detailsData = await detailsRes.json();
+        const mlItems = detailsData.map(d => d.body).filter(Boolean);
         const { data: localProducts } = await supabase.from('products').select('id, name, ml_item_id');
 
         let linkedCount = 0;
@@ -108,13 +123,15 @@ module.exports = async (req, res) => {
         for (const prod of products) {
             if (!prod.ml_item_id) continue;
             try {
-                await axios.put(`https://api.mercadolibre.com/items/${prod.ml_item_id}`, 
-                    { available_quantity: Math.max(0, prod.stock || 0) },
-                    { headers: { Authorization: `Bearer ${accessToken}` } }
-                );
-                results.push({ id: prod.id, status: 'success' });
+                const mlResp = await fetch(`https://api.mercadolibre.com/items/${prod.ml_item_id}`, {
+                    method: 'PUT',
+                    headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ available_quantity: Math.max(0, prod.stock || 0) })
+                });
+                if (mlResp.ok) results.push({ id: prod.id, status: 'success' });
+                else throw new Error(mlResp.statusText);
             } catch (err) {
-                results.push({ id: prod.id, status: 'error', error: err.response?.data?.message || err.message });
+                results.push({ id: prod.id, status: 'error', error: err.message });
             }
         }
         return res.status(200).json({ summary: { total: products.length, success: results.filter(r => r.status === 'success').length, errors: results.filter(r => r.status === 'error').length }, results });
@@ -132,7 +149,7 @@ module.exports = async (req, res) => {
 
         const itemBody = {
             family_name: (product.ml_title || product.name).slice(0, 60),
-            category_id: product.ml_category_id || "MLA3530", // Simplificado para el manager masivo, en produccion usar prediccion si no hay
+            category_id: product.ml_category_id || "MLA3530",
             price,
             currency_id: "ARS",
             available_quantity: product.stock || 0,
@@ -147,18 +164,32 @@ module.exports = async (req, res) => {
             ]
         };
 
-        let mlResp;
         if (product.ml_item_id) {
-            mlResp = await axios.put(`https://api.mercadolibre.com/items/${product.ml_item_id}`, { price, available_quantity: product.stock, pictures }, { headers: { Authorization: `Bearer ${accessToken}` } });
+            await fetch(`https://api.mercadolibre.com/items/${product.ml_item_id}`, {
+                method: 'PUT',
+                headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ price, available_quantity: product.stock, pictures })
+            });
+            return res.status(200).json({ success: true, ml_id: product.ml_item_id });
         } else {
-            // Prediccion de categoria si es nuevo
-            const pred = await axios.get(`https://api.mercadolibre.com/sites/MLA/domain_discovery/search?q=${encodeURIComponent(product.name)}`);
-            if (pred.data?.[0]) itemBody.category_id = pred.data[0].category_id;
-            mlResp = await axios.post(`https://api.mercadolibre.com/items`, itemBody, { headers: { Authorization: `Bearer ${accessToken}` } });
+            // Prediccion basica
+            const predResp = await fetch(`https://api.mercadolibre.com/sites/MLA/domain_discovery/search?q=${encodeURIComponent(product.name)}`);
+            const predData = await predResp.json();
+            if (predData?.[0]) itemBody.category_id = predData[0].category_id;
+            
+            const createResp = await fetch(`https://api.mercadolibre.com/items`, {
+                method: 'POST',
+                headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify(itemBody)
+            });
+            const createData = await createResp.json();
+            if (createResp.ok) {
+                await supabase.from('products').update({ ml_item_id: createData.id, ml_status: createData.status, ml_permalink: createData.permalink }).eq('id', productId);
+                return res.status(200).json({ success: true, ml_id: createData.id });
+            } else {
+                throw new Error(createData.message || 'Error al crear en ML');
+            }
         }
-
-        await supabase.from('products').update({ ml_item_id: mlResp.data.id, ml_status: mlResp.data.status, ml_permalink: mlResp.data.permalink }).eq('id', productId);
-        return res.status(200).json({ success: true, ml_id: mlResp.data.id });
       }
 
       default:
@@ -167,6 +198,6 @@ module.exports = async (req, res) => {
 
   } catch (error) {
     console.error(`[ML Manager] Error in action ${action}:`, error);
-    return res.status(500).json({ error: error.response?.data?.message || error.message });
+    return res.status(500).json({ error: error.message });
   }
-};
+}
