@@ -53,7 +53,7 @@ export default async function handler(req, res) {
       <SOAP-ENV:Body><ns1:loginCms><ns1:in0>${cms}</ns1:in0></ns1:loginCms></SOAP-ENV:Body>
     </SOAP-ENV:Envelope>`;
 
-    const response = await axios.post('https://wsaahomo.afip.gov.ar/ws/services/LoginCms', soapMsg, {
+    const response = await axios.post('https://wsaa.afip.gov.ar/ws/services/LoginCms', soapMsg, {
       headers: { 'Content-Type': 'text/xml;charset=UTF-8' },
       timeout: 10000
     });
