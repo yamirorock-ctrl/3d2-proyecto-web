@@ -8,33 +8,32 @@ export default async function handler(req, res) {
     const keyRaw = process.env.AFIP_PRIVATE_KEY || '';
 
     if (!certRaw || !keyRaw) {
-      return res.status(200).json({ 
-        online: false, 
-        message: 'Faltan credenciales PEM en Vercel', 
-        now: new Date().toISOString() 
-      });
+      return res.status(200).json({ online: false, message: 'Credenciales faltantes' });
     }
 
-    const decodeVercelPEM = (raw, type) => {
-      let cleaned = raw.trim();
-      cleaned = cleaned.split('\\\\n').join('\n').split('\\n').join('\n');
-      if (!cleaned.includes('-----BEGIN')) {
-        const header = `-----BEGIN ${type}-----`;
-        const footer = `-----END ${type}-----`;
-        cleaned = `${header}\n${cleaned}\n${footer}`;
+    const decodePEM = (raw, type) => {
+      let c = raw.trim().split('\\\\n').join('\n').split('\\n').join('\n');
+      if (!c.includes('-----BEGIN')) {
+        c = `-----BEGIN ${type}-----\n${c}\n-----END ${type}-----`;
       }
-      return cleaned;
+      return c;
     };
 
-    const cert = decodeVercelPEM(certRaw, 'CERTIFICATE');
-    const key = decodeVercelPEM(keyRaw, 'RSA PRIVATE KEY');
+    const cert = decodePEM(certRaw, 'CERTIFICATE');
+    const key = decodePEM(keyRaw, 'RSA PRIVATE KEY');
+
+    // AJUSTE DE RELOJ: AFIP rechaza tickets generados en el "futuro"
+    // Ponemos el tick 1 minuto atrás para evitar desincronización de Vercel
+    const now = new Date();
+    const genTime = new Date(now.getTime() - 60000).toISOString().replace(/\.\d+Z$/, '');
+    const expTime = new Date(now.getTime() + 600000).toISOString().replace(/\.\d+Z$/, '');
 
     const tra = `<?xml version="1.0" encoding="UTF-8"?>
     <loginTicketRequest version="1.0">
       <header>
         <uniqueId>${Math.floor(Date.now() / 1000)}</uniqueId>
-        <generationTime>${new Date().toISOString()}</generationTime>
-        <expirationTime>${new Date(Date.now() + 600000).toISOString()}</expirationTime>
+        <generationTime>${genTime}</generationTime>
+        <expirationTime>${expTime}</expirationTime>
       </header>
       <service>wsfe</service>
     </loginTicketRequest>`;
@@ -58,31 +57,23 @@ export default async function handler(req, res) {
 
     const response = await axios.post('https://wsaa.afip.gov.ar/ws/services/LoginCms', soapMsg, {
       headers: { 'Content-Type': 'text/xml;charset=UTF-8' },
-      timeout: 10000
+      timeout: 15000
     });
 
     if (response.data.includes('token')) {
-      return res.status(200).json({ 
-        online: true, 
-        message: '¡CONEXIÓN EXITOSA!', 
-        now: new Date().toISOString() 
-      });
+      return res.status(200).json({ online: true, message: '¡CONEXIÓN EXITOSA!' });
     } else {
-      const fault = response.data.match(/<faultstring>(.*?)<\/faultstring>/)?.[1] || 'Error en AFIP';
-      return res.status(200).json({ 
-        online: false, 
-        message: 'AFIP Rechazó Credenciales', 
-        detail: fault, 
-        now: new Date().toISOString() 
-      });
+      const fault = response.data.match(/<faultstring>(.*?)<\/faultstring>/)?.[1] || 'AFIP Falló';
+      return res.status(200).json({ online: false, message: 'AFIP Rechazó Ticket', detail: fault });
     }
 
   } catch (err) {
+    // Si Axios falla, capturamos el XML de error real de AFIP si está disponible
+    const afipError = err.response?.data ? String(err.response.data) : err.message;
     return res.status(200).json({ 
       online: false, 
-      message: 'Fallo Handshake Proceso',
-      detail: err.message,
-      now: new Date().toISOString()
+      message: 'Error de Red con AFIP', 
+      detail: afipError.includes('faultstring') ? afipError.match(/<faultstring>(.*?)<\/faultstring>/)?.[1] : afipError
     });
   }
 }
