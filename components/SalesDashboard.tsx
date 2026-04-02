@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 import { Order, Payment, OrderStatus } from '../types';
 import { getFiscalConfig, FiscalConfig } from '../services/configService';
@@ -90,6 +90,13 @@ const SalesDashboard: React.FC<Props> = ({ orders, payments, onUpdateStatus, onE
       return matchesDate && matchesBilling && isNotAbandonedCart;
     });
   }, [orders, dateFilter, billingFilter]);
+
+  const [mounted, setMounted] = useState(false);
+  
+  useEffect(() => {
+    const timer = setTimeout(() => setMounted(true), 150);
+    return () => clearTimeout(timer);
+  }, []);
 
   const metrics = useMemo(() => {
     // 1. Filtrar órdenes canceladas
@@ -577,8 +584,9 @@ const SalesDashboard: React.FC<Props> = ({ orders, payments, onUpdateStatus, onE
             Top 5 Productos (Ingresos)
           </h4>
           <div className="h-64 w-full min-w-0 overflow-hidden">
-            <ResponsiveContainer width="100%" height="100%" debounce={100}>
-              <BarChart data={metrics.topProducts} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+            {mounted && (
+              <ResponsiveContainer width="100%" height={256}>
+                <BarChart data={metrics.topProducts} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                 <defs>
                   <linearGradient id="colorBar" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#6366f1" stopOpacity={0.9}/>
@@ -593,9 +601,9 @@ const SalesDashboard: React.FC<Props> = ({ orders, payments, onUpdateStatus, onE
                   contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
                   formatter={(value: number) => [`$${value.toLocaleString('es-AR')}`, 'Ingresos']} 
                 />
-                <Bar dataKey="total" fill="url(#colorBar)" radius={[6, 6, 0, 0]} barSize={40} />
-              </BarChart>
-            </ResponsiveContainer>
+                </BarChart>
+              </ResponsiveContainer>
+            )}
           </div>
         </div>
 
@@ -606,8 +614,8 @@ const SalesDashboard: React.FC<Props> = ({ orders, payments, onUpdateStatus, onE
             Distribución de Ingresos
           </h4>
           <div className="h-64 w-full min-w-0 overflow-hidden">
-            {metrics.total > 0 ? (
-              <ResponsiveContainer width="100%" height="100%" debounce={100}>
+            {(mounted && metrics.total > 0) ? (
+              <ResponsiveContainer width="100%" height={256}>
                 <PieChart>
                   <Pie
                     data={[
@@ -639,7 +647,7 @@ const SalesDashboard: React.FC<Props> = ({ orders, payments, onUpdateStatus, onE
                   <Legend verticalAlign="bottom" height={36} iconType="circle" />
                 </PieChart>
               </ResponsiveContainer>
-            ) : (
+            ) : !mounted ? null : (
               <div className="h-full flex items-center justify-center text-slate-400 text-sm">
                 No hay ingresos en este período
               </div>
