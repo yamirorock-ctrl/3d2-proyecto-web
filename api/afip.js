@@ -20,13 +20,6 @@ const CERT = cleanKey(process.env.AFIP_CERTIFICATE);
 const KEY = cleanKey(process.env.AFIP_PRIVATE_KEY);
 const PUNTO_VENTA = parseInt(process.env.AFIP_PUNTO_VENTA || "2"); // PV configurado hoy
 
-const afip = new Afip({
-  CUIT: CUIT,
-  cert: CERT,
-  key: KEY,
-  production: true // Asumimos producción por el PV creado hoy
-});
-
 export default async function handler(req, res) {
   const origin = req.headers.origin || "*";
   res.setHeader("Access-Control-Allow-Origin", origin);
@@ -35,6 +28,22 @@ export default async function handler(req, res) {
 
   if (req.method === "OPTIONS") return res.status(200).end();
   if (!supabase) return res.status(500).json({ error: 'Supabase no configurado' });
+
+  // INICIALIZAMOS AFIP DENTRO DEL HANDLER CON DIRECTORIO TEMPORAL
+  let afip;
+  try {
+     afip = new Afip({
+        CUIT: CUIT,
+        cert: CERT,
+        key: KEY,
+        production: true,
+        // EN VERCEL SOLO TENEMOS PERMISO DE ESCRITURA EN /tmp/
+        // Esto evita el error 500 al intentar guardar tokens locales
+        res_folder: '/tmp/' 
+     });
+  } catch (e) {
+     return res.status(500).json({ connection: 'ERROR', message: 'Error de entrada: ' + e.message });
+  }
 
   // SOLO PETICIONES POST PARA FACTURAR O GET PARA ESTADO
   if (req.method === 'GET') {

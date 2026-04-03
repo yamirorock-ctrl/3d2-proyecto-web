@@ -1,14 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { ShieldCheck, Receipt, AlertCircle, CheckCircle, Loader, RefreshCw, Info, ExternalLink, Calendar, User, DollarSign } from 'lucide-react';
-import { createClient } from '@supabase/supabase-js';
+import { supabase } from '../services/supabaseService';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-
-// Supabase config (usando las mismas que tu app)
-const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL,
-  import.meta.env.VITE_SUPABASE_ANON_TOKEN
-);
 
 interface InvoiceInfo {
   cae: string;
@@ -91,7 +85,7 @@ export const ArcaManager: React.FC = () => {
 
       if (result.success) {
         // Actualizamos el estado local de la orden
-        await supabase.from('orders').update({ 
+        await (supabase.from('orders') as any).update({ 
           is_invoiced: true,
           notes: (order.notes || '') + `\n[FACTURA C EMITIDA: Nº${result.cbte_number} - CAE: ${result.cae}]`
         }).eq('id', order.id);
