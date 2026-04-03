@@ -4,7 +4,7 @@ import { Product, Order } from '../types';
 import { CustomOrder } from './CustomOrderForm';
 import ProductAdmin from './ProductAdmin';
 import { ManualOrderForm } from './ManualOrderForm';
-import { Trash2, Edit, Plus, ArrowLeft, Package, Users, Mail, Phone, Calendar, CheckCircle, Clock, ShoppingCart, TrendingUp, DollarSign, ShieldAlert, RefreshCw, ListChecks, ShoppingBag, Settings, LogOut, ChevronDown, Database, Upload, Download, Wrench, Truck, Bot, Sparkles } from 'lucide-react';
+import { Trash2, Edit, Plus, ArrowLeft, Package, Users, Mail, Phone, Calendar, CheckCircle, Clock, ShoppingCart, TrendingUp, DollarSign, ShieldCheck, ShieldAlert, RefreshCw, ListChecks, ShoppingBag, Settings, LogOut, ChevronDown, Database, Upload, Download, Wrench, Truck, Bot, Sparkles } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { saveDataUrl, getBlob } from '../services/imageStore';
@@ -18,6 +18,7 @@ import AdminPromptEditor from './AdminPromptEditor';
 import { useAdminNotifications } from '../hooks/useAdminNotifications';
 import PreSalesManager from './PreSalesManager';
 import AdminConfig from './AdminConfig';
+import { ArcaManager } from './ArcaManager';
 
 interface Props {
   products: Product[];
@@ -30,7 +31,7 @@ const AdminPage: React.FC<Props> = ({ products, onAdd, onEdit, onDelete }) => {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isManualOrderOpen, setIsManualOrderOpen] = useState(false);
   const [editing, setEditing] = useState<Product | null>(null);
-  const [activeTab, setActiveTab] = useState<'products' | 'orders' | 'sales' | 'calendar' | 'finances' | 'ai_monitor' | 'ai_brain' | 'pre_sales' | 'ml_config'>('products');
+  const [activeTab, setActiveTab] = useState<'products' | 'orders' | 'sales' | 'calendar' | 'finances' | 'ai_monitor' | 'ai_brain' | 'pre_sales' | 'ml_config' | 'arca'>('products');
 
   const [customOrders, setCustomOrders] = useState<CustomOrder[]>([]);
   const [salesOrders, setSalesOrders] = useState<Order[]>([]);
@@ -596,6 +597,12 @@ const AdminPage: React.FC<Props> = ({ products, onAdd, onEdit, onDelete }) => {
                         <RefreshCw size={16} className="text-blue-500" /> Sincronizar Stock Completo
                       </button>
                       <button
+                        onClick={() => { setActiveTab('arca'); setShowSettings(false); }}
+                        className="w-full text-left px-3 py-2 rounded-lg text-sm text-slate-700 hover:bg-blue-50 flex items-center gap-2"
+                      >
+                        <ShieldCheck size={16} className="text-emerald-500" /> Facturador ARCA (AFIP)
+                      </button>
+                      <button
                         onClick={async () => {
                            if (!user?.id) return toast.error('No autenticado');
                            toast.info('Buscando coincidencias mágicas en MercadoLibre...', { duration: 4000 });
@@ -942,7 +949,11 @@ const AdminPage: React.FC<Props> = ({ products, onAdd, onEdit, onDelete }) => {
                 <AdminPromptEditor />
               )}
 
-              {activeTab === 'ml_config' && (
+              {activeTab === 'arca' && (
+            <ArcaManager />
+          )}
+
+          {activeTab === 'ml_config' && (
                 <AdminConfig />
               )}
             </>
