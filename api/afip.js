@@ -9,13 +9,19 @@ if (SUPABASE_URL && SUPABASE_ANON_KEY) {
   supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 }
 
-// 🩺 Limpieza de Certificados y Claves (AFIP a veces viene con \n literales)
+// 🩺 Limpieza de Certificados, Claves y CUIT (AFIP a veces viene con \n o comillas literales)
 const cleanKey = (key) => {
   if (!key) return '';
-  return key.replace(/\\n/g, '\n');
+  return key.replace(/\\n/g, '\n').trim();
 };
 
-const CUIT = process.env.VITE_AFIP_CUIT || process.env.AFIP_CUIT;
+const cleanCUIT = (cuit) => {
+  if (!cuit) return '';
+  // Elimina comillas dobles, simples y espacios que puedan venir de Vercel/env
+  return cuit.toString().replace(/["'\s]/g, '').trim();
+};
+
+const CUIT = cleanCUIT(process.env.VITE_AFIP_CUIT || process.env.AFIP_CUIT);
 const CERT = cleanKey(process.env.AFIP_CERTIFICATE);
 const KEY = cleanKey(process.env.AFIP_PRIVATE_KEY);
 const PUNTO_VENTA = parseInt(process.env.AFIP_PUNTO_VENTA || "2"); // PV configurado hoy
@@ -27,22 +33,27 @@ export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
 
   if (req.method === "OPTIONS") return res.status(200).end();
+  
+  // LOG DE SEGURIDAD (Solo para Vercel CLI, no expone claves reales)
+  console.log(`[ARCA] Iniciando con CUIT: ${CUIT.substring(0, 4)}... PV: ${PUNTO_VENTA}`);
+
   if (!supabase) return res.status(500).json({ error: 'Supabase no configurado' });
 
   // INICIALIZAMOS AFIP DENTRO DEL HANDLER CON DIRECTORIO TEMPORAL
   let afip;
   try {
+     if (!CUIT || !CERT || !KEY) throw new Error(`Faltan variables: CUIT=${!!CUIT}, CERT=${!!CERT}, KEY=${!!KEY}`);
+     
      afip = new Afip({
         CUIT: CUIT,
         cert: CERT,
         key: KEY,
         production: true,
-        // EN VERCEL SOLO TENEMOS PERMISO DE ESCRITURA EN /tmp/
-        // Esto evita el error 500 al intentar guardar tokens locales
         res_folder: '/tmp/' 
      });
   } catch (e) {
-     return res.status(500).json({ connection: 'ERROR', message: 'Error de entrada: ' + e.message });
+     console.error("[ARCA Init Error]", e.message);
+     return res.status(500).json({ connection: 'ERROR', message: 'Falla en credenciales ARCA: ' + e.message });
   }
 
   // SOLO PETICIONES POST PARA FACTURAR O GET PARA ESTADO
@@ -51,7 +62,7 @@ export default async function handler(req, res) {
         const statuses = await afip.ElectronicBilling.getServerStatus();
         return res.status(200).json({ connection: 'OK', afip_status: statuses });
      } catch (e) {
-        return res.status(500).json({ connection: 'ERROR', message: e.message });
+        return res.status(500).json({ connection: 'ERROR', message: `ARCA respondió: ${e.message}` });
      }
   }
 

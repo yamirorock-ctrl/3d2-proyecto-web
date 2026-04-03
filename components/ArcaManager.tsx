@@ -14,20 +14,29 @@ export const ArcaManager: React.FC = () => {
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [processingId, setProcessingId] = useState<string | null>(null);
-  const [serverStatus, setServerStatus] = useState<'OK' | 'ERROR' | 'CHECKING'>('CHECKING');
+  const [serverStatus, setServerStatus] = useState<'OK' | 'ERROR' | 'IDLE' | 'CHECKING'>('IDLE');
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    checkAfipStatus();
+    // Ya no chequeamos AFIP automáticamente al entrar para evitar bucles si el backend falla.
     fetchPendingOrders();
   }, []);
 
   const checkAfipStatus = async () => {
+    setServerStatus('CHECKING');
+    setErrorMessage(null);
     try {
       const res = await fetch('/api/afip');
       const data = await res.json();
-      setServerStatus(data.connection === 'OK' ? 'OK' : 'ERROR');
-    } catch (e) {
+      if (data.connection === 'OK') {
+        setServerStatus('OK');
+      } else {
+        setServerStatus('ERROR');
+        setErrorMessage(data.message || 'Error desconocido');
+      }
+    } catch (e: any) {
       setServerStatus('ERROR');
+      setErrorMessage(e.message);
     }
   };
 
@@ -115,18 +124,35 @@ export const ArcaManager: React.FC = () => {
         <div className={`px-4 py-2 rounded-full border flex items-center gap-2 text-sm font-medium ${
           serverStatus === 'OK' ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' :
           serverStatus === 'ERROR' ? 'bg-red-500/10 border-red-500/30 text-red-400' :
+          serverStatus === 'CHECKING' ? 'bg-blue-500/10 border-blue-500/30 text-blue-400' :
           'bg-gray-500/10 border-gray-500/30 text-gray-400'
         }`}>
           <div className={`w-2 h-2 rounded-full ${
             serverStatus === 'OK' ? 'bg-emerald-400 animate-pulse' :
-            serverStatus === 'ERROR' ? 'bg-red-400' : 'bg-gray-400'
+            serverStatus === 'ERROR' ? 'bg-red-400' : 
+            serverStatus === 'CHECKING' ? 'bg-blue-400 animate-spin' :
+            'bg-gray-400'
           }`} />
-          {serverStatus === 'OK' ? 'Conectado con AFIP' : serverStatus === 'ERROR' ? 'Error de Conexión' : 'Verificando ARCA...'}
+          {serverStatus === 'OK' ? 'Conectado con ARCA' : 
+           serverStatus === 'ERROR' ? 'Error ARCA' : 
+           serverStatus === 'CHECKING' ? 'Verificando...' :
+           'Consultar Conexión'}
           <button onClick={checkAfipStatus} className="p-1 hover:bg-white/10 rounded ml-2">
-             <RefreshCw className="w-3 h-3" />
+             <RefreshCw className={`w-3 h-3 ${serverStatus === 'CHECKING' ? 'animate-spin' : ''}`} />
           </button>
         </div>
       </div>
+
+      {/* Error Display */}
+      {errorMessage && (
+        <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4 mb-8 flex gap-4 items-center animate-in fade-in slide-in-from-top-2">
+           <AlertCircle className="text-red-400 w-6 h-6 flex-shrink-0" />
+           <div className="flex flex-col">
+              <p className="text-sm font-bold text-red-400">Hubo un problema de conexión</p>
+              <p className="text-xs text-red-300/80">{errorMessage}</p>
+           </div>
+        </div>
+      )}
 
       {/* Info Card */}
       <div className="bg-blue-500/5 border border-blue-500/20 rounded-lg p-4 mb-8 flex gap-4 items-center">
