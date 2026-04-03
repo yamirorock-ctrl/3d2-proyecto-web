@@ -316,7 +316,7 @@ async function handleQuestion(resource, accessToken, res, botEnabled) {
     const model = genAI.getGenerativeModel({
       model: "gemini-2.5-flash",
       systemInstruction: finalPrompt,
-    }); // Use Printy 3.0 model
+    }); 
     const result = await model.generateContent(`Pregunta: "${questionText}"`);
     const answerText = result.response.text().trim();
 
@@ -371,7 +371,7 @@ async function handleQuestion(resource, accessToken, res, botEnabled) {
     await supabase
       .from("ml_questions")
       .update({ status: "error", answer_text: error.message })
-      .eq("question_id", questionId.toString()); // Use ID if known
+      .eq("question_id", questionId.toString()); 
 
     return res.status(200).json({ error: error.message });
   }

@@ -91,6 +91,16 @@ const SalesDashboard: React.FC<Props> = ({ orders, payments, onUpdateStatus, onE
     });
   }, [orders, dateFilter, billingFilter]);
 
+  const displayedOrders = useMemo(() => {
+    return filteredOrders.filter(o => {
+      if (statusFilter === 'all') return true;
+      if (statusFilter === 'completed') return ['paid', 'delivered', 'completed'].includes(o.status as any);
+      if (statusFilter === 'processing') return ['preparing', 'processing', 'shipped'].includes(o.status as any);
+      if (statusFilter === 'pending') return ['pending', 'to_coordinate'].includes(o.status as any);
+      return true;
+    });
+  }, [filteredOrders, statusFilter]);
+
   const [mounted, setMounted] = useState(false);
   
   useEffect(() => {
@@ -219,16 +229,6 @@ const SalesDashboard: React.FC<Props> = ({ orders, payments, onUpdateStatus, onE
       pendingInvoiceCount: pendingInvoiceOrders.length
     };
   }, [filteredOrders, payments, dateFilter]);
-
-  const displayedOrders = useMemo(() => {
-    return filteredOrders.filter(o => {
-      if (statusFilter === 'all') return true;
-      if (statusFilter === 'completed') return ['paid','delivered','completed'].includes(o.status as any);
-      if (statusFilter === 'processing') return ['preparing','payment_pending','processing','shipped'].includes(o.status as any);
-      if (statusFilter === 'pending') return ['pending','to_coordinate'].includes(o.status as any);
-      return true;
-    });
-  }, [filteredOrders, statusFilter]);
 
   const handleExportCSV = () => {
     const headers = ['ID', 'Fecha', 'Cliente', 'Email', 'Teléfono', 'Total', 'Método Pago', 'Estado', 'Productos', 'Notas/Deuda'];

@@ -75,6 +75,14 @@ const FinancialDashboard: React.FC<Props> = ({ orders, products, onEditProduct }
   const [woodType, setWoodType] = useState('MDF 3mm');
   const [woodExtraCount, setWoodExtraCount] = useState(0);
 
+  const [newMaterial, setNewMaterial] = useState<Partial<RawMaterial>>({
+    name: '',
+    category: 'Filamento',
+    quantity: 0,
+    unit: 'unidades',
+    min_threshold: 1
+  });
+
   // Sincronizar nombre de material filamento automáticamente
   useEffect(() => {
     if (newMaterial.category === 'Filamento' && !editingMaterialId) {
@@ -93,13 +101,6 @@ const FinancialDashboard: React.FC<Props> = ({ orders, products, onEditProduct }
     description: ''
   });
 
-  const [newMaterial, setNewMaterial] = useState<Partial<RawMaterial>>({
-    name: '',
-    category: 'Filamento',
-    quantity: 0,
-    unit: 'unidades',
-    min_threshold: 1
-  });
 
   const [customCategories, setCustomCategories] = useState<Record<string, string[]>>(() => {
     try {
