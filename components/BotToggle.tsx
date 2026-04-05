@@ -13,8 +13,9 @@ export default function BotToggle() {
 
   const fetchStatus = async () => {
     try {
-      const { data, error } = await supabase
-        .from("app_settings")
+      // Cast to any to bypass strict TS check on NEW table
+      const { data, error } = await (supabase
+        .from("app_settings") as any)
         .select("bot_enabled")
         .eq("id", 1)
         .maybeSingle();
@@ -24,14 +25,12 @@ export default function BotToggle() {
       if (data) {
         setIsEnabled(data.bot_enabled);
       } else {
-        // Si no hay fila 1, crearla por defecto apagada
-        console.warn("Fila id=1 no encontrada en app_settings. Creando...");
-        await supabase.from("app_settings").insert({ id: 1, bot_enabled: false });
+        console.warn("Fila id=1 no encontrada. Creando...");
+        await (supabase.from("app_settings") as any).insert({ id: 1, bot_enabled: false });
         setIsEnabled(false);
       }
     } catch (err: any) {
-      console.error("Error al obtener estado del bot:", err);
-      // Fallback local por si Supabase falla
+      console.error("Error al obtener estado:", err);
       setIsEnabled(false);
     }
   };
@@ -41,8 +40,8 @@ export default function BotToggle() {
     const newState = !isEnabled;
 
     try {
-      const { error } = await supabase
-        .from("app_settings")
+      const { error } = await (supabase
+        .from("app_settings") as any)
         .update({ 
           bot_enabled: newState,
           updated_at: new Date().toISOString()
@@ -52,10 +51,10 @@ export default function BotToggle() {
       if (error) throw error;
       
       setIsEnabled(newState);
-      toast.success(`Printy ${newState ? 'ENCENDIDO' : 'APAGADO'} correctamente`);
+      toast.success(`Printy ${newState ? 'ENCENDIDO' : 'APAGADO'}`);
     } catch (err: any) {
       console.error("Failed to toggle bot:", err);
-      toast.error("Error al sincronizar con la nube: " + err.message);
+      toast.error("Error de sincronización: " + err.message);
     } finally {
       setLoading(false);
     }
@@ -64,7 +63,7 @@ export default function BotToggle() {
   if (isEnabled === null) {
       return (
           <div className="flex items-center gap-2 text-slate-400 text-sm italic">
-              <RefreshCw size={14} className="animate-spin" /> Sincronizando Printy...
+              <RefreshCw size={14} className="animate-spin" /> Sincronizando...
           </div>
       );
   }
@@ -76,16 +75,16 @@ export default function BotToggle() {
           : "bg-slate-50 border-slate-200"
     }`}>
       <div className="flex items-center gap-3">
-        <div className={`p-2 rounded-lg ${isEnabled ? "bg-emerald-100 text-emerald-600 shadow-inner" : "bg-slate-200 text-slate-500"}`}>
+        <div className={`p-2 rounded-lg ${isEnabled ? "bg-emerald-100 text-emerald-600" : "bg-slate-200 text-slate-500"}`}>
             <Bot size={20} />
         </div>
         <div>
             <div className="flex items-center gap-2">
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Printy (ML)</span>
+                <span className="text-xs font-bold uppercase text-slate-400">Printy IA</span>
                 <span className={`w-2 h-2 rounded-full ${isEnabled ? "bg-emerald-500 animate-pulse" : "bg-slate-400"}`} />
             </div>
             <p className="text-sm font-bold text-slate-700">
-                {isEnabled ? "ACTIVADO 🛰️" : "APAGADO 💤"}
+                {isEnabled ? "ACTIVADO 🟢" : "APAGADO 🔴"}
             </p>
         </div>
       </div>
@@ -93,14 +92,14 @@ export default function BotToggle() {
       <button
         onClick={toggleBot}
         disabled={loading}
-        className={`px-4 py-2 rounded-lg text-xs font-black uppercase tracking-tractive flex items-center gap-2 transition-all shadow-md transform active:scale-95 ${
+        className={`px-4 py-2 rounded-lg text-xs font-black uppercase flex items-center gap-2 transition-all shadow-md transform active:scale-95 ${
           isEnabled
-            ? "bg-rose-500 text-white hover:bg-rose-600 shadow-rose-200"
-            : "bg-indigo-600 text-white hover:bg-indigo-700 shadow-indigo-200"
-        } ${loading ? "opacity-50 cursor-not-allowed" : ""}`}
+            ? "bg-rose-500 text-white hover:bg-rose-600"
+            : "bg-indigo-600 text-white hover:bg-indigo-700"
+        } ${loading ? "opacity-50" : ""}`}
       >
         <Power size={14} />
-        {loading ? "Sincronizando..." : isEnabled ? "Apagar IA 🛑" : "Encender IA ⚡"}
+        {loading ? "..." : isEnabled ? "Apagar🛑" : "Encender⚡"}
       </button>
     </div>
   );
