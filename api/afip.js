@@ -61,8 +61,20 @@ export default async function handler(req, res) {
         production: true,
         res_folder: '/tmp/afip_cache/' 
      });
+
+     // 🚀 HACK ARCA 2026: Redirigimos a los nuevos servidores de ARCA
+     // La librería trae URLs viejas de afip.gov.ar que están dando 401
+     if (afip.WSAA) {
+       afip.WSAA.url = "https://wsaa.arca.gob.ar/ws/services/LoginCms?wsdl";
+       afip.WSAA.wsdl = "https://wsaa.arca.gob.ar/ws/services/LoginCms?wsdl";
+     }
      
-     console.log(`[ARCA] Instancia creada para CUIT: ${CUIT}`);
+     if (afip.ElectronicBilling) {
+       afip.ElectronicBilling.url = "https://serviciosweb.arca.gob.ar/wsfev1/service.asmx";
+       afip.ElectronicBilling.wsdl = "https://serviciosweb.arca.gob.ar/wsfev1/service.asmx?WSDL";
+     }
+     
+     console.log(`[ARCA] Instancia migrada a ARCA.gob.ar para CUIT: ${CUIT}`);
   } catch (e) {
      console.error("[ARCA Init Error]", e.message);
      return res.status(500).json({ connection: 'ERROR', message: 'Credenciales inválidas: ' + e.message });
