@@ -12,16 +12,19 @@ if (SUPABASE_URL && SUPABASE_KEY) {
 // 🩺 Limpieza de Certificados, Claves y CUIT
 const cleanKey = (key) => {
   if (!key) return '';
-  return key.replace(/\\n/g, '\n').trim();
+  return key.toString()
+    .replace(/["']/g, '') // Quita comillas accidentales
+    .replace(/\\n/g, '\n') // Convierte \n literales en saltos reales
+    .trim();
 };
 
 const cleanCUIT = (cuit) => {
-  if (!cuit) return '';
-  return cuit.toString().replace(/["'\s]/g, '').trim();
+  if (!cuit) return null;
+  const cleaned = cuit.toString().replace(/[-"'\s]/g, '').trim();
+  return cleaned ? parseInt(cleaned) : null;
 };
 
-const CUIT_RAW = process.env.VITE_AFIP_CUIT || process.env.AFIP_CUIT;
-const CUIT = CUIT_RAW ? parseInt(CUIT_RAW.toString().replace(/[-"'\s]/g, '')) : null;
+const CUIT = cleanCUIT(process.env.VITE_AFIP_CUIT || process.env.AFIP_CUIT);
 const CERT = cleanKey(process.env.AFIP_CERTIFICATE);
 const KEY = cleanKey(process.env.AFIP_PRIVATE_KEY);
 const PUNTO_VENTA = parseInt(process.env.AFIP_PUNTO_VENTA || "2");
