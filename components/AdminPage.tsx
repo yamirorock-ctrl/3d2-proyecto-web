@@ -481,7 +481,7 @@ const AdminPage: React.FC<Props> = ({ products, onAdd, onEdit, onDelete }) => {
     <div className="max-w-6xl mx-auto p-3 sm:p-6" onClick={() => setShowSettings(false)}>
       <div className="flex flex-col sm:flex-row items-center justify-between mb-6 gap-3">
         <div className="flex items-center gap-4 w-full sm:w-auto">
-          <button onClick={() => navigate(-1)} className="p-2 hover:bg-gray-100 rounded-full transition-colors"><ArrowLeft size={20} /></button>
+          <button onClick={() => navigate(-1)} className="p-2 hover:bg-gray-100 rounded-full transition-colors" title="Volver atrás"><ArrowLeft size={20} /></button>
           <div className="flex flex-col">
             <h2 className="text-2xl font-bold bg-linear-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">Panel Admin</h2>
             {user && <span className="text-xs text-slate-400">Logueado como {user.email}</span>}
@@ -510,6 +510,7 @@ const AdminPage: React.FC<Props> = ({ products, onAdd, onEdit, onDelete }) => {
             <button
               onClick={() => setShowSettings(!showSettings)}
               className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 text-slate-600 flex items-center gap-2 transition-colors relative"
+              title="Ajustes y herramientas"
             >
               <Settings size={20} />
               <ChevronDown size={14} className={`transition-transform duration-200 ${showSettings ? 'rotate-180' : ''}`} />

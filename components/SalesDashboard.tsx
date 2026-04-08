@@ -814,7 +814,7 @@ const SalesDashboard: React.FC<Props> = ({ orders, payments, onUpdateStatus, onE
                               </div>
                               <div>
                                 <label className="text-[10px] font-bold text-slate-400 uppercase">Tipo Factura</label>
-                                <select value={billType} onChange={e => setBillType(e.target.value as any)} className="w-full p-2 text-xs border rounded bg-slate-50">
+                                <select value={billType} onChange={e => setBillType(e.target.value as any)} className="w-full p-2 text-xs border rounded bg-slate-50" title="Tipo de factura">
                                    <option value="Consumidor Final">Cons. Final</option>
                                    <option value="B">Factura B</option>
                                    <option value="C">Factura C</option>
@@ -943,6 +943,8 @@ const SalesDashboard: React.FC<Props> = ({ orders, payments, onUpdateStatus, onE
                                   value={newPayAmount} 
                                   onChange={e => setNewPayAmount(e.target.value)}
                                   className="flex-1 p-1.5 text-sm border rounded font-bold text-slate-700" 
+                                  title="Monto a cobrar por la deuda"
+                                  placeholder="0.00"
                                 />
                               </div>
                               <div className="flex gap-2">

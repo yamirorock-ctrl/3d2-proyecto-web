@@ -137,7 +137,7 @@ export const ArcaManager: React.FC = () => {
            serverStatus === 'ERROR' ? 'Error ARCA' : 
            serverStatus === 'CHECKING' ? 'Verificando...' :
            'Consultar Conexión'}
-          <button onClick={checkAfipStatus} className="p-1 hover:bg-white/10 rounded ml-2">
+          <button onClick={checkAfipStatus} className="p-1 hover:bg-white/10 rounded ml-2" title="Consultar estado de conexión">
              <RefreshCw className={`w-3 h-3 ${serverStatus === 'CHECKING' ? 'animate-spin' : ''}`} />
           </button>
         </div>

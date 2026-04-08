@@ -541,6 +541,8 @@ const FinancialDashboard: React.FC<Props> = ({ orders, products, onEditProduct }
             value={selectedMonth} 
             onChange={(e) => setSelectedMonth(Number(e.target.value))}
             className="p-2 border rounded-lg bg-gray-50 text-sm font-medium focus:ring-2 focus:ring-indigo-500"
+            title="Seleccionar Mes"
+            aria-label="Mes"
           >
             {months.map((m, i) => <option key={i} value={i}>{m}</option>)}
           </select>
@@ -548,6 +550,8 @@ const FinancialDashboard: React.FC<Props> = ({ orders, products, onEditProduct }
             value={selectedYear} 
             onChange={(e) => setSelectedYear(Number(e.target.value))}
             className="p-2 border rounded-lg bg-gray-50 text-sm font-medium focus:ring-2 focus:ring-indigo-500"
+            title="Seleccionar Año"
+            aria-label="Año"
           >
             {[currentYear - 1, currentYear, currentYear + 1].map(y => <option key={y} value={y}>{y}</option>)}
           </select>
@@ -656,7 +660,7 @@ const FinancialDashboard: React.FC<Props> = ({ orders, products, onEditProduct }
                              (financials.invoicedTotal / fiscalConfig.monthly_limit) > 0.9 ? 'bg-rose-500' : 
                              (financials.invoicedTotal / fiscalConfig.monthly_limit) > 0.7 ? 'bg-amber-500' : 'bg-emerald-500'
                            }`}
-                           style={{ width: `${Math.min(100, (financials.invoicedTotal / fiscalConfig.monthly_limit) * 100)}%` }}
+                           style={{ ['--p-width' as any]: `${Math.min(100, (financials.invoicedTotal / fiscalConfig.monthly_limit) * 100)}%`, width: 'var(--p-width)' }}
                         />
                      </div>
                      <div className="flex justify-between mt-1 text-[10px] font-bold text-slate-400 uppercase">
@@ -715,13 +719,13 @@ const FinancialDashboard: React.FC<Props> = ({ orders, products, onEditProduct }
 
             {isAddingExpense ? (
               <div className="space-y-3 animate-in fade-in slide-in-from-top-2 bg-slate-50 p-4 rounded-lg">
-                <input type="date" value={newExpense.date} onChange={e => setNewExpense({...newExpense, date: e.target.value})} className="w-full p-2 border rounded text-sm"/>
+                <input type="date" value={newExpense.date} onChange={e => setNewExpense({...newExpense, date: e.target.value})} className="w-full p-2 border rounded text-sm" title="Fecha del gasto"/>
                 <div className="grid grid-cols-2 gap-2">
                   <div className="relative">
                     <span className="absolute left-2 top-2 text-slate-400">$</span>
                     <input type="number" placeholder="0.00" value={newExpense.amount || ''} onChange={e => setNewExpense({...newExpense, amount: Number(e.target.value)})} className="w-full p-2 pl-6 border rounded text-sm"/>
                   </div>
-                  <select value={newExpense.category} onChange={e => setNewExpense({...newExpense, category: e.target.value as any, subcategory: customCategories[e.target.value]?.[0] || ''})} className="w-full p-2 border rounded text-sm">
+                  <select value={newExpense.category} onChange={e => setNewExpense({...newExpense, category: e.target.value as any, subcategory: customCategories[e.target.value]?.[0] || ''})} className="w-full p-2 border rounded text-sm" title="Categoría del gasto">
                     {Object.keys(customCategories).map(cat => <option key={cat} value={cat}>{cat}</option>)}
                   </select>
                 </div>
@@ -775,13 +779,13 @@ const FinancialDashboard: React.FC<Props> = ({ orders, products, onEditProduct }
                             </div>
                             <div>
                                <label className="text-[10px] font-bold text-slate-500 uppercase">Marca</label>
-                               <select value={filBrand} onChange={e => setFilBrand(e.target.value)} className="w-full p-1 text-xs border rounded bg-slate-50">
+                               <select value={filBrand} onChange={e => setFilBrand(e.target.value)} className="w-full p-1 text-xs border rounded bg-slate-50" title="Marca de filamento">
                                   {FILAMENT_BRANDS.map(b => <option key={b} value={b}>{b}</option>)}
                                </select>
                             </div>
                             <div>
                                <label className="text-[10px] font-bold text-slate-500 uppercase">Tipo</label>
-                               <select value={filType} onChange={e => setFilType(e.target.value)} className="w-full p-1 text-xs border rounded bg-slate-50">
+                               <select value={filType} onChange={e => setFilType(e.target.value)} className="w-full p-1 text-xs border rounded bg-slate-50" title="Tipo de filamento">
                                   {FILAMENT_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
                                </select>
                             </div>
@@ -809,17 +813,17 @@ const FinancialDashboard: React.FC<Props> = ({ orders, products, onEditProduct }
                              </div>
                              <div className="col-span-2">
                                 <label className="text-[10px] font-bold text-amber-700 uppercase">Tipo de Madera</label>
-                                <select value={woodType} onChange={e => setWoodType(e.target.value)} className="w-full p-1 text-xs border border-amber-300 rounded bg-white">
+                                <select value={woodType} onChange={e => setWoodType(e.target.value)} className="w-full p-1 text-xs border border-amber-300 rounded bg-white" title="Tipo de madera">
                                    {(DEFAULT_EXPENSE_CATEGORIES['Madera'] as string[]).map(w => <option key={w} value={w}>{w}</option>)}
                                 </select>
                              </div>
                              <div>
                                 <label className="text-[10px] font-bold text-amber-700 uppercase">Placas (40x40)</label>
-                                <input type="number" value={quantityToAdd} onChange={e => setQuantityToAdd(Number(e.target.value))} className="w-full p-1 text-xs border border-amber-300 rounded text-center" min="0"/>
+                                <input type="number" value={quantityToAdd} onChange={e => setQuantityToAdd(Number(e.target.value))} className="w-full p-1 text-xs border border-amber-300 rounded text-center" min="0" title="Cantidad de placas"/>
                              </div>
                              <div>
                                 <label className="text-[10px] font-bold text-amber-700 uppercase">Recortes (40x17)</label>
-                                <input type="number" value={woodExtraCount} onChange={e => setWoodExtraCount(Number(e.target.value))} className="w-full p-1 text-xs border border-amber-300 rounded text-center" min="0"/>
+                                <input type="number" value={woodExtraCount} onChange={e => setWoodExtraCount(Number(e.target.value))} className="w-full p-1 text-xs border border-amber-300 rounded text-center" min="0" title="Cantidad de recortes"/>
                              </div>
                              
                              <div className="col-span-2 mt-1 border-t border-amber-200 pt-1">
@@ -837,6 +841,7 @@ const FinancialDashboard: React.FC<Props> = ({ orders, products, onEditProduct }
                                   onChange={e => setQuantityToAdd(Number(e.target.value))}
                                   className="w-20 p-1 text-sm border rounded text-center font-bold bg-white focus:ring-2 focus:ring-indigo-500"
                                   min="1"
+                                  title="Cantidad a agregar al inventario"
                                  />
                                   <span className="text-xs text-slate-400">
                                     {newExpense.category === 'Filamento' ? 'kg' : 'unidades'}
@@ -913,8 +918,8 @@ const FinancialDashboard: React.FC<Props> = ({ orders, products, onEditProduct }
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="font-bold text-rose-600">-${e.amount}</span>
-                      <button onClick={() => startEditExpense(e)} className="text-slate-300 hover:text-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity p-1"><Edit2 size={13}/></button>
-                      <button onClick={() => handleDeleteExpense(e.id)} className="text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity p-1"><Trash2 size={13}/></button>
+                      <button onClick={() => startEditExpense(e)} className="text-slate-300 hover:text-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity p-1" title="Editar gasto"><Edit2 size={13}/></button>
+                      <button onClick={() => handleDeleteExpense(e.id)} className="text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity p-1" title="Eliminar gasto"><Trash2 size={13}/></button>
                     </div>
                   </div>
                 ))}
@@ -981,7 +986,7 @@ const FinancialDashboard: React.FC<Props> = ({ orders, products, onEditProduct }
                   
                   <div className="w-32">
                     <label className="text-xs text-indigo-800 font-bold">Categoría</label>
-                    <select value={newMaterial.category} onChange={e => setNewMaterial({...newMaterial, category: e.target.value as any})} className="w-full p-2 text-sm border rounded">
+                    <select value={newMaterial.category} onChange={e => setNewMaterial({...newMaterial, category: e.target.value as any})} className="w-full p-2 text-sm border rounded" title="Categoría del insumo">
                       <option value="Filamento">Filamento</option>
                       <option value="Madera">Madera</option>
                       <option value="Insumos">Insumos</option>
@@ -993,13 +998,13 @@ const FinancialDashboard: React.FC<Props> = ({ orders, products, onEditProduct }
                     <>
                       <div className="w-28">
                         <label className="text-xs text-indigo-800 font-bold">Marca</label>
-                        <select value={filBrand} onChange={e => setFilBrand(e.target.value)} className="w-full p-2 text-sm border rounded bg-white">
+                        <select value={filBrand} onChange={e => setFilBrand(e.target.value)} className="w-full p-2 text-sm border rounded bg-white" title="Marca del filamento">
                           {FILAMENT_BRANDS.map(b => <option key={b} value={b}>{b}</option>)}
                         </select>
                       </div>
                       <div className="w-24">
                         <label className="text-xs text-indigo-800 font-bold">Tipo</label>
-                        <select value={filType} onChange={e => setFilType(e.target.value)} className="w-full p-2 text-sm border rounded bg-white">
+                        <select value={filType} onChange={e => setFilType(e.target.value)} className="w-full p-2 text-sm border rounded bg-white" title="Tipo del filamento">
                           {FILAMENT_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
                         </select>
                       </div>
@@ -1026,11 +1031,11 @@ const FinancialDashboard: React.FC<Props> = ({ orders, products, onEditProduct }
 
                   <div className="w-20">
                     <label className="text-xs text-indigo-800 font-bold">Cant.</label>
-                    <input type="number" value={newMaterial.quantity} onChange={e => setNewMaterial({...newMaterial, quantity: Number(e.target.value)})} className="w-full p-2 text-sm border rounded" />
+                    <input type="number" value={newMaterial.quantity} onChange={e => setNewMaterial({...newMaterial, quantity: Number(e.target.value)})} className="w-full p-2 text-sm border rounded" title="Cantidad inicial"/>
                   </div>
                   <div className="w-24">
                     <label className="text-xs text-indigo-800 font-bold">Unidad</label>
-                    <select value={newMaterial.unit} onChange={e => setNewMaterial({...newMaterial, unit: e.target.value})} className="w-full p-2 text-sm border rounded">
+                    <select value={newMaterial.unit} onChange={e => setNewMaterial({...newMaterial, unit: e.target.value})} className="w-full p-2 text-sm border rounded" title="Unidad de medida">
                       <option value="unidades">Unidades</option>
                       <option value="kg">Kg</option>
                       <option value="rollos">Rollos</option>
@@ -1087,10 +1092,10 @@ const FinancialDashboard: React.FC<Props> = ({ orders, products, onEditProduct }
                            {m.last_cost ? `$${m.last_cost.toLocaleString('es-AR')}` : '-'}
                       </td>
                       <td className="px-4 py-3 text-right flex items-center justify-end gap-1">
-                        <button onClick={() => startEditMaterial(m)} className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors">
+                        <button onClick={() => startEditMaterial(m)} className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors" title="Editar insumo">
                           <Edit2 size={16} />
                         </button>
-                        <button onClick={() => handleDeleteMaterial(m.id)} className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+                        <button onClick={() => handleDeleteMaterial(m.id)} className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Eliminar insumo">
                           <Trash2 size={16} />
                         </button>
                       </td>
@@ -1132,6 +1137,7 @@ const FinancialDashboard: React.FC<Props> = ({ orders, products, onEditProduct }
                     value={costConfig.kwhPrice} 
                     onChange={e => setCostConfig({...costConfig, kwhPrice: Number(e.target.value)})}
                     className="w-full bg-white border rounded-md p-2 font-mono text-lg"
+                    title="Precio por kWh"
                   />
                 </div>
                 <p className="text-[10px] text-blue-400 mt-1 italic">Factor real con impuestos: ~$175</p>
@@ -1146,6 +1152,7 @@ const FinancialDashboard: React.FC<Props> = ({ orders, products, onEditProduct }
                     value={costConfig.machineHourCost} 
                     onChange={e => setCostConfig({...costConfig, machineHourCost: Number(e.target.value)})}
                     className="w-full bg-white border rounded-md p-2 font-mono text-lg"
+                    title="Costo por hora máquina"
                   />
                 </div>
                 <p className="text-[10px] text-purple-400 mt-1 italic">Depreciación, repuestos y ahorro</p>
@@ -1160,6 +1167,7 @@ const FinancialDashboard: React.FC<Props> = ({ orders, products, onEditProduct }
                     value={costConfig.kwhConsumption} 
                     onChange={e => setCostConfig({...costConfig, kwhConsumption: Number(e.target.value)})}
                     className="w-full bg-white border rounded-md p-2 font-mono text-lg"
+                    title="Consumo de la máquina en kW"
                   />
                   <span className="text-sm font-bold text-emerald-600">kW</span>
                 </div>
@@ -1175,6 +1183,7 @@ const FinancialDashboard: React.FC<Props> = ({ orders, products, onEditProduct }
                     value={costConfig.genericFilamentPrice} 
                     onChange={e => setCostConfig({...costConfig, genericFilamentPrice: Number(e.target.value)})}
                     className="w-full bg-white border rounded-md p-2 font-mono text-lg"
+                    title="Precio promedio del filamento por kilo"
                   />
                 </div>
                 <p className="text-[10px] text-orange-400 mt-1 italic">Válido si no hay precio o usás cualquier marca</p>
@@ -1329,7 +1338,7 @@ const FinancialDashboard: React.FC<Props> = ({ orders, products, onEditProduct }
                           <div className="inline-flex items-center gap-1 bg-white border border-gray-200 px-2 py-1 rounded font-bold text-slate-800 shadow-sm">
                             <span className="text-slate-400 text-[10px]">$</span>
                             {p.price.toLocaleString('es-AR')}
-                            <button onClick={() => onEditProduct(p)} className="p-1 hover:text-indigo-600">
+                            <button onClick={() => onEditProduct(p)} className="p-1 hover:text-indigo-600" title="Editar Producto">
                                 <Edit2 size={12}/>
                             </button>
                           </div>
@@ -1344,7 +1353,7 @@ const FinancialDashboard: React.FC<Props> = ({ orders, products, onEditProduct }
                             <div className="w-16 bg-gray-100 h-1.5 rounded-full overflow-hidden mb-1">
                                 <div 
                                     className={`h-full rounded-full transition-all duration-1000 ${margin > 60 ? 'bg-emerald-500' : margin > 30 ? 'bg-amber-400' : 'bg-red-500'}`}
-                                    style={{ width: `${Math.min(100, Math.max(0, margin))}%` }}
+                                    style={{ ['--p-width' as any]: `${Math.min(100, Math.max(0, margin))}%`, width: 'var(--p-width)' }}
                                 />
                             </div>
                             <span className={`text-[10px] font-bold ${margin > 60 ? 'text-emerald-600' : margin > 30 ? 'text-amber-500' : 'text-red-600'}`}>

@@ -2,14 +2,14 @@ import { createClient } from '@supabase/supabase-js';
 import Afip from '@afipsdk/afip.js';
 
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
-const SUPABASE_ANON_KEY = process.env.VITE_SUPABASE_ANON_TOKEN;
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_TOKEN;
 
 let supabase = null;
-if (SUPABASE_URL && SUPABASE_ANON_KEY) {
-  supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+if (SUPABASE_URL && SUPABASE_KEY) {
+  supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 }
 
-// 🩺 Limpieza de Certificados, Claves y CUIT (AFIP a veces viene con \n o comillas literales)
+// 🩺 Limpieza de Certificados, Claves y CUIT
 const cleanKey = (key) => {
   if (!key) return '';
   return key.replace(/\\n/g, '\n').trim();
@@ -17,14 +17,14 @@ const cleanKey = (key) => {
 
 const cleanCUIT = (cuit) => {
   if (!cuit) return '';
-  // Elimina comillas dobles, simples y espacios que puedan venir de Vercel/env
   return cuit.toString().replace(/["'\s]/g, '').trim();
 };
 
-const CUIT = cleanCUIT(process.env.VITE_AFIP_CUIT || process.env.AFIP_CUIT);
+const CUIT_RAW = process.env.VITE_AFIP_CUIT || process.env.AFIP_CUIT;
+const CUIT = CUIT_RAW ? parseInt(CUIT_RAW.toString().replace(/[-"'\s]/g, '')) : null;
 const CERT = cleanKey(process.env.AFIP_CERTIFICATE);
 const KEY = cleanKey(process.env.AFIP_PRIVATE_KEY);
-const PUNTO_VENTA = parseInt(process.env.AFIP_PUNTO_VENTA || "2"); // PV configurado hoy
+const PUNTO_VENTA = parseInt(process.env.AFIP_PUNTO_VENTA || "2");
 
 export default async function handler(req, res) {
   const origin = req.headers.origin || "*";
@@ -34,35 +34,54 @@ export default async function handler(req, res) {
 
   if (req.method === "OPTIONS") return res.status(200).end();
   
-  // LOG DE SEGURIDAD (Solo para Vercel CLI, no expone claves reales)
-  console.log(`[ARCA] Iniciando con CUIT: ${CUIT.substring(0, 4)}... PV: ${PUNTO_VENTA}`);
+  if (!supabase) {
+     console.error("[ARCA] Error: Supabase no inicializado. Faltan variables de entorno.");
+     return res.status(500).json({ error: 'Supabase no configurado' });
+  }
 
-  if (!supabase) return res.status(500).json({ error: 'Supabase no configurado' });
-
-  // INICIALIZAMOS AFIP DENTRO DEL HANDLER CON DIRECTORIO TEMPORAL
   let afip;
   try {
-     if (!CUIT || !CERT || !KEY) throw new Error(`Faltan variables: CUIT=${!!CUIT}, CERT=${!!CERT}, KEY=${!!KEY}`);
+     if (!CUIT || !CERT || !KEY) {
+        const missing = [];
+        if (!CUIT) missing.push("CUIT");
+        if (!CERT) missing.push("CERT");
+        if (!KEY) missing.push("KEY");
+        throw new Error(`Faltan variables: ${missing.join(", ")}`);
+     }
      
-     afip = new Afip({
+     // Soporte para default export en diferentes entornos
+     const AfipClass = Afip.default || Afip;
+     afip = new AfipClass({
         CUIT: CUIT,
         cert: CERT,
         key: KEY,
         production: true,
         res_folder: '/tmp/' 
      });
+     
+     console.log(`[ARCA] Instancia creada para CUIT: ${CUIT}`);
   } catch (e) {
      console.error("[ARCA Init Error]", e.message);
-     return res.status(500).json({ connection: 'ERROR', message: 'Falla en credenciales ARCA: ' + e.message });
+     return res.status(500).json({ connection: 'ERROR', message: 'Credenciales inválidas: ' + e.message });
   }
 
-  // SOLO PETICIONES POST PARA FACTURAR O GET PARA ESTADO
   if (req.method === 'GET') {
      try {
+        // Test de conexión real
         const statuses = await afip.ElectronicBilling.getServerStatus();
-        return res.status(200).json({ connection: 'OK', afip_status: statuses });
+        console.log("[ARCA] Estado del servidor obtenido correctamente");
+        return res.status(200).json({ 
+          connection: 'OK', 
+          message: 'Comunicación con AFIP establecida',
+          afip_status: statuses 
+        });
      } catch (e) {
-        return res.status(500).json({ connection: 'ERROR', message: `ARCA respondió: ${e.message}` });
+        console.error("[ARCA Status Error]", e.message);
+        return res.status(500).json({ 
+          connection: 'ERROR', 
+          message: `AFIP rechazó la conexión: ${e.message}`,
+          tip: 'Verificá que el certificado no esté vencido y que el CUIT esté autorizado en AFIP.'
+        });
      }
   }
 
@@ -83,15 +102,14 @@ export default async function handler(req, res) {
         
         const date = new Date(Date.now() - ((new Date()).getTimezoneOffset() * 60000)).toISOString().split('T')[0].replace(/-/g, '');
         
-        // Datos mínimos para Factura C
         const data = {
           'CantReg': 1,
           'PtoVta': PUNTO_VENTA,
-          'CbteTipo': 11, // Factura C (Monotributo)
-          'Concepto': 1,  // Productos
-          'DocTipo': orderData.docTipo || 99, // 99 es Consumidor Final (Sin DNI)
+          'CbteTipo': 11, 
+          'Concepto': 1, 
+          'DocTipo': orderData.docTipo || 99, 
           'DocNro': parseInt(orderData.docNro || 0),
-          'CbteDesde': 0, // Se autocompleta con getLastVoucher + 1
+          'CbteDesde': 0, 
           'CbteHasta': 0,
           'CbteFch': date,
           'ImpTotal': parseFloat(orderData.total),
@@ -104,15 +122,14 @@ export default async function handler(req, res) {
           'MonCotiz': 1
         };
 
-        // Obtenemos el último número emitido para autoincrementar
         const lastVoucher = await afip.ElectronicBilling.getLastVoucher(PUNTO_VENTA, 11);
         data.CbteDesde = lastVoucher + 1;
         data.CbteHasta = lastVoucher + 1;
 
-        // EJECUCION DE LA FACTURA EN ARCA
+        console.log(`[ARCA] Emitiendo comprobante ${data.CbteDesde}...`);
         const invoiceResponse = await afip.ElectronicBilling.createVoucher(data);
 
-        // RESPUESTA EXITOSA: Guardamos en Supabase
+        // Al usar SERVICE_ROLE_KEY arriba, esta inserción funcionará aunque la tabla tenga RLS activo y sin políticas.
         const { data: dbData, error: dbError } = await supabase
           .from('afip_invoices')
           .insert({
@@ -124,7 +141,9 @@ export default async function handler(req, res) {
             cae_vto: invoiceResponse.CAEFchVto,
           });
 
-        if (dbError) console.error("Error guardando en Supabase:", dbError);
+        if (dbError) {
+          console.error("[Supabase Error]", dbError.message);
+        }
 
         return res.status(200).json({
           success: true,
@@ -139,6 +158,9 @@ export default async function handler(req, res) {
     }
   } catch (error) {
     console.error("[ARCA Engine] Error:", error);
-    return res.status(500).json({ error: error.message || 'Error desconocido en AFIP' });
+    return res.status(500).json({ 
+      error: error.message || 'Error desconocido en AFIP',
+      detail: error.code || 'SOAP_ERROR'
+    });
   }
 }
