@@ -28,3 +28,12 @@ dist-ssr
 *.sln
 *.sw?
 .env*.local
+.env
+*.key
+*.crt
+*.csr
+tmp/
+*.mjs
+*.cjs
+*.p12
+*.pfx
