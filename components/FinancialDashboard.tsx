@@ -656,12 +656,17 @@ const FinancialDashboard: React.FC<Props> = ({ orders, products, onEditProduct }
                      </div>
                      <div className="w-full bg-slate-100 h-3 rounded-full overflow-hidden border border-slate-200">
                         <div 
+                           id="fiscal-progress-bar"
                            className={`h-full rounded-full transition-all duration-1000 ${
                              (financials.invoicedTotal / fiscalConfig.monthly_limit) > 0.9 ? 'bg-rose-500' : 
                              (financials.invoicedTotal / fiscalConfig.monthly_limit) > 0.7 ? 'bg-amber-500' : 'bg-emerald-500'
                            }`}
-                           style={{ ['--p-width' as any]: `${Math.min(100, (financials.invoicedTotal / fiscalConfig.monthly_limit) * 100)}%`, width: 'var(--p-width)' }}
                         />
+                        <style>{`
+                           #fiscal-progress-bar {
+                             width: ${Math.min(100, (financials.invoicedTotal / fiscalConfig.monthly_limit) * 100)}%;
+                           }
+                        `}</style>
                      </div>
                      <div className="flex justify-between mt-1 text-[10px] font-bold text-slate-400 uppercase">
                         <span>$0</span>
@@ -1352,9 +1357,14 @@ const FinancialDashboard: React.FC<Props> = ({ orders, products, onEditProduct }
                           <div className="flex flex-col items-center">
                             <div className="w-16 bg-gray-100 h-1.5 rounded-full overflow-hidden mb-1">
                                 <div 
+                                    id={`margin-bar-${p.id}`}
                                     className={`h-full rounded-full transition-all duration-1000 ${margin > 60 ? 'bg-emerald-500' : margin > 30 ? 'bg-amber-400' : 'bg-red-500'}`}
-                                    style={{ ['--p-width' as any]: `${Math.min(100, Math.max(0, margin))}%`, width: 'var(--p-width)' }}
                                 />
+                                <style>{`
+                                  #margin-bar-${p.id} {
+                                    width: ${Math.min(100, Math.max(0, margin))}%;
+                                  }
+                                `}</style>
                             </div>
                             <span className={`text-[10px] font-bold ${margin > 60 ? 'text-emerald-600' : margin > 30 ? 'text-amber-500' : 'text-red-600'}`}>
                                 {margin.toFixed(0)}%
