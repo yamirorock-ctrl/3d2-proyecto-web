@@ -62,6 +62,10 @@ export default async function handler(req, res) {
         res_folder: '/tmp/afip_cache/' 
      });
 
+     // ⏰ AJUSTE DE RELOJ: Forzamos la zona horaria de Argentina
+     // Muchos 401 en 2026 se deben a que ARCA no acepta UTC puro.
+     process.env.TZ = 'America/Argentina/Buenos_Aires';
+
      // 🚀 HACK ARCA 2026: Redirigimos a los nuevos servidores de ARCA
      // La librería trae URLs viejas de afip.gov.ar que están dando 401
      if (afip.WSAA) {
