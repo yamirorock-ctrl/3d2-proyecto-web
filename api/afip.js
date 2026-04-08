@@ -80,10 +80,15 @@ export default async function handler(req, res) {
         });
      } catch (e) {
         console.error("[ARCA Status Error]", e.message);
-        return res.status(500).json({ 
+        
+        // Si el error es 401, lo manejamos como un estado "en espera"
+        const isAuthError = e.message.includes('401') || e.message.includes('Unauthorized');
+        
+        return res.status(200).json({ 
           connection: 'ERROR', 
-          message: `AFIP rechazó la conexión: ${e.message}`,
-          tip: 'Verificá que el certificado no esté vencido y que el CUIT esté autorizado en AFIP.'
+          message: isAuthError ? 'AFIP está procesando tu nuevo certificado (Error 401).' : `Error de conexión: ${e.message}`,
+          detail: e.message,
+          tip: isAuthError ? 'Esto es normal tras subir un certificado. Aguardá 15-30 minutos.' : 'Revisá la configuración del Punto de Venta y las claves en Vercel.'
         });
      }
   }
