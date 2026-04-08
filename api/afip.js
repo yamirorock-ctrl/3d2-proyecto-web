@@ -59,7 +59,7 @@ export default async function handler(req, res) {
         cert: CERT,
         key: KEY,
         production: true,
-        res_folder: '/tmp/' 
+        res_folder: '/tmp/afip_cache/' 
      });
      
      console.log(`[ARCA] Instancia creada para CUIT: ${CUIT}`);
