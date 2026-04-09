@@ -346,6 +346,9 @@ const SalesDashboard: React.FC<Props> = ({ orders, payments, onUpdateStatus, onE
         return;
       }
       
+      const cleanDoc = String(docDni || '').replace(/\D/g, '');
+      const docTipoStr = cleanDoc ? (cleanDoc.length > 8 ? 80 : 96) : 99;
+      
       const res = await fetch('/api/afip', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -354,8 +357,8 @@ const SalesDashboard: React.FC<Props> = ({ orders, payments, onUpdateStatus, onE
           orderData: {
             id: order.id,
             total: order.total,
-            docTipo: docDni ? (docDni.length > 8 ? 80 : 96) : 99, 
-            docNro: docDni || 0,
+            docTipo: docTipoStr,
+            docNro: cleanDoc || 0,
             invoice_number: order.invoice_number
           }
         })
