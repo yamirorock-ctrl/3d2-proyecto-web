@@ -148,7 +148,7 @@ export default async function handler(req, res) {
         if (pictures.length === 0 && product.image) pictures.push({ source: product.image });
 
         const itemBody = {
-            family_name: (product.ml_title || product.name).slice(0, 60),
+            title: (product.ml_title || product.name).slice(0, 60),
             category_id: product.ml_category_id || "MLA3530",
             price,
             currency_id: "ARS",
