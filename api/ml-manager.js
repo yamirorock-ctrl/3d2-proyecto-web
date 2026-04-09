@@ -149,6 +149,7 @@ export default async function handler(req, res) {
 
         const itemBody = {
             title: (product.ml_title || product.name).slice(0, 60),
+            family_name: (product.ml_title || product.name).slice(0, 60),
             category_id: product.ml_category_id || "MLA3530",
             price,
             currency_id: "ARS",
