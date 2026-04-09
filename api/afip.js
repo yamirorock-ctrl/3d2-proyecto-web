@@ -68,7 +68,8 @@ export default async function handler(req, res) {
         cert: 'cert.pem',
         key: 'key.pem',
         production: true,
-        res_folder: cacheDir 
+        res_folder: cacheDir,
+        ta_folder: cacheDir
      });
 
      // ⏰ AJUSTE DE RELOJ: Forzamos la zona horaria de Argentina
