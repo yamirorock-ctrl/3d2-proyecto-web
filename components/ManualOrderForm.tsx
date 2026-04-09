@@ -38,6 +38,8 @@ export const ManualOrderForm: React.FC<Props> = ({ products, initialOrder, onClo
   // Datos de la Orden
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
+  const [customerEmail, setCustomerEmail] = useState('');
+  const [customerAddress, setCustomerAddress] = useState('');
   const [notes, setNotes] = useState('');
   const [status, setStatus] = useState<Order['status']>('paid'); 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -66,6 +68,8 @@ export const ManualOrderForm: React.FC<Props> = ({ products, initialOrder, onClo
       setOrderItems(initialOrder.items || []);
       setCustomerName(initialOrder.customer_name || '');
       setCustomerPhone(initialOrder.customer_phone || '');
+      setCustomerEmail((initialOrder as any).customer_email || '');
+      setCustomerAddress((initialOrder as any).customer_address || '');
       setStatus(initialOrder.status);
       
       // Facturación
@@ -251,7 +255,8 @@ export const ManualOrderForm: React.FC<Props> = ({ products, initialOrder, onClo
       // Payload base
       const commonData = {
         customer_name: customerName,
-        customer_email: (initialOrder as any)?.customer_email || 'manual@ventas.local', 
+        customer_email: customerEmail || 'manual@ventas.local', 
+        customer_address: customerAddress || 'N/A',
         customer_phone: customerPhone || 'Sin teléfono',
         items: orderItems,
         subtotal: orderTotal,
@@ -747,7 +752,7 @@ export const ManualOrderForm: React.FC<Props> = ({ products, initialOrder, onClo
               
               {/* Datos Básicos */}
               <div className="grid grid-cols-2 gap-4">
-                  <div className="col-span-2 relative group">
+                  <div className="col-span-2 sm:col-span-1 relative group">
                     <User className="absolute left-3 top-3 text-slate-400 group-focus-within:text-blue-500 transition-colors" size={18} />
                     <input
                       type="text"
@@ -755,9 +760,10 @@ export const ManualOrderForm: React.FC<Props> = ({ products, initialOrder, onClo
                       className="w-full pl-10 pr-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-hidden transition-all text-sm"
                       value={customerName}
                       onChange={(e) => setCustomerName(e.target.value)}
+                      title="Nombre del cliente"
                     />
                   </div>
-                  <div className="col-span-2 relative group">
+                  <div className="col-span-2 sm:col-span-1 relative group">
                     <Phone className="absolute left-3 top-3 text-slate-400 group-focus-within:text-blue-500 transition-colors" size={18} />
                     <input
                       type="text"
@@ -765,6 +771,27 @@ export const ManualOrderForm: React.FC<Props> = ({ products, initialOrder, onClo
                       className="w-full pl-10 pr-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-hidden transition-all text-sm"
                       value={customerPhone}
                       onChange={(e) => setCustomerPhone(e.target.value)}
+                      title="Número de teléfono"
+                    />
+                  </div>
+                  <div className="col-span-2 relative group">
+                    <input
+                      type="email"
+                      placeholder="Email (opcional - para enviar recibo)"
+                      className="w-full px-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-hidden transition-all text-sm"
+                      value={customerEmail}
+                      onChange={(e) => setCustomerEmail(e.target.value)}
+                      title="Correo electrónico"
+                    />
+                  </div>
+                  <div className="col-span-2 relative group">
+                    <input
+                      type="text"
+                      placeholder="Dirección (opcional)"
+                      className="w-full px-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-hidden transition-all text-sm"
+                      value={customerAddress}
+                      onChange={(e) => setCustomerAddress(e.target.value)}
+                      title="Dirección física"
                     />
                   </div>
               </div>
