@@ -225,12 +225,26 @@ export default async function handler(req, res) {
                 console.error("[ML] Error auto-filling attributes:", e);
             }
 
-            const createResp = await fetch(`https://api.mercadolibre.com/items`, {
+            let createResp = await fetch(`https://api.mercadolibre.com/items`, {
                 method: 'POST',
                 headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
                 body: JSON.stringify(itemBody)
             });
-            const createData = await createResp.json();
+            let createData = await createResp.json();
+
+            // Auto-recovery para el loco comportamiento de ML que a veces exige family_name en vez de title
+            if (!createResp.ok && createData.cause && JSON.stringify(createData.cause).includes("family_name")) {
+                console.log("[ML] Categoría estricta detectada. Reintentando con family_name en vez de title...");
+                itemBody.family_name = itemBody.title;
+                delete itemBody.title;
+                createResp = await fetch(`https://api.mercadolibre.com/items`, {
+                    method: 'POST',
+                    headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify(itemBody)
+                });
+                createData = await createResp.json();
+            }
+
             if (createResp.ok) {
                 await supabase.from('products').update({ ml_item_id: createData.id, ml_status: createData.status, ml_permalink: createData.permalink }).eq('id', productId);
                 return res.status(200).json({ success: true, ml_id: createData.id });
