@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import Afip from '@afipsdk/afip.js';
+import fs from 'fs';
 
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_TOKEN;
@@ -52,14 +53,22 @@ export default async function handler(req, res) {
         throw new Error(`Faltan variables: ${missing.join(", ")}`);
      }
      
+     const cacheDir = '/tmp/afip_cache/';
+     if (!fs.existsSync(cacheDir)) {
+       fs.mkdirSync(cacheDir, { recursive: true });
+     }
+     
+     fs.writeFileSync(cacheDir + 'cert.pem', CERT);
+     fs.writeFileSync(cacheDir + 'key.pem', KEY);
+
      // Soporte para default export en diferentes entornos
      const AfipClass = Afip.default || Afip;
      afip = new AfipClass({
         CUIT: CUIT,
-        cert: CERT,
-        key: KEY,
+        cert: 'cert.pem',
+        key: 'key.pem',
         production: true,
-        res_folder: '/tmp/afip_cache/' 
+        res_folder: cacheDir 
      });
 
      // ⏰ AJUSTE DE RELOJ: Forzamos la zona horaria de Argentina
