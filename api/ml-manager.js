@@ -146,10 +146,10 @@ export default async function handler(req, res) {
         const price = Math.floor(Number(product.price) * (1 + markup / 100));
         const pictures = (product.images || []).map(img => ({ source: typeof img === 'string' ? img : img.url })).filter(img => img.source?.startsWith('http'));
         if (pictures.length === 0 && product.image) pictures.push({ source: product.image });
-
+        if (pictures.length === 0) pictures.push({ source: "https://raw.githubusercontent.com/lucide-icons/lucide/main/icons/box.svg" }); // Fallback seguro
+        
         const itemBody = {
             title: (product.ml_title || product.name).slice(0, 60),
-            family_name: (product.ml_title || product.name).slice(0, 60),
             category_id: product.ml_category_id || "MLA3530",
             price,
             currency_id: "ARS",
@@ -236,8 +236,7 @@ export default async function handler(req, res) {
                 return res.status(200).json({ success: true, ml_id: createData.id });
             } else {
                 console.error("ML Create Error:", JSON.stringify(createData, null, 2));
-                const causeStr = createData.cause ? JSON.stringify(createData.cause) : '';
-                throw new Error((createData.message || 'Error al crear en ML') + ' ' + causeStr);
+                return res.status(400).json({ error: createData.message || 'Error al crear en ML', details: createData.cause });
             }
         }
       }
