@@ -285,7 +285,42 @@ const SalesDashboard: React.FC<Props> = ({ orders, payments, onUpdateStatus, onE
   };
 
   const handlePrintReceipt = (order: Order) => {
-    printOrderReceipt(order, { isFiscal: order.is_invoiced || false });
+    // Si la orden tiene factura, extraemos los datos de las notas
+    const isFiscal = order.is_invoiced || false;
+    let cae = '';
+    let caeVto = '';
+    
+    if (isFiscal && order.notes) {
+      const caeMatch = order.notes.match(/CAE:\s*(\d+)/i);
+      const vtoMatch = order.notes.match(/VTO:\s*([\d\/]+)/i);
+      if (caeMatch) cae = caeMatch[1];
+      if (vtoMatch) caeVto = vtoMatch[1];
+    }
+
+    printOrderReceipt(order, { 
+      isFiscal, 
+      cae, 
+      caeVto, 
+      cbteNumber: order.invoice_number 
+    });
+  };
+
+  const handleResendEmail = async (order: Order) => {
+    if (!order.customer_email || order.customer_email === 'manual@ventas.local') {
+      const newEmail = window.prompt("No hay un email válido. Ingresá el correo del cliente:", "");
+      if (!newEmail) return;
+      order.customer_email = newEmail;
+    }
+
+    toast.info(`Reenviando comprobante a ${order.customer_email}...`);
+    try {
+      const { sendSaleNotificationEmail } = await import('../services/emailService');
+      const sent = await sendSaleNotificationEmail(order, order.items || []);
+      if (sent) toast.success("¡Email reenviado con éxito!");
+      else toast.error("Error al enviar el email.");
+    } catch (e) {
+      toast.error("Error de conexión al enviar email.");
+    }
   };
   const handleEmitInvoiceToAfip = async (orderId: string, docDni: string, docType: string) => {
     if (!window.confirm("¿Emitir Factura a ARCA/AFIP ahora?")) return;
@@ -1106,10 +1141,20 @@ const SalesDashboard: React.FC<Props> = ({ orders, payments, onUpdateStatus, onE
 
                     <button
                       onClick={() => handlePrintReceipt(order)}
+                      title="Imprimir Recibo / Factura Fiscal"
                       className="px-4 py-2 bg-slate-800 text-white rounded-md text-sm hover:bg-slate-900 transition-colors flex items-center justify-center gap-2 shadow-sm"
                     >
                       <Printer size={14} />
-                      Imprimir Recibo
+                      Imprimir
+                    </button>
+
+                    <button
+                      onClick={() => handleResendEmail(order)}
+                      title="Reenviar comprobante por Email"
+                      className="px-4 py-2 bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-md text-sm hover:bg-emerald-200 transition-colors flex items-center justify-center gap-2"
+                    >
+                      <Mail size={14} />
+                      Reenviar Mail
                     </button>
 
                     {/* Descargar etiqueta MercadoEnvíos si existe shipment */}
