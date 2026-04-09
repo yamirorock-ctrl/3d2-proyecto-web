@@ -316,8 +316,8 @@ export const ManualOrderForm: React.FC<Props> = ({ products, initialOrder, onClo
                   orderData: {
                     id: result.data.id,
                     total: orderTotal,
-                    docTipo: billingDni ? (billingDni.length > 8 ? 80 : 96) : 99, 
-                    docNro: billingDni || 0
+                    docTipo: (String(billingDni).replace(/\D/g, '').length > 8) ? 80 : (billingDni ? 96 : 99), 
+                    docNro: String(billingDni).replace(/\D/g, '') || 0
                   }
                 })
               });
