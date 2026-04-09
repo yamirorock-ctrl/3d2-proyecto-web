@@ -41,14 +41,14 @@ export async function getMLConfig(): Promise<MLConfig> {
   try {
     const { data, error } = await (client
       .from('app_settings') as any)
-      .select('value')
-      .eq('key', 'ml_simulator_config')
+      .select('ml_simulator_config')
+      .eq('id', 1)
       .single();
 
-    if (error || !data) {
+    if (error || !data || !data.ml_simulator_config) {
       return DEFAULT_CONFIG;
     }
-    return { ...DEFAULT_CONFIG, ...data.value };
+    return { ...DEFAULT_CONFIG, ...data.ml_simulator_config };
   } catch (e) {
     return DEFAULT_CONFIG;
   }
@@ -59,11 +59,11 @@ export async function saveMLConfig(config: MLConfig): Promise<boolean> {
   try {
     const { error } = await (client
       .from('app_settings') as any)
-      .upsert({ 
-        key: 'ml_simulator_config', 
-        value: config,
+      .update({ 
+        ml_simulator_config: config,
         updated_at: new Date().toISOString()
-      }, { onConflict: 'key' });
+      })
+      .eq('id', 1);
 
     if (error) throw error;
     return true;
@@ -75,9 +75,13 @@ export async function saveMLConfig(config: MLConfig): Promise<boolean> {
 export async function getFiscalConfig(): Promise<FiscalConfig> {
     const client = getClient();
     try {
-        const { data, error } = await (client.from('app_settings') as any).select('value').eq('key', 'fiscal_config').single();
-        if (error || !data) return DEFAULT_FISCAL;
-        return { ...DEFAULT_FISCAL, ...data.value };
+        const { data, error } = await (client.from('app_settings') as any)
+          .select('fiscal_config')
+          .eq('id', 1)
+          .single();
+          
+        if (error || !data || !data.fiscal_config) return DEFAULT_FISCAL;
+        return { ...DEFAULT_FISCAL, ...data.fiscal_config };
     } catch (e) {
         return DEFAULT_FISCAL;
     }
@@ -86,11 +90,13 @@ export async function getFiscalConfig(): Promise<FiscalConfig> {
 export async function saveFiscalConfig(config: FiscalConfig): Promise<boolean> {
     const client = getClient();
     try {
-        const { error } = await (client.from('app_settings') as any).upsert({ 
-            key: 'fiscal_config', 
-            value: config, 
+        const { error } = await (client.from('app_settings') as any)
+          .update({ 
+            fiscal_config: config, 
             updated_at: new Date().toISOString()
-        }, { onConflict: 'key' });
+        })
+        .eq('id', 1);
+        
         if (error) throw error;
         return true;
     } catch (e) {

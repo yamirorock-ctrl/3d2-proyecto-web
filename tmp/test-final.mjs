@@ -9,20 +9,27 @@ async function test() {
   try {
     console.log('--- TEST AFIP FINAL (CACHE LOCAL) ---');
     
+    process.env.NODE_OPTIONS = '--tls-cipher-list=DEFAULT@SECLEVEL=1';
+    
     const afip = new Afip({
       CUIT: CUIT,
       cert: CERT,
       key: KEY,
       production: true,
-      res_folder: './tmp/' // Usamos la carpeta local tmp que sí existe
+      res_folder: './tmp/'
     });
 
+    process.env.TZ = 'America/Argentina/Buenos_Aires';
+    if (afip.WSAA) afip.WSAA.url = "https://wsaa.arca.gob.ar/ws/services/LoginCms?wsdl";
+    if (afip.ElectronicBilling) afip.ElectronicBilling.url = "https://serviciosweb.arca.gob.ar/wsfev1/service.asmx";
+
     const status = await afip.ElectronicBilling.getServerStatus();
-    console.log('✅ ¡¡CONECTADO!!');
+    console.log('✅ ¡¡CONECTADO A ARCA!!');
     console.log('Respuesta:', JSON.stringify(status));
   } catch (error) {
-    console.error('❌ AFIP SIGUE DICIENDO 401');
+    console.error('❌ AFIP/ARCA SIGUE DICIENDO 401 LUEGO DE LOS FIXES');
     console.error('Mensaje:', error.message);
+    if(error.response) console.log('Data cruda:', error.response.data);
     console.log('\nSugerencia: Esperar 15 minutos a que AFIP procese el certificado nuevo.');
   }
 }
