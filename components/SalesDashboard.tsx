@@ -2,8 +2,9 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 import { Order, Payment, OrderStatus } from '../types';
 import { getFiscalConfig, FiscalConfig } from '../services/configService';
-import { TrendingUp, Package, DollarSign, Clock, Download, Calendar, CheckCircle, Loader, XCircle, Trash2, RefreshCw, Truck, Edit, AlertCircle, Plus, Wallet, CreditCard, Banknote, History, Printer, Calculator, ShieldCheck, Info } from 'lucide-react';
+import { TrendingUp, Package, DollarSign, Clock, Download, Calendar, CheckCircle, Loader, XCircle, Trash2, RefreshCw, Truck, Edit, AlertCircle, Plus, Wallet, CreditCard, Banknote, History, Printer, Calculator, ShieldCheck, Info, Mail } from 'lucide-react';
 import { printOrderReceipt } from '../utils/receiptPrinter';
+import { toast } from 'sonner';
 interface Props {
   orders: Order[];
   payments?: Payment[];
