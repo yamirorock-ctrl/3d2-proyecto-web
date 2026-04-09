@@ -177,6 +177,53 @@ export default async function handler(req, res) {
             const predData = await predResp.json();
             if (predData?.[0]) itemBody.category_id = predData[0].category_id;
             
+            // Auto-rellenar atributos obligatorios de la categoría para evitar Validation Error
+            try {
+                const attrsResp = await fetch(`https://api.mercadolibre.com/categories/${itemBody.category_id}/attributes`);
+                if (attrsResp.ok) {
+                    const categoryAttrs = await attrsResp.json();
+                    let currentAttrs = [...itemBody.attributes];
+                    
+                    categoryAttrs.forEach(attrDef => {
+                        if (attrDef.tags && attrDef.tags.required) {
+                            if (!currentAttrs.find(a => a.id === attrDef.id)) {
+                                let defaultValue = "N/A";
+                                if (attrDef.value_type === "number") defaultValue = "1";
+                                if (attrDef.value_type === "number_unit") defaultValue = "1 cm";
+                                
+                                // Tweak for common 3D toys/baby requirements
+                                if (attrDef.id.includes("MIN_AGE")) defaultValue = "3 años";
+                                else if (attrDef.id.includes("MAX_AGE")) defaultValue = "99 años";
+                                else if (attrDef.id === "COLOR") defaultValue = "Multicolor";
+                                else if (attrDef.id === "MATERIAL") defaultValue = "Plástico PLA";
+                                else if (attrDef.id === "FRANCHISE") defaultValue = "Genérica";
+                                else if (attrDef.id === "CHARACTER") defaultValue = "Genérico";
+                                else if (attrDef.id === "MANUFACTURER") defaultValue = "Creart 3D2";
+                                else if (attrDef.id === "LINE") defaultValue = "Genérica";
+                                else if (attrDef.id.includes("BATTERY")) defaultValue = "No";
+
+                                // If the attribute has a predefined list of values, try to pick "Otros" or the first one
+                                if (attrDef.values && attrDef.values.length > 0 && attrDef.tags.allow_custom_value === false) {
+                                    const otherVal = attrDef.values.find(v => v.name && v.name.toLowerCase().includes("otro"));
+                                    if (otherVal) {
+                                        currentAttrs.push({ id: attrDef.id, value_id: otherVal.id });
+                                        return;
+                                    } else {
+                                        currentAttrs.push({ id: attrDef.id, value_id: attrDef.values[0].id });
+                                        return;
+                                    }
+                                }
+                                
+                                currentAttrs.push({ id: attrDef.id, value_name: String(defaultValue) });
+                            }
+                        }
+                    });
+                    itemBody.attributes = currentAttrs;
+                }
+            } catch(e) {
+                console.error("[ML] Error auto-filling attributes:", e);
+            }
+
             const createResp = await fetch(`https://api.mercadolibre.com/items`, {
                 method: 'POST',
                 headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
