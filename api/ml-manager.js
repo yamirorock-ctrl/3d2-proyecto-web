@@ -173,15 +173,28 @@ export default async function handler(req, res) {
             });
             return res.status(200).json({ success: true, ml_id: product.ml_item_id });
         } else {
-            // Prediccion basica si no hay categoria explicita
+            // Mapeo fuerte de plantillas a categorías hoja de ML (Bypass a la mala predicción de ML)
+            const template = product.ml_attributes?.TEMPLATE || '';
+            const manualCategory = product.category?.toLowerCase() || '';
             if (!product.ml_category_id) {
-                const queryText = product.name + (product.category ? ' ' + product.category : '');
-                const predResp = await fetch(`https://api.mercadolibre.com/sites/MLA/domain_discovery/search?q=${encodeURIComponent(queryText)}`);
-                const predData = await predResp.json();
-                if (predData?.[0]) itemBody.category_id = predData[0].category_id;
+                if (template === 'Bebés' || manualCategory.includes('bebé')) {
+                    itemBody.category_id = "MLA417942"; // Bebés > Cuarto del Bebé > Decoración > Colgantes de Puerta
+                } else if (template === 'Mates' || manualCategory.includes('mate')) {
+                    itemBody.category_id = "MLA190013"; // Mates
+                } else if (template === 'Llaveros' || manualCategory.includes('llavero')) {
+                    itemBody.category_id = "MLA438318"; // Llaveros
+                } else if (template === 'Vasos' || manualCategory.includes('vaso')) {
+                    itemBody.category_id = "MLA438030"; // Vasos
+                } else if (template === 'Soportes' || manualCategory.includes('soporte')) {
+                    itemBody.category_id = "MLA3530";   // Soportes de Celular
+                } else {
+                    // Prediccion basica de contingencia
+                    const queryText = product.name + (product.category ? ' ' + product.category : '');
+                    const predResp = await fetch(`https://api.mercadolibre.com/sites/MLA/domain_discovery/search?q=${encodeURIComponent(queryText)}`);
+                    const predData = await predResp.json();
+                    if (predData?.[0]) itemBody.category_id = predData[0].category_id;
+                }
             }
-            
-            // Auto-rellenar atributos obligatorios de la categoría para evitar Validation Error
             try {
                 const attrsResp = await fetch(`https://api.mercadolibre.com/categories/${itemBody.category_id}/attributes`);
                 if (attrsResp.ok) {
