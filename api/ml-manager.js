@@ -173,10 +173,13 @@ export default async function handler(req, res) {
             });
             return res.status(200).json({ success: true, ml_id: product.ml_item_id });
         } else {
-            // Prediccion basica
-            const predResp = await fetch(`https://api.mercadolibre.com/sites/MLA/domain_discovery/search?q=${encodeURIComponent(product.name)}`);
-            const predData = await predResp.json();
-            if (predData?.[0]) itemBody.category_id = predData[0].category_id;
+            // Prediccion basica si no hay categoria explicita
+            if (!product.ml_category_id) {
+                const queryText = product.name + (product.category ? ' ' + product.category : '');
+                const predResp = await fetch(`https://api.mercadolibre.com/sites/MLA/domain_discovery/search?q=${encodeURIComponent(queryText)}`);
+                const predData = await predResp.json();
+                if (predData?.[0]) itemBody.category_id = predData[0].category_id;
+            }
             
             // Auto-rellenar atributos obligatorios de la categoría para evitar Validation Error
             try {
