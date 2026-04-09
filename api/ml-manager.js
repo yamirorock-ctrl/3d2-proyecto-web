@@ -187,7 +187,9 @@ export default async function handler(req, res) {
                 await supabase.from('products').update({ ml_item_id: createData.id, ml_status: createData.status, ml_permalink: createData.permalink }).eq('id', productId);
                 return res.status(200).json({ success: true, ml_id: createData.id });
             } else {
-                throw new Error(createData.message || 'Error al crear en ML');
+                console.error("ML Create Error:", JSON.stringify(createData, null, 2));
+                const causeStr = createData.cause ? JSON.stringify(createData.cause) : '';
+                throw new Error((createData.message || 'Error al crear en ML') + ' ' + causeStr);
             }
         }
       }
