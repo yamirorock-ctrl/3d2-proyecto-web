@@ -83,7 +83,7 @@ export const printOrderReceipt = (order: Order, options: { isFiscal: boolean, ca
       </style>
     </head>
     <body>
-      ${isFiscal ? \`
+      ${isFiscal ? `
         <div class="fiscal-header">
            <div class="fiscal-header-left">
              <h1>3D2 Impresiones</h1>
@@ -96,34 +96,34 @@ export const printOrderReceipt = (order: Order, options: { isFiscal: boolean, ca
            </div>
            <div class="fiscal-header-right">
              <h2>FACTURA</h2>
-             <p><strong>Nº:</strong> \${finalCbteNumber || '00002-Pendiente'}</p>
-             <p><strong>Fecha Emisión:</strong> \${new Date().toLocaleDateString('es-AR')}</p>
+             <p><strong>Nº:</strong> ${finalCbteNumber || '00002-Pendiente'}</p>
+             <p><strong>Fecha Emisión:</strong> ${new Date().toLocaleDateString('es-AR')}</p>
            </div>
         </div>
-      \` : \`
+      ` : `
         <div class="header">
-          <img src="\${window.location.origin}/LOGO.jpg" alt="3D2 Logo" onerror="this.style.display='none'" />
+          <img src="${window.location.origin}/LOGO.jpg" alt="3D2 Logo" onerror="this.style.display='none'" />
           <h1>3D2 Impresiones</h1>
           <p>Impresión 3D y Corte Láser</p>
         </div>
         <div class="warning">
           <strong>Documento No Fiscal</strong> - Comprobante interno de pedido para el cliente.
         </div>
-      \`}
+      `}
 
       <div class="details">
         <div>
-          <h3>Datos del \${isFiscal ? 'Receptor' : 'Cliente'}</h3>
-          <p><strong>Nombre:</strong> \${(order as any).customer?.name || (order as any).customer_name || 'Consumidor Final'}</p>
-          \${isFiscal ? \`<p><strong>CUIT/DNI:</strong> \${order.billing_dni_cuit || '0'}</p>\` : ''}
-          <p><strong>Contacto:</strong> \${(order as any).customer?.phone || (order as any).customer_phone || (order as any).customer_email || 'N/A'}</p>
+          <h3>Datos del ${isFiscal ? 'Receptor' : 'Cliente'}</h3>
+          <p><strong>Nombre:</strong> ${(order as any).customer?.name || (order as any).customer_name || 'Consumidor Final'}</p>
+          ${isFiscal ? `<p><strong>CUIT/DNI:</strong> ${order.billing_dni_cuit || '0'}</p>` : ''}
+          <p><strong>Contacto:</strong> ${(order as any).customer?.phone || (order as any).customer_phone || (order as any).customer_email || 'N/A'}</p>
         </div>
         <div style="text-align: right;">
           <h3>Detalles de la Operación</h3>
-          <p><strong>N° Orden Interna:</strong> \${order.order_number || order.id.slice(0,8)}</p>
-          <p><strong>Fecha de Operación:</strong> \${new Date((order as any).timestamp || (order as any).created_at).toLocaleDateString('es-AR')}</p>
-          <p><strong>Condición de Venta:</strong> \${((order as any).method === 'mercadopago' || (order as any).payment_id) ? 'MercadoPago' : ((order as any).paymentMethod === 'transfer' ? 'Transferencia' : 'Efectivo/Otro')}</p>
-          <p><strong>Estado:</strong> \${order.status.toUpperCase()}</p>
+          <p><strong>N° Orden Interna:</strong> ${order.order_number || order.id.slice(0,8)}</p>
+          <p><strong>Fecha de Operación:</strong> ${new Date((order as any).timestamp || (order as any).created_at).toLocaleDateString('es-AR')}</p>
+          <p><strong>Condición de Venta:</strong> ${((order as any).method === 'mercadopago' || (order as any).payment_id) ? 'MercadoPago' : ((order as any).paymentMethod === 'transfer' ? 'Transferencia' : 'Efectivo/Otro')}</p>
+          <p><strong>Estado:</strong> ${order.status.toUpperCase()}</p>
         </div>
       </div>
 
@@ -137,48 +137,48 @@ export const printOrderReceipt = (order: Order, options: { isFiscal: boolean, ca
           </tr>
         </thead>
         <tbody>
-          \${(order.items || []).filter((item: any) => !item.name.startsWith('[EMPAQUE]')).map((item: any) => \`
+          ${(order.items || []).filter((item: any) => !item.name.startsWith('[EMPAQUE]')).map((item: any) => `
             <tr>
-              <td><span class="item-name" title="\${item.name}">\${item.name}</span></td>
-              <td>\${item.quantity}</td>
-              <td>$\${Number(item.price).toLocaleString('es-AR')}</td>
-              <td style="text-align: right;">$\${Number(item.price * item.quantity).toLocaleString('es-AR')}</td>
+              <td><span class="item-name" title="${item.name}">${item.name}</span></td>
+              <td>${item.quantity}</td>
+              <td>$${Number(item.price).toLocaleString('es-AR')}</td>
+              <td style="text-align: right;">$${Number(item.price * item.quantity).toLocaleString('es-AR')}</td>
             </tr>
-          \`).join('')}
+          `).join('')}
         </tbody>
       </table>
 
       <div class="total">
-        <p>Total a Pagar: $\${Number(order.total).toLocaleString('es-AR')}</p>
+        <p>Total a Pagar: $${Number(order.total).toLocaleString('es-AR')}</p>
       </div>
 
-      \${(order.notes && !isFiscal) ? \`
+      ${(order.notes && !isFiscal) ? `
       <div class="notes">
         <strong>Notas del Pedido:</strong><br/>
-        \${order.notes.replace(/\\n/g, '<br/>')}
+        ${order.notes.replace(/\\n/g, '<br/>')}
       </div>
-      \` : ''}
+      ` : ''}
 
-      \${(isFiscal && finalCae) ? \`
+      ${(isFiscal && finalCae) ? `
       <div class="afip-box">
           <div class="afip-qr">
-             \${qrImageHtml}
+             ${qrImageHtml}
           </div>
           <div class="afip-data" style="text-align: right;">
              <p style="font-weight: bold; font-size: 12px; margin-bottom: 5px;">Comprobante Autorizado</p>
-             <p><strong>CAE:</strong> \${finalCae}</p>
-             <p><strong>Vto. CAE:</strong> \${finalCaeVto || 'N/A'}</p>
+             <p><strong>CAE:</strong> ${finalCae}</p>
+             <p><strong>Vto. CAE:</strong> ${finalCaeVto || 'N/A'}</p>
           </div>
       </div>
-      \` : ''}
+      ` : ''}
 
       <div class="footer">
         <p style="font-weight: bold; color: #333; margin-bottom: 5px;">¡Gracias por confiar en 3D2!</p>
-        <p>Para dudas o reclamos sobre tu pedido comunicate \${isFiscal ? 'por WhatsApp' : 'con nosotros'}</p>
+        <p>Para dudas o reclamos sobre tu pedido comunicate ${isFiscal ? 'por WhatsApp' : 'con nosotros'}</p>
       </div>
     </body>
     </html>
-  \`;
+  `;
 
   printWindow.document.write(receiptHtml);
   printWindow.document.close();
