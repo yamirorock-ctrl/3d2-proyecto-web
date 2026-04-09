@@ -65,7 +65,7 @@ export default async function handler(req, res) {
 
       mailOptions = {
         from: `"3D2 Ventas" <${process.env.EMAIL_USER}>`,
-        to: process.env.EMAIL_USER,
+        to: customer_email ? `${process.env.EMAIL_USER}, ${customer_email}` : process.env.EMAIL_USER,
         subject: `[Nueva Venta] Orden #${order_number} - ${customer_name}`,
         html: `
           <div style="font-family: Arial, sans-serif; color: #333;">

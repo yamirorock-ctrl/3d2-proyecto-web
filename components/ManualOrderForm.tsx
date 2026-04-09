@@ -331,7 +331,28 @@ export const ManualOrderForm: React.FC<Props> = ({ products, initialOrder, onClo
                     invoice_number: `Nº${afipResult.cbte_number}`,
                     notes: finalNotes + `\n[FACTURA C EMITIDA: Nº${afipResult.cbte_number} - CAE: ${afipResult.cae} - VTO: ${afipResult.cae_vto}]`
                  }).eq('id', result.data.id);
+                 
                  toast.success(`¡Factura C Oficial Nº${afipResult.cbte_number} emitida con éxito!`);
+
+                 // 📄 AUTO-IMPRESIÓN
+                 try {
+                   const { printOrderReceipt } = await import('../utils/receiptPrinter');
+                   const orderForReceipt = {
+                      ...commonData,
+                      id: result.data.id,
+                      invoice_number: `Nº${afipResult.cbte_number}`,
+                      notes: finalNotes + `\n[FACTURA C EMITIDA: Nº${afipResult.cbte_number} - CAE: ${afipResult.cae} - VTO: ${afipResult.cae_vto}]`
+                   } as any;
+                   
+                   printOrderReceipt(orderForReceipt, {
+                      isFiscal: true,
+                      cae: afipResult.cae,
+                      caeVto: afipResult.cae_vto,
+                      cbteNumber: `Nº${afipResult.cbte_number}`
+                   });
+                 } catch (printErr) {
+                   console.error('Error al abrir visor de impresión:', printErr);
+                 }
               } else {
                  toast.error('La orden se guardó PERO falló ARCA: ' + (afipResult.error || 'Autenticación fallida'));
               }
