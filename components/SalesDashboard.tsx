@@ -334,6 +334,48 @@ const SalesDashboard: React.FC<Props> = ({ orders, payments, onUpdateStatus, onE
     }
   }
 
+  const handleVoidInvoiceAfip = async (orderId: string, docDni: string) => {
+    if (!window.confirm("¿Estás 100% seguro de anular esta factura fiscal con una Nota de Crédito? Esta acción es irreversible en ARCA/AFIP.")) return;
+    
+    try {
+      const order = orders.find(o => o.id === orderId);
+      if (!order || !order.invoice_number) {
+        alert("Esta orden no tiene una factura AFIP oficial válida que anular.");
+        return;
+      }
+      
+      const res = await fetch('/api/afip', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'create-credit-note',
+          orderData: {
+            id: order.id,
+            total: order.total,
+            docTipo: docDni ? (docDni.length > 8 ? 80 : 96) : 99, 
+            docNro: docDni || 0,
+            invoice_number: order.invoice_number
+          }
+        })
+      });
+      const afipResult = await res.json();
+      if (res.ok && afipResult.success) {
+         if (onPatchOrder) {
+           onPatchOrder(order.id, {
+              is_invoiced: false,
+              notes: (order.notes || '') + `\n[NOTA DE CRÉDITO C EMITIDA: Nº${afipResult.cbte_number} - CAE: ${afipResult.cae}]`
+           });
+         }
+         alert(`¡Nota de Crédito C Nº${afipResult.cbte_number} emitida con éxito! Factura anulada.`);
+         setEditingInvoicingId(null);
+      } else {
+         alert('Falló ARCA al enviar NC: ' + (afipResult.error || 'Error desconocido'));
+      }
+    } catch(e) {
+      alert('Error de conexión con AFIP');
+    }
+  }
+
   return (
     <div className="space-y-6">
       {/* Header con filtros */}
@@ -762,14 +804,25 @@ const SalesDashboard: React.FC<Props> = ({ orders, payments, onUpdateStatus, onE
                               <input type="text" value={invNum} onChange={e => setInvNum(e.target.value)} className="w-full p-2 text-xs border rounded font-mono" placeholder="00001-00000123"/>
                            </div>
                            <div className="flex gap-2 pt-1">
+                             <div className="flex gap-2">
                              <button 
                                 onClick={() => handleEmitInvoiceToAfip(order.id, billDni, billType)}
                                 className={`flex-1 py-1.5 text-white rounded text-[10px] font-bold ${debt > 0 ? 'bg-slate-300 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}`}
-                                disabled={debt > 0}
+                                disabled={debt > 0 || !!(order.notes && order.notes.includes('[FACTURA C EMITIDA:'))}
                                 title={debt > 0 ? "No puedes facturar pedidos con deuda" : "Crear Factura Electrónica"}
                              >
-                                Emitir a ARCA
+                                Emitir Factura
                              </button>
+                             {order.invoice_number && order.notes && order.notes.includes('[FACTURA C EMITIDA:') && (
+                               <button 
+                                  onClick={() => handleVoidInvoiceAfip(order.id, billDni)}
+                                  className="flex-1 py-1.5 bg-red-600 text-white rounded text-[10px] font-bold hover:bg-red-700"
+                                  title="Anular emitiendo Nota de Crédito en ARCA"
+                               >
+                                  Anular (Generar NC)
+                               </button>
+                             )}
+                             </div>
                              <button 
                                 onClick={() => {
                                   if (onPatchOrder) {
@@ -782,7 +835,7 @@ const SalesDashboard: React.FC<Props> = ({ orders, payments, onUpdateStatus, onE
                                     setEditingInvoicingId(null);
                                   }
                                 }}
-                                className="flex-1 py-1.5 bg-emerald-600 text-white rounded text-[10px] font-bold hover:bg-emerald-700"
+                                className="flex-1 py-1.5 bg-emerald-600 text-white rounded text-[10px] font-bold hover:bg-emerald-700 mt-1"
                                 title="Solo guarda los datos, sin emitir a AFIP"
                              >
                                 Guardar Manual

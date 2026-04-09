@@ -177,6 +177,67 @@ export default async function handler(req, res) {
         });
       }
 
+      case 'create-credit-note': {
+        if (!orderData || !orderData.invoice_number) return res.status(400).json({ error: 'Faltan datos de la factura original' });
+        
+        const date = new Date(Date.now() - ((new Date()).getTimezoneOffset() * 60000)).toISOString().split('T')[0].replace(/-/g, '');
+        
+        const originalNumber = parseInt((orderData.invoice_number || '').replace(/\D/g, ''));
+        if (!originalNumber) return res.status(400).json({ error: 'Número de factura inválido' });
+
+        const data = {
+          'CantReg': 1,
+          'PtoVta': PUNTO_VENTA,
+          'CbteTipo': 13, // 13 = Nota de Crédito C
+          'Concepto': 1, 
+          'DocTipo': orderData.docTipo || 99, 
+          'DocNro': parseInt(orderData.docNro || 0),
+          'CbteDesde': 0, 
+          'CbteHasta': 0,
+          'CbteFch': date,
+          'ImpTotal': parseFloat(orderData.total),
+          'ImpTotConc': 0,
+          'ImpNeto': parseFloat(orderData.total),
+          'ImpOpEx': 0,
+          'ImpIVA': 0,
+          'ImpTrib': 0,
+          'MonId': 'PES',
+          'MonCotiz': 1,
+          'CbtesAsoc': [
+            {
+               'Tipo': 11, // Factura C original
+               'PtoVta': PUNTO_VENTA,
+               'Nro': originalNumber
+            }
+          ]
+        };
+
+        const lastVoucher = await afip.ElectronicBilling.getLastVoucher(PUNTO_VENTA, 13);
+        data.CbteDesde = lastVoucher + 1;
+        data.CbteHasta = lastVoucher + 1;
+
+        console.log(`[ARCA] Emitiendo Nota de Crédito ${data.CbteDesde} anulando NC ${originalNumber}...`);
+        const invoiceResponse = await afip.ElectronicBilling.createVoucher(data);
+
+        await supabase
+          .from('afip_invoices')
+          .insert({
+            order_id: orderData.id,
+            cbte_tipo: 13,
+            punto_venta: PUNTO_VENTA,
+            cbte_numero: data.CbteDesde,
+            cae: invoiceResponse.CAE,
+            cae_vto: invoiceResponse.CAEFchVto,
+          });
+
+        return res.status(200).json({
+          success: true,
+          cbte_number: data.CbteDesde,
+          cae: invoiceResponse.CAE,
+          cae_vto: invoiceResponse.CAEFchVto
+        });
+      }
+
       default:
         return res.status(400).json({ error: 'Accion no soportada' });
     }
