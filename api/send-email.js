@@ -1,166 +1,73 @@
-import nodemailer from "nodemailer";
-
 export default async function handler(req, res) {
   // CORS configuration
   res.setHeader("Access-Control-Allow-Credentials", "true");
-  res.setHeader("Access-Control-Allow-Origin", "*"); // Adjust this in production if needed
+  res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET,OPTIONS,POST");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
-  if (req.method === "OPTIONS") {
-    return res.status(200).end();
-  }
+  if (req.method === "OPTIONS") return res.status(200).end();
+  if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
-  if (req.method !== "POST") {
-    return res.status(405).json({ error: "Method not allowed" });
-  }
-
-  const { type } = req.body;
-
-  if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
-    console.error("Missing email credentials");
-    return res
-      .status(500)
-      .json({ error: "Server email configuration missing" });
-  }
+  const RESEND_API_KEY = process.env.RESEND_API_KEY || "re_MZMsg14U_6M3Tk5rhrjen7xK5K3MGmrLa";
 
   try {
-    // Configure Outlook SMTP Transporter
-    const transporter = nodemailer.createTransport({
-      host: "smtp.office365.com",
-      port: 587,
-      secure: false, // STARTTLS
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
+    const { type, order_number, customer_name, customer_email, total, items, shipping_method, notes } = req.body;
+
+    const itemsHtml = (items || [])
+      .map(item => `<li>${item.quantity}x ${item.title || item.product_id} - $${item.price}</li>`)
+      .join("");
+
+    const emailHtml = `
+      <div style="font-family: Arial, sans-serif; color: #333; max-width: 600px; margin: 0 auto; border: 1px solid #eee; border-radius: 12px; overflow: hidden;">
+        <div style="background: #111; color: #fff; padding: 20px; text-align: center;">
+          <h1 style="margin: 0; font-size: 24px;">Creart 3D2</h1>
+        </div>
+        <div style="padding: 30px;">
+          <h2 style="color: #10b981;">¡Gracias por tu compra, ${customer_name}! 🚀</h2>
+          <p>Tu orden <strong>#${order_number}</strong> ha sido registrada exitosamente.</p>
+          
+          <div style="background: #f8fafc; padding: 20px; border-radius: 10px; margin: 25px 0;">
+            <p style="margin: 0; color: #64748b; font-size: 14px; text-transform: uppercase; font-weight: bold;">Total Pagado</p>
+            <p style="margin: 5px 0 0 0; font-size: 32px; font-weight: 800; color: #0f172a;">$${Number(total).toLocaleString("es-AR")}</p>
+          </div>
+
+          <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+            <tr><td style="padding: 10px 0; border-bottom: 1px solid #f1f5f9;"><strong>Metodo de Envío:</strong></td><td style="padding: 10px 0; border-bottom: 1px solid #f1f5f9; text-align: right;">${shipping_method}</td></tr>
+            ${notes ? `<tr><td style="padding: 10px 0; border-bottom: 1px solid #f1f5f9;"><strong>Notas:</strong></td><td style="padding: 10px 0; border-bottom: 1px solid #f1f5f9; text-align: right;">${notes}</td></tr>` : ""}
+          </table>
+
+          <h3 style="border-bottom: 2px solid #f1f5f9; padding-bottom: 10px; margin-top: 30px;">Detalle de Productos</h3>
+          <ul style="padding-left: 20px; line-height: 1.6;">${itemsHtml}</ul>
+          
+          <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #eee; text-align: center; color: #94a3b8; font-size: 12px;">
+            Este es un correo automático de Creart 3D2. Por consultas, contactanos por WhatsApp.
+          </div>
+        </div>
+      </div>
+    `;
+
+    // 🚀 Llamada a la API de Resend (Vía Fetch para mayor velocidad)
+    const response = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${RESEND_API_KEY}`
       },
-      tls: {
-        rejectUnauthorized: false,
-      },
+      body: JSON.stringify({
+        from: "Creart 3D2 <onboarding@resend.dev>",
+        to: ["creart3d2@gmail.com", customer_email].filter(Boolean),
+        subject: `Confirmación de Orden #${order_number} - Creart 3D2`,
+        html: emailHtml
+      })
     });
 
-    // Verify connection
-    await transporter.verify();
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.message || "Error en Resend API");
 
-    let mailOptions = {};
+    return res.status(200).json({ success: true, id: result.id });
 
-    if (type === "new_sale") {
-      const {
-        order_number,
-        customer_name,
-        customer_email,
-        customer_phone,
-        items,
-        total,
-        shipping_method,
-        notes,
-      } = req.body;
-
-      const itemsHtml = (items || [])
-        .map(
-          (item) =>
-            `<li>${item.quantity}x ${item.title || item.product_id} - $${item.price}</li>`,
-        )
-        .join("");
-
-      mailOptions = {
-        from: `"3D2 Ventas" <${process.env.EMAIL_USER}>`,
-        to: customer_email ? `${process.env.EMAIL_USER}, ${customer_email}` : process.env.EMAIL_USER,
-        subject: `[Nueva Venta] Orden #${order_number} - ${customer_name}`,
-        html: `
-          <div style="font-family: Arial, sans-serif; color: #333;">
-            <h2 style="color: #10b981;">¡Nueva Venta Realizada! 💰</h2>
-            <p>Se ha registrado una nueva orden exitosa en el sistema.</p>
-            
-            <div style="background: #f3f4f6; padding: 15px; border-radius: 8px; margin: 20px 0;">
-              <h3 style="margin-top:0;">Orden #${order_number}</h3>
-              <p style="font-size: 24px; font-weight: bold; color: #111;">Total: $${Number(total).toLocaleString("es-AR")}</p>
-            </div>
-
-            <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
-              <tr>
-                <td style="padding: 8px; border-bottom: 1px solid #eee;"><strong>Cliente:</strong></td>
-                <td style="padding: 8px; border-bottom: 1px solid #eee;">${customer_name}</td>
-              </tr>
-              <tr>
-                <td style="padding: 8px; border-bottom: 1px solid #eee;"><strong>Email:</strong></td>
-                <td style="padding: 8px; border-bottom: 1px solid #eee;">${customer_email}</td>
-              </tr>
-              <tr>
-                <td style="padding: 8px; border-bottom: 1px solid #eee;"><strong>Teléfono:</strong></td>
-                <td style="padding: 8px; border-bottom: 1px solid #eee;">${customer_phone || "N/A"}</td>
-              </tr>
-              <tr>
-                <td style="padding: 8px; border-bottom: 1px solid #eee;"><strong>Envío:</strong></td>
-                <td style="padding: 8px; border-bottom: 1px solid #eee;">${shipping_method}</td>
-              </tr>
-              ${notes ? `<tr><td style="padding: 8px; border-bottom: 1px solid #eee;"><strong>Notas:</strong></td><td style="padding: 8px; border-bottom: 1px solid #eee;">${notes}</td></tr>` : ""}
-            </table>
-            
-            <h3>Productos:</h3>
-            <ul>${itemsHtml}</ul>
-            
-            <p style="font-size: 12px; color: #888; margin-top: 30px;">
-              Sistema de Ventas 3D2 - ${new Date().toLocaleString("es-AR")}
-            </p>
-          </div>
-        `,
-      };
-    } else {
-      // Default: Custom Order
-      const {
-        customer_name,
-        customer_email,
-        customer_phone,
-        technology,
-        description,
-      } = req.body;
-
-      mailOptions = {
-        from: `"3D2 Web" <${process.env.EMAIL_USER}>`,
-        to: process.env.EMAIL_USER,
-        replyTo: customer_email,
-        subject: `[Nuevo Pedido Personalizado] ${customer_name}`,
-        html: `
-          <div style="font-family: Arial, sans-serif; color: #333;">
-            <h2 style="color: #4f46e5;">Nuevo Pedido Personalizado Recibido</h2>
-            <p>Se ha recibido una nueva solicitud desde la web.</p>
-            
-            <hr style="border: 1px solid #eee; margin: 20px 0;" />
-            
-            <h3>Detalles del Cliente</h3>
-            <p><strong>Nombre:</strong> ${customer_name}</p>
-            <p><strong>Email:</strong> ${customer_email}</p>
-            <p><strong>Teléfono:</strong> ${customer_phone || "No indicado"}</p>
-            
-            <h3>Detalles del Proyecto</h3>
-            <p><strong>Tecnología:</strong> ${technology}</p>
-            <p><strong>Descripción:</strong></p>
-            <blockquote style="background: #f9f9f9; padding: 15px; border-left: 4px solid #4f46e5;">
-              ${description ? description.replace(/\n/g, "<br/>") : ""}
-            </blockquote>
-            
-            <p style="font-size: 12px; color: #888; margin-top: 30px;">
-              Enviado el: ${new Date().toLocaleString("es-AR")}
-            </p>
-          </div>
-        `,
-      };
-    }
-
-    // Send Email
-    const info = await transporter.sendMail(mailOptions);
-    console.log("Message sent: %s", info.messageId);
-
-    return res
-      .status(200)
-      .json({ success: true, message: "Email sent successfully" });
   } catch (error) {
-    console.error("Error sending email:", error);
-    return res.status(500).json({
-      success: false,
-      error: "Failed to send email",
-      details: error.message,
-    });
+    console.error("Resend Error:", error);
+    return res.status(500).json({ success: false, error: error.message });
   }
 }
