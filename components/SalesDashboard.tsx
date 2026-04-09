@@ -3,7 +3,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { Order, Payment, OrderStatus } from '../types';
 import { getFiscalConfig, FiscalConfig } from '../services/configService';
 import { TrendingUp, Package, DollarSign, Clock, Download, Calendar, CheckCircle, Loader, XCircle, Trash2, RefreshCw, Truck, Edit, AlertCircle, Plus, Wallet, CreditCard, Banknote, History, Printer, Calculator, ShieldCheck, Info } from 'lucide-react';
-
+import { printOrderReceipt } from '../utils/receiptPrinter';
 interface Props {
   orders: Order[];
   payments?: Payment[];
@@ -285,119 +285,54 @@ const SalesDashboard: React.FC<Props> = ({ orders, payments, onUpdateStatus, onE
   };
 
   const handlePrintReceipt = (order: Order) => {
-    const printWindow = window.open('', '_blank', 'width=800,height=600');
-    if (!printWindow) return alert('Por favor habilitá las ventanas emergentes (pop-ups) para imprimir el recibo.');
-
-    const receiptHtml = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <title>Comprobante de Pedido #${order.order_number || order.id.slice(0,8)}</title>
-        <style>
-          @page { margin: 10mm; size: A4; }
-          body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #333; line-height: 1.3; font-size: 11px; padding: 0; max-width: 100%; margin: 0 auto; box-sizing: border-box; }
-          h1, h2, h3, p { margin: 0; padding: 0; }
-          .header { text-align: center; border-bottom: 2px solid #333; padding-bottom: 10px; margin-bottom: 10px; }
-          .header img { width: 45px; height: 45px; object-fit: cover; border-radius: 50%; margin-bottom: 5px; }
-          .header h1 { color: #4f46e5; font-size: 20px; }
-          .header p { color: #666; font-size: 11px; margin-top: 2px; }
-          .warning { text-align: center; background: #f3f4f6; padding: 5px; font-size: 10px; color: #666; border: 1px solid #e5e7eb; margin-bottom: 15px; }
-          .details { display: flex; justify-content: space-between; margin-bottom: 15px; }
-          .details div { flex: 1; }
-          .details h3 { font-size: 13px; border-bottom: 1px solid #eee; padding-bottom: 2px; margin-bottom: 5px; color: #4f46e5; }
-          .details p { margin-bottom: 3px; }
-          table { border-collapse: collapse; margin-bottom: 15px; width: 100%; border: 1px solid #eee; }
-          th, td { padding: 6px; text-align: left; border-bottom: 1px solid #eee; font-size: 11px; }
-          th { background-color: #f9fafb; font-weight: bold; padding: 8px 6px; }
-          td { padding-top: 8px; padding-bottom: 8px; }
-          .item-name { max-width: 250px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: inline-block; }
-          .total { text-align: right; font-size: 14px; font-weight: bold; background: #f9fafb; padding: 10px; border: 1px solid #eee; }
-          .notes { margin-top: 15px; padding: 8px; background: #fafafa; border-left: 3px solid #4f46e5; font-size: 10px; }
-          .footer { margin-top: 20px; text-align: center; font-size: 10px; color: #999; border-top: 1px solid #eee; padding-top: 10px; }
-        </style>
-      </head>
-      <body>
-        <div class="header">
-          <img src="${window.location.origin}/LOGO.jpg" alt="3D2 Logo" onerror="this.style.display='none'" />
-          <h1>3D2 Impresiones</h1>
-          <p>Impresión 3D y Corte Láser</p>
-        </div>
-        
-        <div class="warning">
-          <strong>Documento No Fiscal</strong> - Comprobante interno de pedido para el cliente.
-        </div>
-
-        <div class="details">
-          <div>
-            <h3>Datos del Cliente</h3>
-            <p><strong>Nombre:</strong> ${(order as any).customer?.name || (order as any).customer_name || 'N/A'}</p>
-            <p><strong>Email:</strong> ${(order as any).customer?.email || (order as any).customer_email || 'N/A'}</p>
-            <p><strong>Teléfono:</strong> ${(order as any).customer?.phone || (order as any).customer_phone || 'N/A'}</p>
-          </div>
-          <div style="text-align: right;">
-            <h3>Detalles del Pedido</h3>
-            <p><strong>N° de Pedido:</strong> ${order.order_number || order.id.slice(0,8)}</p>
-            <p><strong>Fecha:</strong> ${new Date((order as any).timestamp || (order as any).created_at).toLocaleDateString('es-AR')}</p>
-            <p><strong>Método de Pago:</strong> ${((order as any).method === 'mercadopago' || (order as any).payment_id) ? 'MercadoPago' : ((order as any).paymentMethod === 'transfer' ? 'Transferencia' : 'Otro')}</p>
-            <p><strong>Estado:</strong> ${order.status.toUpperCase()}</p>
-          </div>
-        </div>
-
-        <table>
-          <thead>
-            <tr>
-              <th>Producto</th>
-              <th>Cantidad</th>
-              <th>Precio Unit.</th>
-              <th style="text-align: right;">Subtotal</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${(order.items || []).filter(item => !item.name.startsWith('[EMPAQUE]')).map(item => `
-              <tr>
-                <td><span class="item-name" title="${item.name}">${item.name}</span></td>
-                <td>${item.quantity}</td>
-                <td>$${Number(item.price).toLocaleString('es-AR')}</td>
-                <td style="text-align: right;">$${Number(item.price * item.quantity).toLocaleString('es-AR')}</td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
-
-        <div class="total">
-          <p>Total a Pagar: $${Number(order.total).toLocaleString('es-AR')}</p>
-        </div>
-
-        ${order.notes ? `
-        <div class="notes">
-          <strong>Notas del Pedido:</strong><br/>
-          ${order.notes.replace(/\n/g, '<br/>')}
-        </div>
-        ` : ''}
-
-        <div class="footer">
-          <p style="font-weight: bold; color: #333; margin-bottom: 5px;">¡Gracias por confiar en 3D2!</p>
-          <p>Para dudas o reclamos sobre tu pedido:</p>
-          <p style="margin-top: 5px;">
-            <strong>Web:</strong> www.creart3d2.com &nbsp; | &nbsp; 
-            <strong>WhatsApp:</strong> 11 7128-5516 &nbsp; | &nbsp; 
-            <strong>Instagram:</strong> @3d2_creart
-          </p>
-          <div style="margin-top: 10px; font-size: 9px; color: #bbb;">
-            © ${new Date().getFullYear()} 3D2 - Impresión 3D & Corte Láser
-          </div>
-        </div>
-        
-        <script>
-          window.onload = function() { window.print(); }
-        </script>
-      </body>
-      </html>
-    `;
-
-    printWindow.document.write(receiptHtml);
-    printWindow.document.close();
+    printOrderReceipt(order, { isFiscal: order.is_invoiced || false });
   };
+  const handleEmitInvoiceToAfip = async (orderId: string, docDni: string, docType: string) => {
+    if (!window.confirm("¿Emitir Factura a ARCA/AFIP ahora?")) return;
+    
+    try {
+      const order = orders.find(o => o.id === orderId);
+      if (!order) return;
+      
+      const { debt } = getExtraInfo(order.notes);
+      if (debt > 0) {
+          alert('¡Cancelá la deuda primero antes de facturar!');
+          return;
+      }
+      
+      const res = await fetch('/api/afip', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'create-invoice',
+          orderData: {
+            id: order.id,
+            total: order.total,
+            docTipo: docDni ? (docDni.length > 8 ? 80 : 96) : 99, 
+            docNro: docDni || 0
+          }
+        })
+      });
+      const afipResult = await res.json();
+      if (res.ok && afipResult.success) {
+         if (onPatchOrder) {
+           onPatchOrder(order.id, {
+              is_invoiced: true,
+              billing_dni_cuit: docDni,
+              billing_type: docType as any,
+              invoice_number: `Nº${afipResult.cbte_number}`,
+              notes: (order.notes || '') + `\n[FACTURA C EMITIDA: Nº${afipResult.cbte_number} - CAE: ${afipResult.cae} - VTO: ${afipResult.cae_vto}]`
+           });
+         }
+         alert(`¡Factura C Oficial Nº${afipResult.cbte_number} emitida con éxito!`);
+         setEditingInvoicingId(null);
+      } else {
+         alert('Falló ARCA: ' + (afipResult.error || 'Autenticación fallida'));
+      }
+    } catch(e) {
+      alert('Error de conexión con AFIP');
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -828,6 +763,14 @@ const SalesDashboard: React.FC<Props> = ({ orders, payments, onUpdateStatus, onE
                            </div>
                            <div className="flex gap-2 pt-1">
                              <button 
+                                onClick={() => handleEmitInvoiceToAfip(order.id, billDni, billType)}
+                                className={`flex-1 py-1.5 text-white rounded text-[10px] font-bold ${debt > 0 ? 'bg-slate-300 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}`}
+                                disabled={debt > 0}
+                                title={debt > 0 ? "No puedes facturar pedidos con deuda" : "Crear Factura Electrónica"}
+                             >
+                                Emitir a ARCA
+                             </button>
+                             <button 
                                 onClick={() => {
                                   if (onPatchOrder) {
                                     onPatchOrder(order.id, {
@@ -840,8 +783,9 @@ const SalesDashboard: React.FC<Props> = ({ orders, payments, onUpdateStatus, onE
                                   }
                                 }}
                                 className="flex-1 py-1.5 bg-emerald-600 text-white rounded text-[10px] font-bold hover:bg-emerald-700"
+                                title="Solo guarda los datos, sin emitir a AFIP"
                              >
-                               Confirmar Facturado
+                                Guardar Manual
                              </button>
                              <button 
                                 onClick={() => setEditingInvoicingId(null)}

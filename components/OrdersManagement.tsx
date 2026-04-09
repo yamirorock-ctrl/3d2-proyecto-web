@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Package, Truck, CheckCircle, Clock, XCircle, Search, Edit2, Save, X, Printer } from 'lucide-react';
 import { getAllOrders, updateOrderStatus, updateOrderTracking } from '../services/orderService';
 import { Order, OrderStatus } from '../types';
+import { printOrderReceipt } from '../utils/receiptPrinter';
 
 const OrdersManagement: React.FC = () => {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -84,118 +85,7 @@ const OrdersManagement: React.FC = () => {
   };
 
   const handlePrintReceipt = (order: Order) => {
-    const printWindow = window.open('', '_blank', 'width=800,height=600');
-    if (!printWindow) return alert('Por favor habilitá las ventanas emergentes (pop-ups) para imprimir el recibo.');
-
-    const receiptHtml = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <title>Comprobante de Pedido #${order.order_number}</title>
-        <style>
-          @page { margin: 10mm; size: A4; }
-          body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #333; line-height: 1.3; font-size: 11px; padding: 0; max-width: 100%; margin: 0 auto; box-sizing: border-box; }
-          h1, h2, h3, p { margin: 0; padding: 0; }
-          .header { text-align: center; border-bottom: 2px solid #333; padding-bottom: 10px; margin-bottom: 10px; }
-          .header img { width: 45px; height: 45px; object-fit: cover; border-radius: 50%; margin-bottom: 5px; }
-          .header h1 { color: #4f46e5; font-size: 20px; }
-          .header p { color: #666; font-size: 11px; margin-top: 2px; }
-          .warning { text-align: center; background: #f3f4f6; padding: 5px; font-size: 10px; color: #666; border: 1px solid #e5e7eb; margin-bottom: 15px; }
-          .details { display: flex; justify-content: space-between; margin-bottom: 15px; }
-          .details div { flex: 1; }
-          .details h3 { font-size: 13px; border-bottom: 1px solid #eee; padding-bottom: 2px; margin-bottom: 5px; color: #4f46e5; }
-          .details p { margin-bottom: 3px; }
-          table { border-collapse: collapse; margin-bottom: 15px; width: 100%; border: 1px solid #eee; }
-          th, td { padding: 6px; text-align: left; border-bottom: 1px solid #eee; font-size: 11px; }
-          th { background-color: #f9fafb; font-weight: bold; padding: 8px 6px; }
-          td { padding-top: 8px; padding-bottom: 8px; }
-          .item-name { max-width: 250px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: inline-block; }
-          .total { text-align: right; font-size: 14px; font-weight: bold; background: #f9fafb; padding: 10px; border: 1px solid #eee; }
-          .notes { margin-top: 15px; padding: 8px; background: #fafafa; border-left: 3px solid #4f46e5; font-size: 10px; }
-          .footer { margin-top: 20px; text-align: center; font-size: 10px; color: #999; border-top: 1px solid #eee; padding-top: 10px; }
-        </style>
-      </head>
-      <body>
-        <div class="header">
-          <img src="${window.location.origin}/LOGO.jpg" alt="3D2 Logo" onerror="this.style.display='none'" />
-          <h1>3D2 Impresiones</h1>
-          <p>Impresión 3D y Corte Láser</p>
-        </div>
-        
-        <div class="warning">
-          <strong>Documento No Fiscal</strong> - Comprobante interno de pedido para el cliente.
-        </div>
-
-        <div class="details">
-          <div>
-            <h3>Datos del Cliente</h3>
-            <p><strong>Nombre:</strong> ${order.customer_name}</p>
-            <p><strong>Email:</strong> ${order.customer_email || 'N/A'}</p>
-            <p><strong>Teléfono:</strong> ${order.customer_phone || 'N/A'}</p>
-          </div>
-          <div style="text-align: right;">
-            <h3>Detalles del Pedido</h3>
-            <p><strong>N° de Pedido:</strong> ${order.order_number}</p>
-            <p><strong>Fecha:</strong> ${new Date(order.created_at).toLocaleDateString('es-AR')}</p>
-            <p><strong>Envío:</strong> ${order.shipping_method.toUpperCase()}</p>
-            <p><strong>Estado:</strong> ${order.status.toUpperCase()}</p>
-          </div>
-        </div>
-
-        <table>
-          <thead>
-            <tr>
-              <th>Producto</th>
-              <th>Cantidad</th>
-              <th>Precio Unit.</th>
-              <th style="text-align: right;">Subtotal</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${order.items.filter(item => !item.name.startsWith('[EMPAQUE]')).map(item => `
-              <tr>
-                <td><span class="item-name" title="${item.name}">${item.name}</span></td>
-                <td>${item.quantity}</td>
-                <td>$${Number(item.price).toLocaleString('es-AR')}</td>
-                <td style="text-align: right;">$${Number(item.price * item.quantity).toLocaleString('es-AR')}</td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
-
-        <div class="total">
-          <p>Total a Pagar: $${Number(order.total).toLocaleString('es-AR')}</p>
-        </div>
-
-        ${order.notes ? `
-        <div class="notes">
-          <strong>Notas del Pedido:</strong><br/>
-          ${order.notes.replace(/\n/g, '<br/>')}
-        </div>
-        ` : ''}
-
-        <div class="footer">
-          <p style="font-weight: bold; color: #333; margin-bottom: 5px;">¡Gracias por confiar en 3D2!</p>
-          <p>Para dudas o reclamos sobre tu pedido:</p>
-          <p style="margin-top: 5px;">
-            <strong>Web:</strong> www.creart3d2.com &nbsp; | &nbsp; 
-            <strong>WhatsApp:</strong> 11 7128-5516 &nbsp; | &nbsp; 
-            <strong>Instagram:</strong> @3d2_creart
-          </p>
-          <div style="margin-top: 10px; font-size: 9px; color: #bbb;">
-            © ${new Date().getFullYear()} 3D2 - Impresión 3D & Corte Láser
-          </div>
-        </div>
-        
-        <script>
-          window.onload = function() { window.print(); }
-        </script>
-      </body>
-      </html>
-    `;
-
-    printWindow.document.write(receiptHtml);
-    printWindow.document.close();
+    printOrderReceipt(order, { isFiscal: !!order.is_invoiced });
   };
 
   const getShippingMethodBadge = (method: string) => {
@@ -277,6 +167,7 @@ const OrdersManagement: React.FC = () => {
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-3 text-gray-400" size={20} />
             <input
+              title="Buscar pedido"
               type="text"
               placeholder="Buscar por número, cliente o email..."
               value={searchTerm}
@@ -286,6 +177,7 @@ const OrdersManagement: React.FC = () => {
           </div>
 
           <select
+            title="Filtrar por estado"
             value={filter}
             onChange={(e) => setFilter(e.target.value as OrderStatus | 'all')}
             className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
@@ -390,12 +282,14 @@ const OrdersManagement: React.FC = () => {
                         className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm"
                       />
                       <button
+                        title="Guardar código de seguimiento"
                         onClick={() => handleSaveTracking(order.id)}
                         className="px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
                       >
                         <Save size={16} />
                       </button>
                       <button
+                        title="Cancelar edición"
                         onClick={cancelEditTracking}
                         className="px-3 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400"
                       >
@@ -421,6 +315,7 @@ const OrdersManagement: React.FC = () => {
                 {/* Acciones */}
                 <div className="flex flex-wrap gap-2">
                   <select
+                    title="Actualizar estado del pedido"
                     value={order.status}
                     onChange={(e) => handleStatusChange(order.id, e.target.value as OrderStatus)}
                     className="px-3 py-2 border border-gray-300 rounded-lg text-sm"

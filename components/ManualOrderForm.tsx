@@ -298,7 +298,44 @@ export const ManualOrderForm: React.FC<Props> = ({ products, initialOrder, onClo
            const { updateOrderStatus } = await import('../services/orderService');
            await updateOrderStatus(result.data.id, status);
         }
-        toast.success('¡Venta registrada y stock actualizado!');
+
+        // --- NEW AFIP LOGIC ---
+        if (result.data && isFacturado && remainingBalance === 0) {
+           toast.info('Venta creada. Entablando conexión con ARCA...');
+           try {
+              const res = await fetch('/api/afip', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  action: 'create-invoice',
+                  orderData: {
+                    id: result.data.id,
+                    total: orderTotal,
+                    docTipo: billingDni ? (billingDni.length > 8 ? 80 : 96) : 99, 
+                    docNro: billingDni || 0
+                  }
+                })
+              });
+              const afipResult = await res.json();
+              if (res.ok && afipResult.success) {
+                 const { supabase } = await import('../services/supabaseService');
+                 await (supabase.from('orders') as any).update({ 
+                    is_invoiced: true,
+                    billing_dni_cuit: billingDni,
+                    billing_type: billingType,
+                    invoice_number: `Nº${afipResult.cbte_number}`,
+                    notes: finalNotes + `\n[FACTURA C EMITIDA: Nº${afipResult.cbte_number} - CAE: ${afipResult.cae} - VTO: ${afipResult.cae_vto}]`
+                 }).eq('id', result.data.id);
+                 toast.success(`¡Factura C Oficial Nº${afipResult.cbte_number} emitida con éxito!`);
+              } else {
+                 toast.error('La orden se guardó PERO falló ARCA: ' + (afipResult.error || 'Autenticación fallida'));
+              }
+           } catch (e) {
+              toast.error('La orden se guardó PERO hubo un error de conexión con AFIP');
+           }
+        } else {
+           toast.success('¡Venta registrada y stock actualizado al instante!');
+        }
       }
 
       onOrderCreated(); // Refrescar lista
@@ -321,7 +358,7 @@ export const ManualOrderForm: React.FC<Props> = ({ products, initialOrder, onClo
           <h2 className="text-xl font-bold text-emerald-800 flex items-center gap-2">
             <ShoppingCart size={24} /> Nueva Venta Rápida (Multi-Producto)
           </h2>
-          <button onClick={onClose} className="p-2 hover:bg-red-50 text-slate-400 hover:text-red-500 rounded-full transition-colors">
+          <button title="Cerrar" onClick={onClose} className="p-2 hover:bg-red-50 text-slate-400 hover:text-red-500 rounded-full transition-colors">
             <X size={20} />
           </button>
         </div>
@@ -398,7 +435,7 @@ export const ManualOrderForm: React.FC<Props> = ({ products, initialOrder, onClo
                         <div className="font-bold text-slate-800 truncate">{selectedProduct.name}</div>
                         <div className="text-xs text-emerald-600">Base: ${selectedProduct.price}</div>
                       </div>
-                      <button type="button" onClick={() => setSelectedProduct(null)} className="text-slate-400 hover:text-red-500 p-1 bg-white rounded-full shadow-xs">
+                      <button title="Quitar producto seleccionado" type="button" onClick={() => setSelectedProduct(null)} className="text-slate-400 hover:text-red-500 p-1 bg-white rounded-full shadow-xs">
                         <X size={16} />
                       </button>
                     </div>
@@ -420,6 +457,7 @@ export const ManualOrderForm: React.FC<Props> = ({ products, initialOrder, onClo
                       <div>
                         <label className="block text-xs font-bold text-blue-700 uppercase mb-1">Cantidad</label>
                         <input 
+                          title="Cantidad personalizada"
                           type="number" 
                           className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-hidden bg-white text-sm"
                           value={quantity}
@@ -431,6 +469,7 @@ export const ManualOrderForm: React.FC<Props> = ({ products, initialOrder, onClo
                         <div className="relative">
                           <DollarSign className="absolute left-2 top-2.5 text-blue-500" size={14} />
                           <input 
+                            title="Precio personalizado total"
                             type="number" 
                             className="w-full pl-6 pr-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-hidden bg-white text-sm font-bold"
                             value={customPrice}
@@ -474,12 +513,13 @@ export const ManualOrderForm: React.FC<Props> = ({ products, initialOrder, onClo
                       {customConsumables.map((c, i) => (
                           <div key={i} className="flex justify-between items-center bg-slate-50 p-2 rounded mb-1 border border-slate-100 text-xs">
                              <span><b className="text-slate-700">{c.material}</b> x{c.quantity}</span>
-                             <button type="button" onClick={() => setCustomConsumables(prev => prev.filter((_, idx) => idx !== i))} className="text-red-500 hover:text-red-700 p-1"><X size={12}/></button>
+                             <button title="Quitar insumo" type="button" onClick={() => setCustomConsumables(prev => prev.filter((_, idx) => idx !== i))} className="text-red-500 hover:text-red-700 p-1"><X size={12}/></button>
                           </div>
                       ))}
 
                       <div className="flex flex-col sm:flex-row gap-2 mt-2">
                          <select 
+                            title="Elegir Insumo"
                             className="flex-1 p-1.5 text-xs border border-slate-200 rounded focus:ring-1 focus:ring-blue-500 bg-slate-50"
                             value={tempMaterial}
                             onChange={e => setTempMaterial(e.target.value)}
@@ -490,13 +530,13 @@ export const ManualOrderForm: React.FC<Props> = ({ products, initialOrder, onClo
                             ))}
                          </select>
                          <input 
+                            title="Cantidad de insumo"
                             type="number" 
                             min="0.1"
                             step="any"
                             className="w-16 p-1.5 text-xs border border-slate-200 rounded text-center focus:ring-1 focus:ring-blue-500 bg-slate-50"
                             value={tempMaterialQty}
                             onChange={e => setTempMaterialQty(Number(e.target.value) || 1)}
-                            title="Cantidad"
                          />
                          <button 
                             type="button" 
@@ -533,6 +573,7 @@ export const ManualOrderForm: React.FC<Props> = ({ products, initialOrder, onClo
                   <div>
                     <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Cantidad</label>
                     <input
+                      title="Elegir cantidad de producto"
                       type="number"
                       min="1"
                       className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 outline-hidden font-bold text-center bg-white"
@@ -545,6 +586,7 @@ export const ManualOrderForm: React.FC<Props> = ({ products, initialOrder, onClo
                     <div className="relative">
                       <DollarSign className="absolute left-2 top-2.5 text-slate-400" size={14} />
                       <input
+                        title="Precio modificado"
                         type="number"
                         className="w-full pl-6 pr-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 outline-hidden font-bold text-slate-900 bg-white"
                         value={customPrice}
@@ -617,7 +659,7 @@ export const ManualOrderForm: React.FC<Props> = ({ products, initialOrder, onClo
                        </div>
                        <div className="flex items-center gap-3">
                          <span className="text-sm font-bold text-emerald-600">${(item.price * item.quantity).toLocaleString('es-AR')}</span>
-                         <button onClick={() => handleRemoveItem(idx)} className="text-slate-300 hover:text-red-500 transition-colors p-1 hover:bg-red-50 rounded-md">
+                         <button title="Quitar item del pedido" onClick={() => handleRemoveItem(idx)} className="text-slate-300 hover:text-red-500 transition-colors p-1 hover:bg-red-50 rounded-md">
                            <Trash2 size={16} />
                          </button>
                        </div>
@@ -641,6 +683,7 @@ export const ManualOrderForm: React.FC<Props> = ({ products, initialOrder, onClo
                   </label>
                   <div className="flex flex-col sm:flex-row gap-2">
                      <select 
+                        title="Seleccionar material de despachado"
                         className="flex-1 p-1.5 text-xs border border-slate-200 rounded focus:ring-1 focus:ring-emerald-500 bg-white"
                         value={packMaterial}
                         onChange={e => setPackMaterial(e.target.value)}
@@ -755,6 +798,7 @@ export const ManualOrderForm: React.FC<Props> = ({ products, initialOrder, onClo
                           <div>
                               <label className="block text-xs font-bold text-blue-700 uppercase mb-1">Medio</label>
                               <select 
+                                title="Seleccionar medio de pago"
                                 value={payMethod} 
                                 onChange={e => setPayMethod(e.target.value as any)} 
                                 className="w-full px-3 py-2 border border-blue-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-hidden text-sm font-medium text-slate-700 bg-white"
@@ -779,6 +823,7 @@ export const ManualOrderForm: React.FC<Props> = ({ products, initialOrder, onClo
                       <div className="col-span-2">
                           <label className="block text-xs font-bold text-blue-700 uppercase mb-1">Fecha Entrega</label>
                           <input 
+                              title="Fecha del despacho"
                               type="date" 
                               className="w-full px-3 py-2 border border-blue-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-hidden text-sm font-medium text-slate-700"
                               value={deliveryDate}
@@ -798,31 +843,36 @@ export const ManualOrderForm: React.FC<Props> = ({ products, initialOrder, onClo
               </div>
 
                {/* SECCIÓN FISCAL - NUEVO */}
-               <div className="bg-emerald-50 p-4 rounded-xl border border-emerald-100 space-y-3">
+               <div className={`p-4 rounded-xl border space-y-3 ${remainingBalance > 0 ? 'bg-slate-50 border-slate-200 opacity-70' : 'bg-emerald-50 border-emerald-100'}`}>
                   <div className="flex items-center justify-between mb-1">
-                      <span className="text-xs font-bold text-emerald-800 uppercase flex items-center gap-1">
-                        <Calculator size={14}/> Datos para Facturar (ARCA)
-                      </span>
+                      <div className="flex flex-col">
+                        <span className={`text-xs font-bold uppercase flex items-center gap-1 ${remainingBalance > 0 ? 'text-slate-500' : 'text-emerald-800'}`}>
+                          <Calculator size={14}/> Datos para Facturar (ARCA)
+                        </span>
+                        {remainingBalance > 0 && <span className="text-[9px] text-red-500 font-bold mt-0.5">La factura AFIP se bloquea si hay saldo pendiente.</span>}
+                      </div>
                       <button 
                         type="button"
+                        disabled={remainingBalance > 0}
                         onClick={() => setIsFacturado(!isFacturado)}
-                        className={`w-10 h-5 rounded-full transition-colors relative ${isFacturado ? 'bg-emerald-600' : 'bg-slate-300'}`}
-                        title="Marcar como facturado ya mismo"
+                        className={`w-10 h-5 rounded-full transition-colors relative ${remainingBalance > 0 ? 'bg-slate-200 cursor-not-allowed' : (isFacturado ? 'bg-emerald-600' : 'bg-slate-300')}`}
+                        title={remainingBalance > 0 ? "No podés facturar con deuda" : "Marcar como facturado ya mismo"}
                       >
-                         <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${isFacturado ? 'left-6' : 'left-1'}`} />
+                         <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${(isFacturado && remainingBalance === 0) ? 'left-6' : 'left-1'}`} />
                       </button>
                   </div>
 
                   <div className="space-y-2">
                      <div className="flex gap-2">
                         <input 
+                           title="Ingresar DNI/CUIT"
                            type="text" 
                            placeholder="DNI / CUIT del Cliente" 
                            className="flex-1 px-3 py-2 border border-emerald-200 rounded-lg focus:ring-2 focus:ring-emerald-500 bg-white text-xs font-mono"
                            value={billingDni}
                            onChange={e => setBillingDni(e.target.value)}
                         />
-                        <select 
+                        <select title="Tipo de Factura" 
                            className="w-24 px-2 py-2 border border-emerald-200 rounded-lg focus:ring-2 focus:ring-emerald-500 bg-white text-[10px] font-bold"
                            value={billingType}
                            onChange={e => setBillingType(e.target.value as any)}
