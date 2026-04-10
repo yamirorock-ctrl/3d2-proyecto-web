@@ -165,6 +165,12 @@ export default async function handler(req, res) {
             ]
         };
 
+        // Agregar dimensiones reales de paquete para MercadoEnvíos
+        if (product.weight) itemBody.attributes.push({ id: "PACKAGE_WEIGHT", value_name: `${product.weight} g` });
+        if (product.dimensions?.length) itemBody.attributes.push({ id: "PACKAGE_LENGTH", value_name: `${product.dimensions.length} cm` });
+        if (product.dimensions?.width) itemBody.attributes.push({ id: "PACKAGE_WIDTH", value_name: `${product.dimensions.width} cm` });
+        if (product.dimensions?.height) itemBody.attributes.push({ id: "PACKAGE_HEIGHT", value_name: `${product.dimensions.height} cm` });
+
         if (product.ml_item_id) {
             await fetch(`https://api.mercadolibre.com/items/${product.ml_item_id}`, {
                 method: 'PUT',
