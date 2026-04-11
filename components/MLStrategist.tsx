@@ -331,7 +331,7 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
                             { label: 'Ingresos', value: `$ ${(analysis?.total_revenue || 460847).toLocaleString()}`, delta: '+185%', color: 'emerald' },
                             { label: 'ACOS', value: `${analysis?.acos || '39,82'}%`, delta: '+29%', color: 'rose' },
                         ].map((m, i) => (
-                            <div key={i} className="min-w-[150px] bg-slate-50 border border-slate-100 rounded-[2rem] p-5 shadow-sm hover:shadow-md transition-all cursor-pointer group hover:bg-white hover:border-indigo-100">
+                            <div key={i} className="min-w-[150px] bg-slate-50 border border-slate-100 rounded-4xl p-5 shadow-sm hover:shadow-md transition-all cursor-pointer group hover:bg-white hover:border-indigo-100">
                                 <div className="flex items-center gap-2 mb-3">
                                     <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest truncate">{m.label}</span>
                                     <div className="w-4 h-4 rounded-full border border-slate-200 flex items-center justify-center text-[8px] text-slate-400 font-bold">?</div>
