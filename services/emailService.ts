@@ -1,4 +1,6 @@
 import { Order, OrderItem } from '../types';
+import { generateAFIPInvoiceBase64 } from '../utils/pdfGenerator';
+
 
 interface EmailData {
   customer_name: string;
@@ -39,6 +41,27 @@ export async function sendSaleNotificationEmail(
   items: OrderItem[]
 ): Promise<boolean> {
   try {
+    let attachment_base64 = undefined;
+
+    // Si existen los datos de AFIP en 'notes', generamos el PDF y lo adjuntamos
+    if (order.notes && order.notes.includes('CAE:')) {
+      try {
+        const caeMatch = order.notes.match(/CAE:\s*(\d+)/);
+        const cbteMatch = order.notes.match(/N[º°]?(?:1\s*-?\s*)?(\d+)/) || order.notes.match(/Nº\s*(\d+)/); 
+        const vtoMatch = order.notes.match(/VTO:\s*([\d-]+)/);
+        
+        if (caeMatch) {
+          const cae = caeMatch[1];
+          const cbte = cbteMatch ? cbteMatch[1] : '0';
+          const vto = vtoMatch ? vtoMatch[1] : '';
+          
+          attachment_base64 = await generateAFIPInvoiceBase64(order, cae, cbte, vto);
+        }
+      } catch (err) {
+        console.error("No se pudo generar el PDF de facturacion adjunto", err);
+      }
+    }
+
     const response = await fetch('/api/send-email', {
       method: 'POST',
       headers: {
@@ -53,7 +76,8 @@ export async function sendSaleNotificationEmail(
         total: order.total,
         shipping_method: order.shipping_method,
         notes: order.notes,
-        items: items
+        items: items,
+        attachment_base64
       }),
     });
 

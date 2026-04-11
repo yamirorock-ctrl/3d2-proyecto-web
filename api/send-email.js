@@ -11,7 +11,7 @@ export default async function handler(req, res) {
   const RESEND_API_KEY = process.env.RESEND_API_KEY || "re_MZMsg14U_6M3Tk5rhrjen7xK5K3MGmrLa";
 
   try {
-    const { type, order_number, customer_name, customer_email, total, items, shipping_method, notes } = req.body;
+    const { type, order_number, customer_name, customer_email, total, items, shipping_method, notes, attachment_base64 } = req.body;
 
     const itemsHtml = (items || [])
       .map(item => `<li>${item.quantity}x ${item.title || item.product_id} - $${item.price}</li>`)
@@ -57,7 +57,13 @@ export default async function handler(req, res) {
         from: "Creart 3D2 <ventas@creart3d2.com>",
         to: ["creart3d2@gmail.com", customer_email].filter(Boolean),
         subject: `Confirmación de Orden #${order_number} - Creart 3D2`,
-        html: emailHtml
+        html: emailHtml,
+        attachments: attachment_base64 ? [
+          {
+            filename: `Factura-${order_number}.pdf`,
+            content: attachment_base64
+          }
+        ] : undefined
       })
     });
 
