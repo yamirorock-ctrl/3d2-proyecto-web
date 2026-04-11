@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { MessageSquare, Send, X, Sparkles, Loader2, Minimize2, ShoppingBag, Eye, Printer } from 'lucide-react';
 import { Message, Product } from '../types';
-import { createChatSession, sendMessageToGemini } from '../services/geminiService';
-import { ChatSession } from '@google/generative-ai';
+import { createChatSession, sendMessageToGemini, ChatSessionProxy } from '../services/geminiService';
 import { useNavigate } from 'react-router-dom';
 
 interface ChatAssistantProps {
@@ -35,7 +34,7 @@ const ChatAssistant: React.FC<ChatAssistantProps> = ({ products }) => {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const chatSessionRef = useRef<ChatSession | null>(null);
+  const chatSessionRef = useRef<ChatSessionProxy | null>(null);
 
   // Estados para manejar errores de imagen (fallback)
   const [imgErrorButton, setImgErrorButton] = useState(false);
