@@ -519,7 +519,14 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
                       <Rocket className="w-12 h-12 text-indigo-600" /> ACCIONES MANDATORIAS
                    </h3>
                    {(analysis.recommended_actions || []).map((act, idx) => (
-                      <div key={idx} className="bg-white p-8 rounded-[3.5rem] border border-slate-100 flex items-center justify-between group hover:shadow-2xl hover:border-indigo-300 transition-all duration-700 shadow-xl shadow-slate-100 relative overflow-hidden">
+                      <div 
+                        key={idx} 
+                        onClick={() => {
+                            setUserInput(`Vanguard, quiero ejecutar la acción "${act.action}" para el recurso ${act.item_id}. ¿Cómo procedemos?`);
+                            setTimeout(() => sendMessage(), 100);
+                        }}
+                        className="bg-white p-8 rounded-[3.5rem] border border-slate-100 flex items-center justify-between group hover:shadow-2xl hover:border-indigo-300 transition-all duration-700 shadow-xl shadow-slate-100 relative overflow-hidden cursor-pointer active:scale-95"
+                      >
                          <div className="absolute left-0 top-0 w-2 h-full bg-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity"></div>
                          <div className="flex items-center gap-8">
                             <div className="w-20 h-20 bg-indigo-50 rounded-4xl flex items-center justify-center group-hover:bg-indigo-600 group-hover:text-white transition-all shadow-inner">
