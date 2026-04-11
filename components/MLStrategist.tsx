@@ -34,6 +34,55 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
 
+  // Dragging state and logic
+  const [position, setPosition] = useState({ bottom: 24, right: 24 });
+  const [isDragging, setIsDragging] = useState(false);
+  const dragRef = useRef({ startX: 0, startY: 0, startBottom: 24, startRight: 24, isMoved: false });
+
+  const handlePointerDown = (e: React.PointerEvent<HTMLButtonElement>) => {
+    e.currentTarget.setPointerCapture(e.pointerId);
+    dragRef.current = {
+      startX: e.clientX,
+      startY: e.clientY,
+      startBottom: position.bottom,
+      startRight: position.right,
+      isMoved: false,
+    };
+    setIsDragging(true);
+  };
+
+  const handlePointerMove = (e: React.PointerEvent<HTMLButtonElement>) => {
+    if (!isDragging) return;
+    const dx = e.clientX - dragRef.current.startX;
+    const dy = e.clientY - dragRef.current.startY;
+    
+    // Si realmente lo movimos (más de 5px para evitar clicks temblorosos) marcamos como movido
+    if (Math.abs(dx) > 5 || Math.abs(dy) > 5) {
+      dragRef.current.isMoved = true;
+    }
+
+    setPosition({
+      bottom: Math.max(0, dragRef.current.startBottom - dy),
+      right: Math.max(0, dragRef.current.startRight - dx)
+    });
+  };
+
+  const handlePointerUp = (e: React.PointerEvent<HTMLButtonElement>) => {
+    if (isDragging) {
+      setIsDragging(false);
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    }
+  };
+
+  const toggleChat = () => {
+    if (dragRef.current.isMoved) {
+      dragRef.current.isMoved = false;
+      return; 
+    }
+    setIsChatOpen(!isChatOpen);
+    setUnreadCount(0);
+  };
+
   const chatEndRef = useRef<HTMLDivElement>(null);
   const [goals, setGoals] = useState({
     dailySales: 2,
@@ -343,9 +392,12 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
       </div>
 
       {/* =========================================
-          FLOATING VANGUARD CHAT (Messenger Style)
+          FLOATING VANGUARD CHAT (Messenger Style Draggable)
       =========================================== */}
-      <div className="fixed bottom-6 right-6 z-100 flex flex-col items-end">
+      <div 
+        className="fixed z-100 flex flex-col items-end drop-shadow-2xl"
+        style={{ bottom: `${position.bottom}px`, right: `${position.right}px` }}
+      >
         {/* Chat Window (Opens Upwards) */}
         {isChatOpen && (
           <div className="w-[360px] sm:w-[400px] h-[580px] bg-[#1a1c23] border border-white/10 rounded-3xl mb-4 shadow-[0_20px_50px_rgba(0,0,0,0.5)] flex flex-col overflow-hidden animate-in slide-in-from-bottom-5 fade-in duration-200">
@@ -428,10 +480,14 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
           </div>
         )}
 
-        {/* Floating Toggle Button */}
+        {/* Floating Toggle Button (Draggable) */}
         <button title="Abrir chat de Vanguard"
-          onClick={() => { setIsChatOpen(!isChatOpen); setUnreadCount(0); }}
-          className="w-16 h-16 bg-linear-to-tr from-violet-600 to-cyan-500 rounded-full flex items-center justify-center shadow-[0_10px_30px_rgba(124,58,237,0.5)] hover:scale-110 active:scale-95 transition-all relative z-50 group"
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerUp}
+          onPointerCancel={handlePointerUp}
+          onClick={toggleChat}
+          className={`w-16 h-16 bg-linear-to-tr from-violet-600 to-cyan-500 rounded-full flex items-center justify-center shadow-[0_10px_30px_rgba(124,58,237,0.5)] transition-all relative z-50 group hover:scale-110 ${!isDragging && 'active:scale-95'} ${isDragging ? 'cursor-grabbing scale-110 shadow-[0_20px_50px_rgba(124,58,237,0.8)]' : 'cursor-pointer'}`}
         >
           {isChatOpen ? <X className="text-white w-7 h-7 group-hover:rotate-90 transition-transform" /> : <MessageSquare className="text-white w-7 h-7" />}
           
