@@ -548,13 +548,13 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
                {attachment && (
                  <div className="mb-3 relative inline-block">
                     <img src={attachment.url} alt="Preview" className="h-16 rounded-md border border-white/10 object-cover" />
-                     <button onClick={() => setAttachment(null)} className="absolute -top-2 -right-2 bg-slate-800 text-slate-300 rounded-full p-1 border border-white/10 hover:text-white transition-colors">
+                     <button title="Remover imagen adjunta" aria-label="Remover imagen adjunta" onClick={() => setAttachment(null)} className="absolute -top-2 -right-2 bg-slate-800 text-slate-300 rounded-full p-1 border border-white/10 hover:text-white transition-colors">
                        <X size={12}/>
                      </button>
                  </div>
                )}
                <div className="relative flex items-center">
-                  <input type="file" accept="image/*" className="hidden" ref={fileInputRef} onChange={handleFileChange} />
+                  <input title="Subir imagen" aria-label="Subir imagen" type="file" accept="image/*" className="hidden" ref={fileInputRef} onChange={handleFileChange} />
                   <button title="Adjuntar imagen" onClick={() => fileInputRef.current?.click()} className="absolute left-2 p-2 text-slate-400 hover:text-white transition-colors z-10 focus:outline-none">
                      <Paperclip className="w-5 h-5 pointer-events-none" />
                   </button>

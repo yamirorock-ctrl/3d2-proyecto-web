@@ -360,11 +360,14 @@ const Checkout: React.FC<CheckoutProps> = ({ cart, onClearCart }) => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label htmlFor="customerEmail" className="block text-sm font-medium text-gray-700 mb-1">
                     Email *
                   </label>
                   <input
+                    id="customerEmail"
+                    title="Ingresar correo electrónico"
                     type="email"
+                    placeholder="tucorreo@ejemplo.com"
                     value={customerEmail}
                     onChange={(e) => setCustomerEmail(e.target.value)}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
@@ -387,10 +390,12 @@ const Checkout: React.FC<CheckoutProps> = ({ cart, onClearCart }) => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label htmlFor="customerProvince" className="block text-sm font-medium text-gray-700 mb-1">
                     Provincia *
                   </label>
                   <select
+                    id="customerProvince"
+                    title="Selecciona una provincia"
                     value={customerProvince}
                     onChange={(e) => setCustomerProvince(e.target.value)}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
@@ -445,10 +450,12 @@ const Checkout: React.FC<CheckoutProps> = ({ cart, onClearCart }) => {
               <h2 className="text-xl font-semibold mb-4">Datos de Facturación</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-gray-50 p-4 rounded-xl border border-gray-200">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label htmlFor="billingType" className="block text-sm font-medium text-gray-700 mb-1">
                     Tipo de Comprobante
                   </label>
                   <select
+                    id="billingType"
+                    title="Selecciona el tipo de comprobante"
                     value={billingType}
                     onChange={(e) => setBillingType(e.target.value as 'Consumidor Final' | 'Factura A' | 'Factura B')}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 bg-white"
