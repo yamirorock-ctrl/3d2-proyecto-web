@@ -129,7 +129,7 @@ export default async function handler(req, res) {
         const apiKey = process.env.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
         const genAI = new GoogleGenerativeAI(apiKey);
         const model = genAI.getGenerativeModel({ 
-          model: "gemini-1.5-pro-latest", // Usamos 1.5 Pro o Flash para full soporte multimodal 
+          model: "gemini-3.1-pro-preview",
           systemInstruction: `
             Eres VANGUARD, el Socio Estratégico Senior de 3D2 Store. 
             Misión: Reputación, Ventas y Posicionamiento en ML Argentina.
