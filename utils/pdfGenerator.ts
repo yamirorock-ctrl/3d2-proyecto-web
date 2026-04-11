@@ -44,7 +44,11 @@ export const generateAFIPInvoiceBase64 = async (order: any, cae: string, nro: st
   cursorY += 6;
   doc.text('Impresión 3D y Corte Láser', 105, cursorY, { align: 'center' });
   
-  cursorY += 10;
+  cursorY += 5;
+  doc.setFontSize(9);
+  doc.text('CUIT: 27409292834 | Condición: Monotributo', 105, cursorY, { align: 'center' });
+  
+  cursorY += 8;
   doc.setDrawColor(50, 50, 50);
   doc.setLineWidth(0.5);
   doc.line(marginX, cursorY, marginX + contentWidth, cursorY);
@@ -88,7 +92,16 @@ export const generateAFIPInvoiceBase64 = async (order: any, cae: string, nro: st
   doc.setFont('helvetica', 'bold');
   doc.text('CUIT/DNI:', marginX, cursorY);
   doc.setFont('helvetica', 'normal');
-  doc.text((order.customer_dni || '0').toString(), marginX + 18, cursorY);
+  // Extraer DNI del cliente si está en `notes` (ej: [DNI/CUIT: 31930845])
+  let clientDoc = order.customer_dni || order.billing_dni_cuit || 'Consumidor Final';
+  if (!clientDoc || clientDoc === 'Consumidor Final') {
+    const dniMatch = order.notes?.match(/DNI\/CUIT:\s*([\d]+)/i);
+    if (dniMatch) {
+      clientDoc = dniMatch[1];
+    }
+  }
+
+  doc.text(String(clientDoc), marginX + 22, cursorY);
   
   doc.setFont('helvetica', 'bold');
   doc.text('Fecha:', marginX + 100, cursorY);
@@ -200,15 +213,15 @@ export const generateAFIPInvoiceBase64 = async (order: any, cae: string, nro: st
   const afipJson = {
       ver: 1,
       fecha: format(new Date(), 'yyyy-MM-dd'),
-      cuit: 20319308451,
+      cuit: 27409292834,
       ptoVta: 2,
       tipoCmp: 11, // Factura C
       nroCmp: Number(nro),
       importe: Number(order.total),
       moneda: "PES",
       ctz: 1,
-      tipoDocRec: order.customer_dni ? 96 : 99,
-      nroDocRec: order.customer_dni || 0,
+      tipoDocRec: clientDoc !== 'Consumidor Final' ? 96 : 99,
+      nroDocRec: clientDoc !== 'Consumidor Final' ? Number(clientDoc) : 0,
       tipoCodAut: "E", 
       codAut: Number(cae)
   };
