@@ -38,7 +38,7 @@ export default async function handler(req, res) {
     // 2. Suggest Title
     if (action === 'suggest_title') {
       const { productName, description, imageUrlBase64 } = payload;
-      const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+      const model = genAI.getGenerativeModel({ model: "gemini-3-flash" });
       
       const prompt = `Actúa como un experto en SEO para MercadoLibre Argentina.
 Genera un TÍTULO DE VENTA competitivo para el siguiente producto.

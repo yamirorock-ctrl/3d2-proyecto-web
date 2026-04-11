@@ -1,8 +1,7 @@
-
 import React, { useState, useEffect } from 'react';
-import { ShieldCheck, TrendingUp, AlertTriangle, CheckCircle, Target, DollarSign, Rocket, RefreshCw, BarChart, ChevronRight, Zap } from 'lucide-react';
+import { Zap, Target, DollarSign, Rocket, RefreshCw, BarChart, ShieldCheck, TrendingUp, AlertTriangle, CheckCircle, ChevronRight } from 'lucide-react';
 import { toast } from 'sonner';
-import { supabase } from '../supabaseClient';
+import { supabase } from '../services/supabaseService';
 
 interface Props {
   userId: string;
@@ -93,7 +92,7 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Columna Izquierda: Objetivos y Metas */}
         <div className="lg:col-span-4 space-y-6">
-          <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100">
+          <div className="bg-white p-6 rounded-4xl shadow-sm border border-slate-100">
             <h3 className="text-lg font-bold mb-6 flex items-center gap-2 text-slate-800">
               <Target className="w-5 h-5 text-indigo-500" /> Definir Objetivos
             </h3>
@@ -102,6 +101,8 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
               <div>
                 <label className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 block">Ventas por Día (Meta)</label>
                 <input 
+                  title="Meta de ventas diarias"
+                  placeholder="Ej: 2"
                   type="number" 
                   value={goals.dailySales} 
                   onChange={(e) => setGoals({...goals, dailySales: Number(e.target.value)})}
@@ -113,6 +114,8 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
                 <div className="relative">
                    <DollarSign className="absolute left-3 top-3.5 w-4 h-4 text-slate-400" />
                    <input 
+                     title="Presupuesto máximo diario en Ads"
+                     placeholder="Ej: 5000"
                      type="number" 
                      value={goals.maxAdSpend} 
                      onChange={(e) => setGoals({...goals, maxAdSpend: Number(e.target.value)})}
@@ -131,7 +134,7 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
           </div>
 
           {analysis && (
-            <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100">
+            <div className="bg-white p-6 rounded-4xl shadow-sm border border-slate-100">
                <h3 className="text-lg font-bold mb-4 text-slate-800">Performance Score</h3>
                <div className="flex items-center gap-4">
                   <div className="relative w-24 h-24">
@@ -196,7 +199,7 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
                 </div>
 
                 {/* Clasificación de Productos */}
-                <div className="bg-slate-50 p-6 rounded-[2rem]">
+                <div className="bg-slate-50 p-6 rounded-4xl">
                    <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-4">Portafolio Estratégico</h3>
                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       <div className="bg-white p-4 rounded-2xl shadow-sm">
@@ -242,7 +245,10 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
                                <p className="text-xs text-slate-400 font-mono mt-1">Item ID: {act.item_id}</p>
                             </div>
                          </div>
-                         <button className="p-3 bg-slate-50 text-slate-400 rounded-full group-hover:bg-indigo-600 group-hover:text-white transition-all shadow-sm">
+                         <button 
+                            title="Ejecutar o ver más sobre esta acción"
+                            className="p-3 bg-slate-50 text-slate-400 rounded-full group-hover:bg-indigo-600 group-hover:text-white transition-all shadow-sm"
+                          >
                             <ChevronRight className="w-6 h-6" />
                          </button>
                       </div>
