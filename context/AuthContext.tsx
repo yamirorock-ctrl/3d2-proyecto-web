@@ -20,7 +20,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [isAdmin, setIsAdmin] = useState(false);
 
   // Read admin email from env
-  const ADMIN_EMAIL = (import.meta as any).env.VITE_ADMIN_EMAIL || '';
 
   useEffect(() => {
     // Get initial session
@@ -42,14 +41,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     return () => subscription.unsubscribe();
   }, []);
 
-  const checkAdmin = (currentUser: User | null | undefined) => {
-    if (!currentUser || !currentUser.email) {
+  const checkAdmin = (u: User | null | undefined) => {
+    if (!u) {
       setIsAdmin(false);
       return;
     }
-    // Simple check: is the email the admin email?
-    // In strict production, this could be a claim in the token, but env check is safe enough for this scale if RLS is also set.
-    setIsAdmin(currentUser.email === ADMIN_EMAIL);
+    // Verificamos si el usuario tiene el rol de admin en sus metadatos de Supabase
+    // Esto es mucho más seguro que comparar emails en el código cliente.
+    const isUserAdmin = u.app_metadata?.role === 'admin' || u.user_metadata?.role === 'admin';
+    setIsAdmin(isUserAdmin);
   };
 
   const logout = async () => {

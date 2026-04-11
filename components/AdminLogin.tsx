@@ -40,11 +40,10 @@ const AdminLogin: React.FC = () => {
       }
 
       if (data.user) {
-         // 2. Check if user is actually the admin (by email or metadata could be checked here too, but AuthContext does it)
-         // AuthContext will update state and redirect via AdminGuard if accessing protected route,
-         // but here we can check explicitly to give UI feedback if a non-admin user tries to log in here.
-         const adminEmail = (import.meta as any).env.VITE_ADMIN_EMAIL;
-         if (adminEmail && data.user.email !== adminEmail) {
+         // Validamos por rol en metadatos, no por email expuesto
+         const role = data.user.app_metadata?.role || data.user.user_metadata?.role;
+         
+         if (role !== 'admin') {
              await supabase.auth.signOut();
              setLoading(false);
              setErrorMSG('Este usuario no tiene permisos de administrador.');
