@@ -180,43 +180,71 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
             <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest">Última actualización: Justo ahora</p>
         </div>
       </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-start">
-        {/* SIDEBAR IZQUIERDO (STICKY) */}
-        <div className="lg:col-span-4 space-y-8 lg:sticky lg:top-8">
+      <div className="flex flex-col gap-10">
+        {/* FILA 1: OBJETIVOS Y HALLAZGOS (AHORA ARRIBA Y ANCHO) */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {/* OBJETIVOS */}
-          <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100">
-            <h3 className="text-xl font-black mb-8 flex items-center gap-3 text-slate-800">
-              <Target className="w-6 h-6 text-indigo-500" /> MIS METAS
-            </h3>
-            <div className="space-y-6">
-              <div>
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2.5 block">Ventas Diarias (Objetivo)</label>
-                <input 
-                  title="Meta de ventas"
-                  type="number" 
-                  value={goals.dailySales} 
-                  onChange={(e) => setGoals({...goals, dailySales: Number(e.target.value)})}
-                  className="w-full bg-slate-50 border-none rounded-2xl p-4 font-black text-lg text-slate-700 focus:ring-2 focus:ring-indigo-500/20 transition-all" 
-                />
-              </div>
-              <div>
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2.5 block">Presupuesto Ads (Máximo)</label>
-                <div className="relative">
-                   <DollarSign className="absolute left-4 top-4.5 w-5 h-5 text-slate-400" />
+          <div className="bg-white p-8 rounded-[3.5rem] border border-slate-100 shadow-sm">
+             <div className="flex items-center gap-3 mb-6">
+                <Target className="w-6 h-6 text-indigo-600" />
+                <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest">Objetivos ML</h3>
+             </div>
+             <div className="space-y-4">
+                <div>
+                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 block">Meta Diaria (Ventas)</label>
                    <input 
-                     title="Presupuesto Ads"
-                     type="number" 
-                     value={goals.maxAdSpend} 
-                     onChange={(e) => setGoals({...goals, maxAdSpend: Number(e.target.value)})}
-                     className="w-full bg-slate-50 border-none rounded-2xl p-4 pl-12 font-black text-lg text-slate-700 focus:ring-2 focus:ring-indigo-500/20 transition-all" 
+                      type="number" 
+                      value={goals.dailySales} 
+                      onChange={(e) => setGoals({...goals, dailySales: Number(e.target.value)})}
+                      className="w-full bg-slate-50 border-none rounded-2xl p-4 font-black text-lg text-slate-700"
                    />
                 </div>
-              </div>
-            </div>
+                <div>
+                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 block">Target Mensual</label>
+                   <input 
+                      type="number" 
+                      value={goals.monthlyTarget} 
+                      onChange={(e) => setGoals({...goals, monthlyTarget: Number(e.target.value)})}
+                      className="w-full bg-slate-50 border-none rounded-2xl p-4 font-black text-lg text-slate-700"
+                   />
+                </div>
+                <div>
+                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 block">Inversión Ads Máxima</label>
+                   <input 
+                      type="number" 
+                      value={goals.maxAdSpend} 
+                      onChange={(e) => setGoals({...goals, maxAdSpend: Number(e.target.value)})}
+                      className="w-full bg-slate-50 border-none rounded-2xl p-4 font-black text-lg text-slate-700"
+                   />
+                </div>
+             </div>
           </div>
 
-          {/* CHAT VANGUARD */}
+          {/* HALLAZGOS (INSIGHTS) - EXPANDIDO */}
+          <div className="md:col-span-2 bg-white p-8 rounded-[3.5rem] border border-slate-100 shadow-sm">
+             <div className="flex items-center gap-3 mb-6">
+                <ShieldCheck className="w-6 h-6 text-indigo-600" />
+                <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest">Hallazgos Estratégicos</h3>
+             </div>
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {analysis?.insights?.slice(0, 4).map((insight, i) => (
+                  <div key={i} className={`p-5 rounded-4xl border ${
+                    insight.type === 'success' ? 'bg-emerald-50/50 border-emerald-100' : 
+                    insight.type === 'warning' ? 'bg-rose-50/50 border-rose-100' : 
+                    'bg-indigo-50/50 border-indigo-100'
+                  }`}>
+                    <h5 className="text-[10px] font-black text-slate-800 uppercase mb-2 tracking-widest">{insight.title}</h5>
+                    <p className="text-xs text-slate-600 leading-relaxed font-medium">{insight.description}</p>
+                  </div>
+                ))}
+             </div>
+          </div>
+        </div>
+
+        {/* FILA 2: CHAT Y GRÁFICOS */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
+          {/* CHAT VANGUARD (STICKY) */}
+          <div className="lg:col-span-4 lg:sticky lg:top-8 order-2 lg:order-1">
           <div className="bg-slate-950 rounded-[3rem] overflow-hidden shadow-2xl flex flex-col h-[700px] border border-slate-800/50">
               <div className="p-6 border-b border-white/5 flex items-center justify-between bg-white/5 backdrop-blur-xl">
                   <div className="flex items-center gap-3">
