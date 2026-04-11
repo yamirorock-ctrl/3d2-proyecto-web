@@ -44,10 +44,7 @@ const ImageCarousel: React.FC<{
     <div 
       className="relative h-64 overflow-hidden bg-white p-8 flex items-center justify-center cursor-pointer group/image" 
       onClick={onImageClick}
-      role="button"
-      tabIndex={0}
-      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onImageClick(); }}
-      aria-label={`Ver detalles de ${productName}`}
+      aria-hidden="true"
     >
        {/* Zoom hint */}
       <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/5 opacity-0 group-hover/image:opacity-100 transition-opacity pointer-events-none">
@@ -221,11 +218,9 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart }) => {
         <div className={`p-5 flex flex-col grow ${images.length > 1 ? 'pt-3' : ''}`}>
           <div className="flex justify-between items-start mb-2">
             <h3 
-              className="text-lg font-bold text-slate-900 overflow-hidden text-ellipsis display-webkit-box webkit-line-clamp-2 webkit-box-orient-vertical hover:text-indigo-600 cursor-pointer transition-colors"
-              style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}
+              className="text-lg font-bold text-slate-900 overflow-hidden line-clamp-2 hover:text-indigo-600 cursor-pointer transition-colors"
               onClick={() => setIsModalOpen(true)}
               title={product.name}
-              role="button"
               tabIndex={0}
               onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setIsModalOpen(true); }}
             >
@@ -263,6 +258,8 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart }) => {
                   className="text-xs border border-gray-300 rounded px-2 py-1 bg-white focus:ring-2 focus:ring-indigo-500 outline-none" 
                   value={selectedSaleType} 
                   onChange={e => setSelectedSaleType(e.target.value as any)}
+                  aria-label="Seleccionar tipo de venta"
+                  title="Tipo de venta"
                 >
                   {availableSaleTypes.map(type => (
                     <option key={type} value={type}>
