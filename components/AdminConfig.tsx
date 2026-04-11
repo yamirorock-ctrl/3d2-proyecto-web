@@ -53,7 +53,7 @@ const AdminConfig: React.FC = () => {
             return;
         }
         
-        const linkedCount = products.filter(p => !!p.ml_item_id).length;
+        const linkedCount = (products || []).filter(p => p && !!p.ml_item_id).length;
         if (linkedCount === 0) {
             toast.error('No hay productos vinculados con MercadoLibre para sincronizar.');
             return;

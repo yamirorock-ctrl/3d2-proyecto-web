@@ -20,18 +20,19 @@ const PriceUpdateTool: React.FC<Props> = ({ products, onUpdatePrices, onClose })
   const [showPreview, setShowPreview] = useState(false);
 
   const categories = useMemo(() => {
-    const cats = new Set(products.map(p => p.category));
-    return Array.from(cats).filter(Boolean);
+    const cats = new Set((products || []).map(p => p.category).filter(Boolean));
+    return Array.from(cats);
   }, [products]);
 
   const affectedProducts = useMemo(() => {
+    const safeProducts = products || [];
     switch (filterMode) {
       case 'all':
-        return products;
+        return safeProducts;
       case 'category':
-        return products.filter(p => p.category === selectedCategory);
+        return safeProducts.filter(p => p && p.category === selectedCategory);
       case 'selected':
-        return products.filter(p => selectedIds.has(p.id));
+        return safeProducts.filter(p => p && selectedIds.has(p.id));
       default:
         return [];
     }
@@ -41,7 +42,8 @@ const PriceUpdateTool: React.FC<Props> = ({ products, onUpdatePrices, onClose })
     if (!adjustValue || isNaN(Number(adjustValue))) return affectedProducts;
 
     const value = Number(adjustValue);
-    return affectedProducts.map(p => {
+    return (affectedProducts || []).map(p => {
+      if (!p) return p;
       let newPrice = p.price;
       if (adjustMode === 'percentage') {
         newPrice = p.price * (1 + value / 100);
@@ -221,7 +223,7 @@ const PriceUpdateTool: React.FC<Props> = ({ products, onUpdatePrices, onClose })
 
             {filterMode === 'selected' && (
               <div className="max-h-48 overflow-y-auto border-2 border-gray-200 rounded-xl p-3 space-y-2">
-                {products.map(p => (
+                {(products || []).map(p => (
                   <label key={p.id} className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded cursor-pointer">
                     <input
                       type="checkbox"
@@ -230,7 +232,7 @@ const PriceUpdateTool: React.FC<Props> = ({ products, onUpdatePrices, onClose })
                       className="w-4 h-4 text-indigo-600"
                     />
                     <span className="text-sm text-slate-700">{p.name}</span>
-                    <span className="text-xs text-slate-500 ml-auto">${p.price.toFixed(2)}</span>
+                    <span className="text-xs text-slate-500 ml-auto">${(p.price || 0).toFixed(2)}</span>
                   </label>
                 ))}
               </div>
@@ -248,14 +250,15 @@ const PriceUpdateTool: React.FC<Props> = ({ products, onUpdatePrices, onClose })
                 {affectedProducts.length} producto(s) serán actualizados
               </p>
               <div className="max-h-40 overflow-y-auto space-y-2">
-                {previewProducts.slice(0, 10).map(p => {
-                  const original = products.find(pr => pr.id === p.id);
+                {(previewProducts || []).slice(0, 10).map(p => {
+                  if (!p) return null;
+                  const original = (products || []).find(pr => pr && pr.id === p.id);
                   const diff = p.price - (original?.price || 0);
                   return (
                     <div key={p.id} className="flex items-center justify-between bg-white p-2 rounded-lg text-sm">
                       <span className="text-slate-700 font-medium">{p.name}</span>
                       <div className="flex items-center gap-2">
-                        <span className="text-slate-400 line-through">${original?.price.toFixed(2)}</span>
+                        <span className="text-slate-400 line-through">${original?.price?.toFixed(2) || '0.00'}</span>
                         <span className="font-bold text-blue-600">${p.price.toFixed(2)}</span>
                         <span className={`text-xs ${diff >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                           ({diff >= 0 ? '+' : ''}{diff.toFixed(2)})

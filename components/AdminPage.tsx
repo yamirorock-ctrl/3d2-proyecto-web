@@ -358,9 +358,9 @@ const AdminPage: React.FC<Props> = ({ products, onAdd, onEdit, onDelete }) => {
         
         // Normalizar products antes de guardar
         if (Array.isArray(data.products)) {
-          const normalizedProducts = data.products.map((p: any) => {
-            if (p.images && Array.isArray(p.images)) {
-              p.images = p.images.map((img: any) => {
+          const normalizedProducts = (data.products || []).map((p: any) => {
+            if (p && p.images && Array.isArray(p.images)) {
+              p.images = (p.images || []).map((img: any) => {
                 if (typeof img === 'string') {
                   try {
                     return JSON.parse(img);
@@ -412,11 +412,11 @@ const AdminPage: React.FC<Props> = ({ products, onAdd, onEdit, onDelete }) => {
     if (!confirm('Esto migrará imágenes embebidas (base64) o IndexedDB a Supabase Storage y actualizará los productos con la URL pública. ¿Continuar?')) return;
     try {
       const { uploadToSupabase, upsertProductToSupabase } = await import('../services/supabaseService');
-      const migrated = await Promise.all(products.map(async (p) => {
-        if (!p.images || p.images.length === 0) return p;
+      const migrated = await Promise.all((products || []).map(async (p) => {
+        if (!p || !p.images || p.images.length === 0) return p;
         
         // Normalizar images: si son strings JSON, parsearlos
-        let normalizedImages = p.images.map(img => {
+        let normalizedImages = (p.images || []).map(img => {
           if (typeof img === 'string') {
             try {
               return JSON.parse(img);

@@ -17,7 +17,7 @@ const Home: React.FC = () => {
   // Find product from URL if exists
   const urlProduct = React.useMemo(() => {
     if (!productId) return null;
-    return products.find(p => p.id === Number(productId)); // Handle string/number ID
+    return (products || []).find(p => p && p.id === Number(productId)); 
   }, [productId, products]);
 
   // Handle modal close
@@ -130,7 +130,7 @@ const Home: React.FC = () => {
             <div className="flex gap-2 overflow-x-auto pb-2 sm:pb-0 w-full sm:w-auto no-scrollbar">
               <button onClick={()=>setSelectedCategory('Destacados')} className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap ${selectedCategory==='Destacados'? 'bg-slate-900 text-white' : 'bg-white border border-gray-200 text-slate-600 hover:bg-gray-50'}`}>Destacados</button>
               <button onClick={()=>setSelectedCategory('__all__')} className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap ${selectedCategory==='__all__'? 'bg-slate-900 text-white' : 'bg-white border border-gray-200 text-slate-600 hover:bg-gray-50'}`}>Todo</button>
-              {availableCategories.map((cat: string) => (
+              {(availableCategories || []).map((cat: string) => (
                 <button key={cat} onClick={()=>setSelectedCategory(cat)} className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap ${selectedCategory===cat? 'bg-slate-900 text-white' : 'bg-white border border-gray-200 text-slate-600 hover:bg-gray-50'}`}>{cat}</button>
               ))}
             </div>
@@ -142,7 +142,7 @@ const Home: React.FC = () => {
                 <CustomOrderForm onSubmit={handleCustomOrder} />
               </div>
             ) : (
-                filteredProducts.map((product: Product) => (
+                (filteredProducts || []).map((product: Product) => (
                 <ProductCard 
                     key={product.id} 
                     product={product} 

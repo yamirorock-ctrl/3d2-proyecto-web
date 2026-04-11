@@ -212,13 +212,13 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
                       </div>
                   )}
                   {(messages || []).map((msg, i) => (
-                      <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                      <div key={i} className={`flex ${(msg && msg.role === 'user') ? 'justify-end' : 'justify-start'}`}>
                           <div className={`max-w-[85%] p-4 rounded-3xl ${
-                              msg.role === 'user' 
+                              (msg && msg.role === 'user') 
                               ? 'bg-indigo-600 text-white rounded-tr-sm shadow-xl' 
                               : 'bg-white/5 text-slate-200 rounded-tl-sm border border-white/10 backdrop-blur-md'
                           }`}>
-                              <p className="text-xs leading-relaxed font-medium">{msg.content}</p>
+                              <p className="text-xs leading-relaxed font-medium">{(msg && msg.content) || ''}</p>
                           </div>
                       </div>
                   ))}
@@ -355,7 +355,7 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
 
                 {/* INSIGHTS */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                   {analysis.insights.map((insight, idx) => (
+                   {(analysis.insights || []).map((insight, idx) => (
                      <div key={idx} className={`p-8 rounded-[2.5rem] border ${
                        insight.type === 'warning' ? 'bg-orange-50/70 border-orange-100' :
                        insight.type === 'success' ? 'bg-emerald-50/70 border-emerald-100' :
@@ -381,7 +381,7 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
                              <TrendingUp className="w-4 h-4" /> Protagonistas
                          </p>
                          <div className="space-y-3">
-                            {analysis.categorized_items.protagonists.map(id => <p key={id} className="text-[11px] font-mono text-slate-300 bg-white/5 p-3 rounded-2xl text-center border border-white/5">#{id}</p>)}
+                            {(analysis.categorized_items?.protagonists || []).map(id => <p key={id} className="text-[11px] font-mono text-slate-300 bg-white/5 p-3 rounded-2xl text-center border border-white/5">#{id}</p>)}
                          </div>
                       </div>
                       <div className="bg-white/5 p-6 rounded-4xl border border-white/10 backdrop-blur-md">
@@ -389,7 +389,7 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
                              <Target className="w-4 h-4" /> Estancados
                          </p>
                          <div className="space-y-3">
-                            {analysis.categorized_items.stagnant.map(id => <p key={id} className="text-[11px] font-mono text-slate-300 bg-white/5 p-3 rounded-2xl text-center border border-white/5">#{id}</p>)}
+                            {(analysis.categorized_items?.stagnant || []).map(id => <p key={id} className="text-[11px] font-mono text-slate-300 bg-white/5 p-3 rounded-2xl text-center border border-white/5">#{id}</p>)}
                          </div>
                       </div>
                       <div className="bg-white/5 p-6 rounded-4xl border border-white/10 backdrop-blur-md">
@@ -397,7 +397,7 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
                              <AlertTriangle className="w-4 h-4" /> Zombies
                          </p>
                          <div className="space-y-3">
-                            {analysis.categorized_items.zombies.map(id => <p key={id} className="text-[11px] font-mono text-slate-300 bg-white/5 p-3 rounded-2xl text-center border border-white/5">#{id}</p>)}
+                            {(analysis.categorized_items?.zombies || []).map(id => <p key={id} className="text-[11px] font-mono text-slate-300 bg-white/5 p-3 rounded-2xl text-center border border-white/5">#{id}</p>)}
                          </div>
                       </div>
                    </div>
@@ -408,7 +408,7 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
                    <h3 className="text-3xl font-black text-slate-800 flex items-center gap-5 tracking-tighter">
                       <Rocket className="w-12 h-12 text-indigo-600" /> ACCIONES MANDATORIAS
                    </h3>
-                   {analysis.recommended_actions.map((act, idx) => (
+                   {(analysis.recommended_actions || []).map((act, idx) => (
                       <div key={idx} className="bg-white p-8 rounded-[3.5rem] border border-slate-100 flex items-center justify-between group hover:shadow-2xl hover:border-indigo-300 transition-all duration-700 shadow-xl shadow-slate-100 relative overflow-hidden">
                          <div className="absolute left-0 top-0 w-2 h-full bg-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity"></div>
                          <div className="flex items-center gap-8">
@@ -417,7 +417,7 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
                             </div>
                             <div>
                                <div className="flex items-center gap-4 mb-2">
-                                  <span className="text-xs font-black uppercase text-indigo-600 tracking-tighter">{act.action.replace('_', ' ')}</span>
+                                  <span className="text-xs font-black uppercase text-indigo-600 tracking-tighter">{(act.action || '').replace('_', ' ')}</span>
                                   <span className={`px-4 py-1 text-[10px] font-black rounded-full uppercase tracking-tighter ${
                                     act.impact === 'alto' ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'
                                   }`}>Prioridad {act.impact}</span>

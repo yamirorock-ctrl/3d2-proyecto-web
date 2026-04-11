@@ -208,7 +208,7 @@ const ChatAssistant: React.FC<ChatAssistantProps> = ({ products }) => {
             role="log"
             aria-live="polite"
           >
-            {messages.map((msg) => {
+            {(messages || []).map((msg) => {
               const { text, recommendations } = parseMessageContent(msg.text);
               const isUser = msg.role === 'user';
 
@@ -222,7 +222,7 @@ const ChatAssistant: React.FC<ChatAssistantProps> = ({ products }) => {
                         : 'bg-white text-slate-700 border border-gray-100 rounded-tl-none'
                     }`}
                   >
-                    {text.split(/(https?:\/\/[^\s]+)/g).map((part, i) => 
+                    {(text.split(/(https?:\/\/[^\s]+)/g) || []).map((part, i) => 
                       part.match(/https?:\/\/[^\s]+/) ? (
                         <a 
                           key={i} 
@@ -242,14 +242,14 @@ const ChatAssistant: React.FC<ChatAssistantProps> = ({ products }) => {
                   {/* Recommendations Cards (Only for Bot) */}
                   {!isUser && recommendations.length > 0 && (
                      <div className="flex gap-2 overflow-x-auto pb-2 w-full max-w-[90%] snap-x">
-                        {recommendations.map((rec, idx) => (
+                        {(recommendations || []).map((rec, idx) => (
                           <div 
                              key={idx}
-                             onClick={() => handleProductClick(rec.id)}
+                             onClick={() => rec && rec.id && handleProductClick(rec.id)}
                              className="snap-center min-w-[200px] w-[200px] bg-white rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-all cursor-pointer overflow-hidden group shrink-0"
                           >
                              <div className="h-24 w-full bg-gray-100 relative overflow-hidden">
-                                {rec.image ? (
+                                {rec && rec.image ? (
                                     <img src={rec.image} alt={rec.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
                                 ) : (
                                     <div className="w-full h-full flex items-center justify-center text-gray-300"><ShoppingBag size={24} /></div>
@@ -257,9 +257,9 @@ const ChatAssistant: React.FC<ChatAssistantProps> = ({ products }) => {
                                 <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-all" />
                              </div>
                              <div className="p-3">
-                                <h4 className="font-semibold text-slate-800 text-xs line-clamp-1 mb-1">{rec.name}</h4>
+                                <h4 className="font-semibold text-slate-800 text-xs line-clamp-1 mb-1">{rec?.name}</h4>
                                 <div className="flex justify-between items-center">
-                                    <span className="text-indigo-600 font-bold text-sm">${rec.price?.toLocaleString()}</span>
+                                    <span className="text-indigo-600 font-bold text-sm">${rec?.price?.toLocaleString()}</span>
                                     <button 
                                       className="p-1.5 bg-indigo-50 text-indigo-600 rounded-lg hover:bg-indigo-600 hover:text-white transition-colors"
                                       title="Ver producto"

@@ -103,7 +103,9 @@ export const ProductProvider: React.FC<{ children: ReactNode }> = ({ children })
     try {
       const fromStorage = localStorage.getItem('categories');
       const extra = fromStorage ? JSON.parse(fromStorage) as string[] : [];
-      const fromProducts = Array.from(new Set((JSON.parse(localStorage.getItem('products')||'[]') as Product[]).map(p=>p.category).filter(Boolean)));
+      const prodRaw = localStorage.getItem('products');
+      const prodArr = prodRaw ? JSON.parse(prodRaw) as Product[] : [];
+      const fromProducts = Array.from(new Set((Array.isArray(prodArr) ? prodArr : []).map(p=>p.category).filter(Boolean)));
       return Array.from(new Set([...fromProducts, ...extra]));
     } catch (e) {
       return [];
@@ -147,8 +149,8 @@ export const ProductProvider: React.FC<{ children: ReactNode }> = ({ children })
 
 
   const normalizeProducts = (productsFromDB: any[]): Product[] => {
-     return productsFromDB.map(p => {
-        if (p.images && Array.isArray(p.images)) {
+     return (productsFromDB || []).map(p => {
+        if (p && p.images && Array.isArray(p.images)) {
         p.images = p.images.map((img: any) => {
             if (typeof img === 'string') {
             try {
