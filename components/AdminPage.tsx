@@ -140,7 +140,7 @@ const AdminPage: React.FC<Props> = ({ products, onAdd, onEdit, onDelete }) => {
     localStorage.setItem('products', JSON.stringify(migratedProducts));
 
     // Actualizar categorías disponibles
-    const cleanCategories = Array.from(new Set(migratedProducts.map(p => p.category).filter(Boolean)));
+    const cleanCategories = Array.from(new Set((migratedProducts || []).map(p => p.category).filter(Boolean)));
     localStorage.setItem('categories', JSON.stringify(cleanCategories));
 
     localStorage.setItem('categories', JSON.stringify(cleanCategories));
@@ -156,7 +156,7 @@ const AdminPage: React.FC<Props> = ({ products, onAdd, onEdit, onDelete }) => {
   };
 
   const handleUpdateOrderStatus = (orderId: number, newStatus: CustomOrder['status']) => {
-    const updated = customOrders.map(o => o.id === orderId ? { ...o, status: newStatus } : o);
+    const updated = (customOrders || []).map(o => o.id === orderId ? { ...o, status: newStatus } : o);
     setCustomOrders(updated);
     localStorage.setItem('customOrders', JSON.stringify(updated));
   };
@@ -184,7 +184,7 @@ const AdminPage: React.FC<Props> = ({ products, onAdd, onEdit, onDelete }) => {
     }
 
     // Actualizar en localStorage
-    const updated = salesOrders.map(o => o.id === orderId ? { ...o, status: newStatus } : o);
+    const updated = (salesOrders || []).map(o => o.id === orderId ? { ...o, status: newStatus } : o);
     setSalesOrders(updated);
     localStorage.setItem('orders', JSON.stringify(updated));
   };
@@ -728,7 +728,7 @@ const AdminPage: React.FC<Props> = ({ products, onAdd, onEdit, onDelete }) => {
       {/* Products Tab */}
       {activeTab === 'products' && (
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {products.map(p => (
+        {(products || []).map(p => (
           <div key={p.id} className="border rounded-lg p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white shadow-sm hover:shadow-md transition-shadow">
             <div className="flex flex-row items-start gap-4 w-full">
               <SmartImage src={p.images?.[0]?.url ?? p.image} storageKey={p.images?.[0]?.storageKey} alt={p.name} className="h-20 w-20 sm:h-24 sm:w-24 object-cover rounded-md shrink-0 bg-slate-100" />
@@ -779,7 +779,7 @@ const AdminPage: React.FC<Props> = ({ products, onAdd, onEdit, onDelete }) => {
               <p>No hay pedidos personalizados aún</p>
             </div>
           ) : (
-            customOrders.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()).map(order => (
+            (customOrders || []).slice().sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()).map(order => (
               <div key={order.id} className="border rounded-lg p-6 bg-white shadow-sm">
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex-1">
@@ -897,7 +897,7 @@ const AdminPage: React.FC<Props> = ({ products, onAdd, onEdit, onDelete }) => {
         try {
           const stored = localStorage.getItem('categories');
           const extra = stored ? JSON.parse(stored) as string[] : [];
-          const categories = Array.from(new Set([...products.map(p => p.category).filter(Boolean), ...extra]));
+          const categories = Array.from(new Set([...(products || []).map(p => p.category).filter(Boolean), ...extra]));
           return (
             <>
               {isCreateOpen && (
