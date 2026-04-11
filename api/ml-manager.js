@@ -147,13 +147,18 @@ export default async function handler(req, res) {
           const reply = result.response.text();
           
           try {
-            const updatedHistory = [...history, { role: 'user', content: message }, { role: 'vanguard', content: reply }];
-            await supabase.from('vanguard_memory').upsert({
-                user_id: String(userId),
-                event_type: 'chat_history',
-                content: updatedHistory
-            }, { onConflict: 'user_id,event_type' });
-          } catch (e) { console.error('Error guardando chat:', e); }
+            const updatedHistory = [...(history || []), { role: 'user', content: String(message) }, { role: 'vanguard', content: String(reply) }];
+            if (supabase) {
+              await supabase.from('vanguard_memory').upsert({
+                  user_id: String(userId),
+                  event_type: 'chat_history',
+                  content: updatedHistory
+              }, { onConflict: 'user_id,event_type' });
+            }
+          } catch (e) { 
+            console.error('Error no crítico guardando chat:', e); 
+            // No bloqueamos la respuesta si falla el guardado
+          }
 
           return res.status(200).json({ reply });
         }
