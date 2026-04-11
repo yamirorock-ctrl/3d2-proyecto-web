@@ -70,7 +70,13 @@ const ImageCarousel: React.FC<{
           <button aria-label="Siguiente" onClick={(e) => handleInteraction(e, next)} className="absolute right-2 top-1/2 -translate-y-1/2 z-30 bg-white/80 hover:bg-white text-slate-700 rounded-full h-8 w-8 flex items-center justify-center shadow">›</button>
           <div className="absolute bottom-2 left-0 right-0 flex justify-center gap-2 z-30">
             {images.map((_, idx) => (
-              <button key={idx} onClick={(e) => handleInteraction(e, () => setActive(idx))} className={`h-2.5 w-2.5 rounded-full ${idx === active ? 'bg-white' : 'bg-white/50'} border border-white/60`}></button>
+              <button 
+                key={idx} 
+                aria-label={`Ver imagen ${idx + 1}`}
+                title={`Ver imagen ${idx + 1}`}
+                onClick={(e) => handleInteraction(e, () => setActive(idx))} 
+                className={`h-2.5 w-2.5 rounded-full ${idx === active ? 'bg-white' : 'bg-white/50'} border border-white/60`}
+              ></button>
             ))}
           </div>
         </>
@@ -225,7 +231,10 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart }) => {
             >
               {product.name}
             </h3>
-            <span className="text-lg font-bold text-cyan-600 ml-2 shrink-0 glow-cyan transition-all">
+            <span 
+              className="text-lg font-bold text-cyan-600 ml-2 shrink-0 glow-cyan transition-all"
+              aria-label={`Precio: $${selectedSaleType === 'unidad' ? product.price : selectedSaleType === 'pack' ? packPrice : wholesalePrice}`}
+            >
               {selectedSaleType === 'unidad' && `$${product.price}`}
               {selectedSaleType === 'pack' && `$${packPrice}`}
               {selectedSaleType === 'mayorista' && `$${wholesalePrice}`}

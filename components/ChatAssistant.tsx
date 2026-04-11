@@ -203,7 +203,11 @@ const ChatAssistant: React.FC<ChatAssistantProps> = ({ products }) => {
       {/* Chat Area */}
       {!isMinimized && (
         <>
-          <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50/50">
+          <div 
+            className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50/50"
+            role="log"
+            aria-live="polite"
+          >
             {messages.map((msg) => {
               const { text, recommendations } = parseMessageContent(msg.text);
               const isUser = msg.role === 'user';
