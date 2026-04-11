@@ -190,12 +190,14 @@ export default async function handler(req, res) {
         const finalObj = JSON.parse(jsonMatch[0]);
 
         try {
-          await supabase.from('vanguard_memory').upsert({
-             user_id: String(userId),
-             event_type: 'latest_analysis',
-             content: { analysis: finalObj, goals }
-          }, { onConflict: 'user_id,event_type' });
-        } catch (dbErr) { console.error('Error persistencia:', dbErr); }
+          if (supabase) {
+            await supabase.from('vanguard_memory').upsert({
+                user_id: String(userId),
+                event_type: 'latest_analysis',
+                content: { analysis: finalObj, goals }
+            }, { onConflict: 'user_id,event_type' });
+          }
+        } catch (e) { console.error('Error guardando análisis:', e); }
 
         return res.status(200).json(finalObj);
       }
