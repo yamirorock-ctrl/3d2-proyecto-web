@@ -150,6 +150,7 @@ const AdminConfig: React.FC = () => {
                                 <div>
                                     <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Cargo por vender (%)</label>
                                     <input 
+                                        title="Cargo por vender (%)"
                                         type="number" 
                                         step="0.0001"
                                         value={config.classic_fee * 100}
@@ -161,6 +162,7 @@ const AdminConfig: React.FC = () => {
                                 <div>
                                     <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Costo Fijo Unitario ($)</label>
                                     <input 
+                                        title="Costo Fijo Unitario ($)"
                                         type="number" 
                                         value={config.fixed_fee_unit}
                                         onChange={e => setConfig({...config, fixed_fee_unit: Number(e.target.value)})}
@@ -180,6 +182,7 @@ const AdminConfig: React.FC = () => {
                                 <div>
                                     <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Umbral Envío Gratis ($)</label>
                                     <input 
+                                        title="Umbral Envío Gratis ($)"
                                         type="number" 
                                         value={config.fixed_fee_threshold}
                                         onChange={e => setConfig({...config, fixed_fee_threshold: Number(e.target.value)})}
@@ -189,6 +192,7 @@ const AdminConfig: React.FC = () => {
                                 <div>
                                     <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Costo Envío Estimado ($)</label>
                                     <input 
+                                        title="Costo Envío Estimado ($)"
                                         type="number" 
                                         value={config.shipping_cost}
                                         onChange={e => setConfig({...config, shipping_cost: Number(e.target.value)})}
@@ -209,6 +213,7 @@ const AdminConfig: React.FC = () => {
                                 <div>
                                     <label className="block text-xs font-bold text-slate-500 uppercase mb-1">3 Cuotas (%)</label>
                                     <input 
+                                        title="Recargo 3 Cuotas (%)"
                                         type="number" 
                                         step="0.01"
                                         value={config.installment_3 * 100}
@@ -219,6 +224,7 @@ const AdminConfig: React.FC = () => {
                                 <div>
                                     <label className="block text-xs font-bold text-slate-500 uppercase mb-1">6 Cuotas (%)</label>
                                     <input 
+                                        title="Recargo 6 Cuotas (%)"
                                         type="number" 
                                         step="0.01"
                                         value={config.installment_6 * 100}
@@ -229,6 +235,7 @@ const AdminConfig: React.FC = () => {
                                 <div>
                                     <label className="block text-xs font-bold text-slate-500 uppercase mb-1">9 Cuotas (%)</label>
                                     <input 
+                                        title="Recargo 9 Cuotas (%)"
                                         type="number" 
                                         step="0.01"
                                         value={config.installment_9 * 100}
@@ -239,6 +246,7 @@ const AdminConfig: React.FC = () => {
                                 <div>
                                     <label className="block text-xs font-bold text-slate-500 uppercase mb-1">12 Cuotas (%)</label>
                                     <input 
+                                        title="Recargo 12 Cuotas (%)"
                                         type="number" 
                                         step="0.01"
                                         value={config.installment_12 * 100}
@@ -320,6 +328,7 @@ const AdminConfig: React.FC = () => {
                                 <div>
                                     <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Categoría Actual</label>
                                     <select 
+                                        title="Categoría del Monotributo"
                                         value={fiscal.monotributo_category}
                                         onChange={e => setFiscal({...fiscal, monotributo_category: e.target.value})}
                                         className="w-full bg-slate-50 border-slate-200 rounded-xl font-bold text-slate-700 focus:ring-emerald-500 focus:border-emerald-500"
@@ -336,6 +345,7 @@ const AdminConfig: React.FC = () => {
                                     <div className="relative">
                                         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold">$</span>
                                         <input 
+                                            title="Límite Mensual ($)"
                                             type="number" 
                                             value={fiscal.monthly_limit}
                                             onChange={e => setFiscal({...fiscal, monthly_limit: Number(e.target.value)})}
@@ -348,6 +358,7 @@ const AdminConfig: React.FC = () => {
                                 <div>
                                     <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Fecha Inicio Facturación</label>
                                     <input 
+                                        title="Fecha Inicio Facturación"
                                         type="date" 
                                         value={fiscal.start_date || '2026-04-01'}
                                         onChange={e => setFiscal({...fiscal, start_date: e.target.value})}
@@ -425,6 +436,7 @@ const AdminConfig: React.FC = () => {
                                     <p className="text-xs text-slate-400">Habilitar o deshabilitar las alertas visuales de facturación.</p>
                                 </div>
                                 <button 
+                                    title={fiscal.is_active ? "Desactivar Monitoreo" : "Activar Monitoreo"}
                                     onClick={() => setFiscal({...fiscal, is_active: !fiscal.is_active})}
                                     className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${fiscal.is_active ? 'bg-emerald-600' : 'bg-slate-300'}`}
                                 >

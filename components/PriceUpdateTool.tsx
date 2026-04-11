@@ -97,7 +97,7 @@ const PriceUpdateTool: React.FC<Props> = ({ products, onUpdatePrices, onClose })
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-[95vw] sm:max-w-2xl lg:max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-4 sm:p-6 text-white flex items-center justify-between">
+        <div className="bg-linear-to-r from-indigo-600 to-purple-600 p-4 sm:p-6 text-white flex items-center justify-between">
           <div>
             <h2 className="text-xl sm:text-2xl font-bold flex items-center gap-2">
               <DollarSign size={24} className="hidden sm:block" />
@@ -107,6 +107,7 @@ const PriceUpdateTool: React.FC<Props> = ({ products, onUpdatePrices, onClose })
             <p className="text-xs sm:text-sm opacity-90 mt-1">Ajusta precios de forma rápida</p>
           </div>
           <button
+            title="Cerrar"
             onClick={onClose}
             className="p-2 hover:bg-white/20 rounded-lg transition-colors"
           >
@@ -210,6 +211,7 @@ const PriceUpdateTool: React.FC<Props> = ({ products, onUpdatePrices, onClose })
 
             {filterMode === 'category' && (
               <select
+                title="Seleccionar categoría"
                 value={selectedCategory}
                 onChange={(e) => setSelectedCategory(e.target.value)}
                 className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-600 focus:outline-none"
@@ -279,7 +281,7 @@ const PriceUpdateTool: React.FC<Props> = ({ products, onUpdatePrices, onClose })
           {/* Advertencia */}
           {affectedProducts.length === 0 && filterMode !== 'all' && (
             <div className="bg-amber-50 border-2 border-amber-200 rounded-xl p-4 flex items-start gap-3">
-              <AlertTriangle className="text-amber-600 flex-shrink-0" size={20} />
+              <AlertTriangle className="text-amber-600 shrink-0" size={20} />
               <div>
                 <p className="font-medium text-amber-900">Sin productos seleccionados</p>
                 <p className="text-sm text-amber-700 mt-1">
@@ -302,7 +304,7 @@ const PriceUpdateTool: React.FC<Props> = ({ products, onUpdatePrices, onClose })
           <button
             onClick={handleApplyChanges}
             disabled={!adjustValue || affectedProducts.length === 0}
-            className="px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-medium hover:from-indigo-700 hover:to-purple-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 order-1 sm:order-2"
+            className="px-6 py-3 bg-linear-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-medium hover:from-indigo-700 hover:to-purple-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 order-1 sm:order-2"
           >
             <DollarSign size={20} />
             <span className="hidden sm:inline">Aplicar Cambios ({affectedProducts.length})</span>
