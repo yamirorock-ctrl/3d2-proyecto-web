@@ -116,6 +116,8 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
           isChat: true,
           history: messages,
           message: userInput,
+          metrics,
+          current_inventory: products,
           userId 
         })
       });
