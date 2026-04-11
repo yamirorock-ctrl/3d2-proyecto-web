@@ -323,7 +323,10 @@ export default async function handler(req, res) {
 
       case 'strategic-analysis': {
         const { metrics, goals, current_inventory } = req.body;
-        const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+        const apiKey = process.env.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
+        if (!apiKey) throw new Error("Falta GEMINI_API_KEY en el servidor");
+
+        const genAI = new GoogleGenerativeAI(apiKey);
         const model = genAI.getGenerativeModel({ 
           model: "gemini-3.1-pro",
           systemInstruction: `
