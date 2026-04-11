@@ -9,6 +9,8 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { saveDataUrl, getBlob } from '../services/imageStore';
 import SmartImage from './SmartImage';
+import OrdersManagement from './OrdersManagement';
+import MLStrategist from './MLStrategist';
 import SalesDashboard from './SalesDashboard';
 import PriceUpdateTool from './PriceUpdateTool';
 import { getAuthUrl } from '../services/mlService';
@@ -690,7 +692,7 @@ const AdminPage: React.FC<Props> = ({ products, onAdd, onEdit, onDelete }) => {
           }`}
         >
           <Sparkles size={20} />
-          Gestor de Preventas
+          Socio Senior Vanguard
         </button>
         <button
           onClick={() => setActiveTab('calendar' as any)}
@@ -884,22 +886,9 @@ const AdminPage: React.FC<Props> = ({ products, onAdd, onEdit, onDelete }) => {
         <FinancialDashboard orders={salesOrders} products={products} onEditProduct={onEdit} />
       )}
 
-      {/* Pre Sales Manager Tab */}
-      {activeTab === 'pre_sales' && (
-        <PreSalesManager onPublish={(data) => {
-          // Open ProductAdmin mapped with the generated data
-          setEditing({
-            id: 0,
-            name: data.name,
-            description: data.description,
-            price: data.price,
-            ml_title: data.ml_title,
-            category: 'Personalizados', // Provide a default category
-            image: data.imageBase64,
-            images: [{ url: data.imageBase64 }],
-            technology: '3D',
-          });
-        }} />
+      {/* ML Strategist Vanguard Tab */}
+      {activeTab === 'pre_sales' && user && (
+        <MLStrategist userId={user.id} />
       )}
 
 

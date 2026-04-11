@@ -112,6 +112,49 @@ export default async function handler(req, res) {
         return res.status(200).json({ message: 'Búsqueda completada', linked: linkedCount, logs });
       }
 
+      case 'get-metrics': {
+        const mlUserId = dbToken.user_id;
+        
+        // 1. Obtener items activos
+        const searchRes = await fetch(`https://api.mercadolibre.com/users/${mlUserId}/items/search?status=active`, {
+            headers: { Authorization: `Bearer ${accessToken}` }
+        });
+        const searchData = await searchRes.json();
+        const mlIds = (searchData.results || []).slice(0, 20); // Top 20 para no saturar
+
+        // 2. Obtener ventas recientes (últimos 30 días)
+        const dateFrom = new Date();
+        dateFrom.setDate(dateFrom.getDate() - 30);
+        const ordersRes = await fetch(`https://api.mercadolibre.com/orders/search?seller=${mlUserId}&order.date_created.from=${dateFrom.toISOString()}`, {
+            headers: { Authorization: `Bearer ${accessToken}` }
+        });
+        const ordersData = await ordersRes.json();
+
+        // 3. Obtener métricas de publicidad (Ads)
+        const adsRes = await fetch(`https://api.mercadolibre.com/advertising/advertising_campaigns/search?seller_id=${mlUserId}`, {
+            headers: { Authorization: `Bearer ${accessToken}` }
+        });
+        const adsData = await adsRes.json();
+
+        return res.status(200).json({
+           account_id: mlUserId,
+           items_count: searchData.paging.total,
+           recent_orders: ordersData.results?.length || 0,
+           orders_summary: ordersData.results?.slice(0, 10) || [],
+           ads: adsData.results || [],
+           top_items: mlIds
+        });
+      }
+
+      case 'get-promotions': {
+        const mlUserId = dbToken.user_id;
+        const promosRes = await fetch(`https://api.mercadolibre.com/seller-promotions/principals?seller_id=${mlUserId}`, {
+            headers: { Authorization: `Bearer ${accessToken}` }
+        });
+        const promosData = await promosRes.json();
+        return res.status(200).json(promosData);
+      }
+
       case 'bulk-sync-stock': {
         const { productIds } = req.body;
         let query = supabase.from('products').select('id, name, stock, ml_item_id');
