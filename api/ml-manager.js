@@ -328,7 +328,7 @@ export default async function handler(req, res) {
 
         const genAI = new GoogleGenerativeAI(apiKey);
         const model = genAI.getGenerativeModel({ 
-          model: "gemini-3.1-pro",
+          model: "gemini-3.1-pro-preview",
           systemInstruction: `
             Eres VANGUARD, el Socio Estratégico Senior de 3D2 Store. 
             Tu misión es maximizar la rentabilidad y el crecimiento en Mercado Libre Argentina. 
