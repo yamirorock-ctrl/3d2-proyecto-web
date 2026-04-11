@@ -160,15 +160,15 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
              <div className="space-y-4">
                 <div>
                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 block">Meta Diaria</label>
-                   <input type="number" value={goals.dailySales} onChange={(e) => setGoals({...goals, dailySales: Number(e.target.value)})} className="w-full bg-slate-50 border-none rounded-2xl p-4 font-black text-lg" />
+                   <input title="Meta de ventas diarias" placeholder="2" type="number" value={goals.dailySales} onChange={(e) => setGoals({...goals, dailySales: Number(e.target.value)})} className="w-full bg-slate-50 border-none rounded-2xl p-4 font-black text-lg" />
                 </div>
                 <div>
                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 block">Target Mensual</label>
-                   <input type="number" value={goals.monthlyTarget} onChange={(e) => setGoals({...goals, monthlyTarget: Number(e.target.value)})} className="w-full bg-slate-50 border-none rounded-2xl p-4 font-black text-lg" />
+                   <input title="Objetivo de ventas mensual" placeholder="50" type="number" value={goals.monthlyTarget} onChange={(e) => setGoals({...goals, monthlyTarget: Number(e.target.value)})} className="w-full bg-slate-50 border-none rounded-2xl p-4 font-black text-lg" />
                 </div>
                 <div>
                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 block">Inversión Ads</label>
-                   <input type="number" value={goals.maxAdSpend} onChange={(e) => setGoals({...goals, maxAdSpend: Number(e.target.value)})} className="w-full bg-slate-50 border-none rounded-2xl p-4 font-black text-lg" />
+                   <input title="Inversión máxima en Ads" placeholder="5000" type="number" value={goals.maxAdSpend} onChange={(e) => setGoals({...goals, maxAdSpend: Number(e.target.value)})} className="w-full bg-slate-50 border-none rounded-2xl p-4 font-black text-lg" />
                 </div>
              </div>
           </div>
@@ -200,7 +200,7 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
                         <p className="text-[9px] text-emerald-400 font-black uppercase">Analista Senior Online</p>
                       </div>
                   </div>
-                  <button onClick={() => setMessages([])} className="text-slate-500 hover:text-white"><RefreshCw className="w-5 h-5" /></button>
+                  <button title="Reiniciar chat de estrategia" onClick={() => setMessages([])} className="text-slate-500 hover:text-white"><RefreshCw className="w-5 h-5" /></button>
               </div>
               <div className="flex-1 overflow-y-auto p-6 space-y-5">
                   {messages.map((msg, i) => (
@@ -215,7 +215,7 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
               <div className="p-6 bg-white/5 border-t border-white/5">
                   <div className="relative flex items-center">
                        <input value={userInput} onChange={(e) => setUserInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && sendMessage()} placeholder="Discutir movimientos..." className="w-full bg-slate-900 border-none rounded-2xl py-4 px-5 pr-14 text-sm text-slate-200" />
-                       <button onClick={sendMessage} className="absolute right-2 p-3 bg-indigo-600 text-white rounded-xl"><Send className="w-5 h-5" /></button>
+                       <button title="Enviar mensaje a Vanguard" onClick={sendMessage} className="absolute right-2 p-3 bg-indigo-600 text-white rounded-xl"><Send className="w-5 h-5" /></button>
                   </div>
               </div>
             </div>
