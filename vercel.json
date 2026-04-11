@@ -2,8 +2,8 @@
 {
   "crons": [
     {
-      "path": "/api/ml-refresh-token",
-      "schedule": "0 0 * * *"
+      "path": "/api/vanguard-cron",
+      "schedule": "0 1,15 * * *"
     }
   ]
 }
