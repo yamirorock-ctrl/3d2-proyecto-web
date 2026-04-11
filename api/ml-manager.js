@@ -125,11 +125,11 @@ export default async function handler(req, res) {
       }
 
       case 'strategic-analysis': {
-        const { metrics, goals, current_inventory, isChat, history, message } = req.body;
+        const { metrics, goals, current_inventory, isChat, history, message, attachment } = req.body;
         const apiKey = process.env.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
         const genAI = new GoogleGenerativeAI(apiKey);
         const model = genAI.getGenerativeModel({ 
-          model: "gemini-3.1-pro-preview",
+          model: "gemini-1.5-pro-latest", // Usamos 1.5 Pro o Flash para full soporte multimodal 
           systemInstruction: `
             Eres VANGUARD, el Socio Estratégico Senior de 3D2 Store. 
             Misión: Reputación, Ventas y Posicionamiento en ML Argentina.
@@ -141,15 +141,35 @@ export default async function handler(req, res) {
           const chat = model.startChat({
             history: (history || []).map(m => ({
                 role: m.role === 'vanguard' ? 'model' : 'user',
+                // Evitamos pasar las fotos dentro del historial viejo a la IA para no quemar tokens inútilmente.
                 parts: [{ text: String(m.content) }]
             }))
           });
-          const chatPrompt = `MENSAJE USUARIO: ${message} | MÉTRICAS: ${JSON.stringify(metrics || {})} | STOCK: ${JSON.stringify(current_inventory || [])}`;
-          const result = await chat.sendMessage(chatPrompt);
+          
+          let chatParts = [];
+          chatParts.push({ text: `MENSAJE USUARIO: ${message || 'Revisa esta imagen adjunta'} | MÉTRICAS: ${JSON.stringify(metrics || {})} | STOCK: ${JSON.stringify(current_inventory || [])}` });
+          
+          if (attachment) {
+            try {
+              const base64Data = attachment.split(',')[1];
+              const mimeType = attachment.split(';')[0].split(':')[1];
+              chatParts.push({
+                 inlineData: { data: base64Data, mimeType }
+              });
+            } catch (err) {
+              console.error("Error parseando el attachment base64", err);
+            }
+          }
+
+          const result = await chat.sendMessage(chatParts);
           const reply = result.response.text();
           
           try {
-            const updatedHistory = [...(history || []), { role: 'user', content: String(message) }, { role: 'vanguard', content: String(reply) }];
+            // Regla de Oro: Limpiamos los attachments del history para que la BD no explote guardando bytes innecesarios.
+            const cleanHistory = (history || []).map(h => ({ role: h.role, content: h.content }));
+            const userContent = attachment ? `🖼️ [Imagen adjunta enviada] ${message}` : message;
+            
+            const updatedHistory = [...cleanHistory, { role: 'user', content: String(userContent) }, { role: 'vanguard', content: String(reply) }];
             if (supabase) {
               await supabase.from('vanguard_memory').upsert({
                   user_id: String(userId),
@@ -159,7 +179,6 @@ export default async function handler(req, res) {
             }
           } catch (e) { 
             console.error('Error no crítico guardando chat:', e); 
-            // No bloqueamos la respuesta si falla el guardado
           }
 
           return res.status(200).json({ reply });

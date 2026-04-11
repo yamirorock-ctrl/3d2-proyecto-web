@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Zap, Target, DollarSign, Rocket, RefreshCw, BarChart, ShieldCheck, TrendingUp, AlertTriangle, CheckCircle, ChevronRight, Send, User, Maximize2, MessageSquare, X, Activity } from 'lucide-react';
+import { Zap, Target, DollarSign, Rocket, RefreshCw, BarChart, ShieldCheck, TrendingUp, AlertTriangle, CheckCircle, ChevronRight, Send, User, Maximize2, MessageSquare, X, Activity, Paperclip } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '../services/supabaseService';
 import { ComposedChart, Line, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, Area } from 'recharts';
@@ -33,6 +33,19 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
   const [currentInventory, setCurrentInventory] = useState<any[]>([]);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+
+  // Attachment state for Vision AI
+  const [attachment, setAttachment] = useState<{ url: string, type: string } | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file && file.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onload = () => setAttachment({ url: reader.result as string, type: file.type });
+      reader.readAsDataURL(file);
+    }
+  };
 
   // Dragging state and logic
   const [position, setPosition] = useState({ bottom: 24, right: 24 });
@@ -152,13 +165,15 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
 
   const sendMessage = async (presetText?: string) => {
     const text = presetText || userInput;
-    if (!text.trim() || chatLoading) return;
+    const currentAttachment = attachment;
+    if (!text.trim() && !currentAttachment) return;
     
     if (presetText && !isChatOpen) setIsChatOpen(true);
     
-    const newMsg = { role: 'user', content: text };
+    const newMsg = { role: 'user', content: text, attachment: currentAttachment?.url };
     setMessages(prev => [...prev, newMsg]);
     setUserInput('');
+    setAttachment(null);
     setChatLoading(true);
     try {
       const resp = await fetch('/api/ml-manager', {
@@ -169,6 +184,7 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
           isChat: true,
           history: messages,
           message: text,
+          attachment: currentAttachment?.url,
           metrics: currentMetrics,
           current_inventory: currentInventory,
           userId 
@@ -400,7 +416,19 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
       >
         {/* Chat Window (Opens Upwards) */}
         {isChatOpen && (
-          <div className="w-[360px] sm:w-[400px] h-[580px] bg-[#1a1c23] border border-white/10 rounded-3xl mb-4 shadow-[0_20px_50px_rgba(0,0,0,0.5)] flex flex-col overflow-hidden animate-in slide-in-from-bottom-5 fade-in duration-200">
+          <div 
+             className="w-[360px] sm:w-[400px] h-[580px] bg-[#1a1c23] border border-white/10 rounded-3xl mb-4 shadow-[0_20px_50px_rgba(0,0,0,0.5)] flex flex-col overflow-hidden animate-in slide-in-from-bottom-5 fade-in duration-200"
+             onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
+             onDrop={(e) => {
+               e.preventDefault(); e.stopPropagation();
+               const file = e.dataTransfer.files?.[0];
+               if (file && file.type.startsWith('image/')) {
+                 const reader = new FileReader();
+                 reader.onload = () => setAttachment({ url: reader.result as string, type: file.type });
+                 reader.readAsDataURL(file);
+               }
+             }}
+          >
             {/* Header */}
             <div className="bg-[#131826] p-4 flex justify-between items-center border-b border-white/5">
                <div className="flex items-center gap-3">
@@ -436,6 +464,9 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
                        ? 'bg-violet-600 text-white rounded-br-sm' 
                        : 'bg-[#1e293b] text-slate-200 rounded-bl-sm border border-white/5'
                      }`}>
+                        {msg.attachment && (
+                           <img src={msg.attachment} alt="Adjunto" className="w-full rounded-lg mb-2 max-h-40 object-cover border border-white/10" />
+                        )}
                         <p className="whitespace-pre-wrap">{msg.content}</p>
                      </div>
                   </div>
@@ -454,7 +485,19 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
 
             {/* Input Area */}
             <div className="p-4 bg-[#131826] border-t border-white/5">
-               <div className="relative">
+               {attachment && (
+                 <div className="mb-3 relative inline-block">
+                    <img src={attachment.url} alt="Preview" className="h-16 rounded-md border border-white/10 object-cover" />
+                     <button onClick={() => setAttachment(null)} className="absolute -top-2 -right-2 bg-slate-800 text-slate-300 rounded-full p-1 border border-white/10 hover:text-white transition-colors">
+                       <X size={12}/>
+                     </button>
+                 </div>
+               )}
+               <div className="relative flex items-center">
+                  <input type="file" accept="image/*" className="hidden" ref={fileInputRef} onChange={handleFileChange} />
+                  <button title="Adjuntar imagen" onClick={() => fileInputRef.current?.click()} className="absolute left-2 p-2 text-slate-400 hover:text-white transition-colors z-10 focus:outline-none">
+                     <Paperclip className="w-5 h-5 pointer-events-none" />
+                  </button>
                   <textarea 
                     value={userInput}
                     onChange={(e) => setUserInput(e.target.value)}
@@ -464,9 +507,9 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
                         sendMessage();
                       }
                     }}
-                    placeholder="Pregunta a Vanguard sobre tu estrategia..."
+                    placeholder="Escribe o arrastra fotos aquí..."
                     rows={1}
-                    className="w-full bg-[#0b0f19] border border-white/10 rounded-full py-3 pl-4 pr-12 text-sm text-white focus:outline-none focus:border-violet-500 transition-all resize-none shadow-inner"
+                    className="w-full bg-[#0b0f19] border border-white/10 rounded-full py-3 pl-10 pr-12 text-sm text-white focus:outline-none focus:border-violet-500 transition-all resize-none shadow-inner custom-scrollbar"
                   />
                   <button title="Enviar mensaje" 
                     onClick={() => sendMessage()}
