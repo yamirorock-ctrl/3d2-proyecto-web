@@ -31,7 +31,7 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
   const [chartData, setChartData] = useState<any[]>([]); 
   const [currentMetrics, setCurrentMetrics] = useState<any>(null);
   const [currentInventory, setCurrentInventory] = useState<any[]>([]);
-  const [isChatOpen, setIsChatOpen] = useState(false); // FIXED BOT CHAT BUBBLE
+  const [isChatOpen, setIsChatOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
 
   const chatEndRef = useRef<HTMLDivElement>(null);
@@ -105,7 +105,6 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
     const text = presetText || userInput;
     if (!text.trim() || chatLoading) return;
     
-    // Open chat automatically if sending a command from dashboard
     if (presetText && !isChatOpen) setIsChatOpen(true);
     
     const newMsg = { role: 'user', content: text };
@@ -150,7 +149,7 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
   }, [userId]);
 
   return (
-    <div className="bg-[#0b0f19] text-slate-200 font-sans min-h-screen p-4 sm:p-8 rounded-4xl border border-slate-800 relative shadow-2xl overflow-hidden">
+    <div className="bg-[#0b0f19] text-slate-200 font-sans min-h-screen w-full p-4 sm:p-8 rounded-4xl border border-slate-800 relative shadow-2xl overflow-hidden">
       {/* GLOW BACKGROUND EFFECT */}
       <div className="absolute top-0 left-1/4 w-[800px] h-[500px] bg-violet-600/10 rounded-full blur-[120px] pointer-events-none"></div>
       
@@ -158,17 +157,17 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
       <header className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 pb-6 border-b border-white/5 relative z-10 gap-6">
         <div>
            <h1 className="text-3xl font-black tracking-tight text-white flex items-center gap-3">
-              VANGUARD <span className="bg-clip-text text-transparent bg-linear-to-r from-violet-400 to-cyan-400 italic">OVERVIEW</span>
+              VANGUARD <span className="bg-clip-text text-transparent bg-linear-to-r from-violet-400 to-cyan-400 italic">PANEL GENERAL</span>
            </h1>
-           <p className="text-sm font-medium text-slate-500 mt-1">Track your MercadoLibre metrics in real time.</p>
+           <p className="text-sm font-medium text-slate-500 mt-1">Monitorea tus métricas de MercadoLibre en tiempo real.</p>
         </div>
 
         <div className="flex items-center gap-4 bg-[#131826] p-2 rounded-2xl border border-white/5">
             <div className="px-4 py-2">
-               <span className="text-[10px] font-black text-slate-500 uppercase block mb-1">Status</span>
+               <span className="text-[10px] font-black text-slate-500 uppercase block mb-1">Estado</span>
                <span className="text-xs font-bold text-cyan-400 flex items-center gap-2">
                   <span className="w-1.5 h-1.5 bg-cyan-400 rounded-full animate-pulse shadow-[0_0_10px_#22d3ee]"></span>
-                  Live Sync
+                  Sincronizado
                </span>
             </div>
             <div className="w-px h-8 bg-white/10"></div>
@@ -178,7 +177,7 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
                 className="bg-violet-600 hover:bg-violet-500 text-white px-6 py-3 rounded-xl font-bold text-xs flex items-center gap-2 transition-all shadow-[0_0_20px_rgba(124,58,237,0.3)] disabled:opacity-50"
             >
                 {loading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Activity className="w-4 h-4" />}
-                Analyze Now
+                Analizar Menú
             </button>
         </div>
       </header>
@@ -194,11 +193,11 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
                         <DollarSign className="w-6 h-6 text-white" />
                     </div>
                     <div className="text-3xl font-black text-white">${(analysis?.total_revenue || 82450).toLocaleString()}</div>
-                    <div className="text-xs font-medium text-white/80 mt-1 uppercase tracking-wider">Total Sales (30d)</div>
+                    <div className="text-xs font-medium text-white/80 mt-1 uppercase tracking-wider">Ventas Totales (30d)</div>
                 </div>
             </div>
             <div className="mt-4 flex items-center gap-2 text-xs font-bold text-emerald-300">
-                <TrendingUp className="w-4 h-4" /> +12.5% vs last month
+                <TrendingUp className="w-4 h-4" /> +12.5% vs mes anterior
             </div>
          </div>
 
@@ -208,9 +207,9 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
                 <Target className="w-6 h-6" />
             </div>
             <div className="text-3xl font-black text-white">{analysis?.organic_sales || 1250}</div>
-            <div className="text-xs font-medium text-slate-500 mt-1 uppercase tracking-wider">Total Orders</div>
+            <div className="text-xs font-medium text-slate-500 mt-1 uppercase tracking-wider">Órdenes Totales</div>
             <div className="mt-4 flex items-center gap-2 text-xs font-bold text-emerald-400">
-                <TrendingUp className="w-4 h-4" /> +8.3% vs last month
+                <TrendingUp className="w-4 h-4" /> +8.3% vs mes anterior
             </div>
          </div>
 
@@ -219,9 +218,9 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
                 <Zap className="w-6 h-6" />
             </div>
             <div className="text-3xl font-black text-white">42.8%</div>
-            <div className="text-xs font-medium text-slate-500 mt-1 uppercase tracking-wider">Ads Conversion</div>
+            <div className="text-xs font-medium text-slate-500 mt-1 uppercase tracking-wider">Conversión Ads</div>
             <div className="mt-4 flex items-center gap-2 text-xs font-bold text-emerald-400">
-                <TrendingUp className="w-4 h-4" /> Optimal Rate
+                <TrendingUp className="w-4 h-4" /> Tasa Óptima
             </div>
          </div>
 
@@ -230,9 +229,9 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
                 <BarChart className="w-6 h-6" />
             </div>
             <div className="text-3xl font-black text-white">{analysis?.acos || '39.8'}%</div>
-            <div className="text-xs font-medium text-slate-500 mt-1 uppercase tracking-wider">Global ACOS</div>
+            <div className="text-xs font-medium text-slate-500 mt-1 uppercase tracking-wider">ACOS Global</div>
             <div className="mt-4 flex items-center gap-2 text-xs font-bold text-slate-400">
-                <CheckCircle className="w-4 h-4 text-emerald-400" /> Controlled
+                <CheckCircle className="w-4 h-4 text-emerald-400" /> Bajo Control
             </div>
          </div>
       </div>
@@ -244,8 +243,8 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
         <div className="xl:col-span-2 bg-[#131826] rounded-3xl p-6 md:p-8 border border-white/5">
             <div className="flex justify-between items-center mb-8">
                 <div>
-                   <h2 className="text-xl font-bold text-white">Sales Performance Over Time</h2>
-                   <p className="text-xs text-slate-500 mt-1">Line Chart with dual lines (Ads vs Organic)</p>
+                   <h2 className="text-xl font-bold text-white">Rendimiento Histórico</h2>
+                   <p className="text-xs text-slate-500 mt-1">Curva de asimilación (Orgánico vs Ads)</p>
                 </div>
                 <div className="hidden sm:flex items-center gap-4 text-xs font-medium">
                     <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-violet-500"></div> Asistidas (Ads)</div>
@@ -268,8 +267,8 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
                             contentStyle={{ backgroundColor: '#0f172a', borderColor: '#1e293b', borderRadius: '12px', color: '#fff' }}
                             itemStyle={{ color: '#e2e8f0' }}
                         />
-                        <Line type="monotone" dataKey="salesAds" name="Ads Sales" stroke="#8b5cf6" strokeWidth={4} dot={{r: 5, fill: '#8b5cf6', stroke: '#0f172a', strokeWidth: 2}} activeDot={{r: 8}} />
-                        <Line type="monotone" dataKey="salesOrg" name="Organic Sales" stroke="#22d3ee" strokeWidth={4} dot={{r: 5, fill: '#22d3ee', stroke: '#0f172a', strokeWidth: 2}} />
+                        <Line type="monotone" dataKey="salesAds" name="Ventas Ads" stroke="#8b5cf6" strokeWidth={4} dot={{r: 5, fill: '#8b5cf6', stroke: '#0f172a', strokeWidth: 2}} activeDot={{r: 8}} />
+                        <Line type="monotone" dataKey="salesOrg" name="Ventas Orgánicas" stroke="#22d3ee" strokeWidth={4} dot={{r: 5, fill: '#22d3ee', stroke: '#0f172a', strokeWidth: 2}} />
                     </ComposedChart>
                 </ResponsiveContainer>
             </div>
@@ -280,23 +279,23 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
             <div>
                <div className="flex justify-between items-center mb-6">
                    <div>
-                       <h3 className="text-lg font-bold text-white">Portfolio Classification</h3>
-                       <p className="text-xs text-slate-500 mt-1">AI-driven matrix</p>
+                       <h3 className="text-lg font-bold text-white">Clasificación de Ecosistema</h3>
+                       <p className="text-xs text-slate-500 mt-1">Matriz impulsada por IA</p>
                    </div>
                </div>
                
                <div className="space-y-4">
                   {[
-                     { title: 'Protagonistas (Star)', icon: <Rocket size={16} />, color: 'violet', value: analysis?.categorized_items?.protagonists?.length || 5, bg: 'bg-violet-500/20 text-violet-400' },
-                     { title: 'Estancados (Stagnant)', icon: <Target size={16} />, color: 'cyan', value: analysis?.categorized_items?.stagnant?.length || 12, bg: 'bg-cyan-500/20 text-cyan-400' },
-                     { title: 'Zombies (Dead)', icon: <AlertTriangle size={16} />, color: 'rose', value: analysis?.categorized_items?.zombies?.length || 3, bg: 'bg-rose-500/20 text-rose-400' },
+                     { title: 'Protagonistas (Estrellas)', icon: <Rocket size={16} />, color: 'violet', value: analysis?.categorized_items?.protagonists?.length || 5, bg: 'bg-violet-500/20 text-violet-400' },
+                     { title: 'Estancados (Lento)', icon: <Target size={16} />, color: 'cyan', value: analysis?.categorized_items?.stagnant?.length || 12, bg: 'bg-cyan-500/20 text-cyan-400' },
+                     { title: 'Zombies (Muertos)', icon: <AlertTriangle size={16} />, color: 'rose', value: analysis?.categorized_items?.zombies?.length || 3, bg: 'bg-rose-500/20 text-rose-400' },
                   ].map((cat, i) => (
                       <div key={i} onClick={() => sendMessage(`Muéstrame el listado y plan para mis productos ${cat.title}`)} className="bg-[#0b0f19] p-4 rounded-2xl flex items-center justify-between group cursor-pointer hover:border-violet-500/50 border border-transparent transition-all">
                           <div className="flex items-center gap-4">
                               <div className={`p-3 rounded-xl ${cat.bg}`}>{cat.icon}</div>
                               <div>
                                  <h4 className="font-bold text-sm text-slate-200">{cat.title}</h4>
-                                 <p className="text-xs text-slate-500">{cat.value} Publications</p>
+                                 <p className="text-xs text-slate-500">{cat.value} Publicaciones</p>
                               </div>
                           </div>
                       </div>
@@ -305,7 +304,7 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
             </div>
 
             <button onClick={() => sendMessage("Dame un resumen de mi Portfolio")} className="w-full mt-6 py-3 bg-white/5 hover:bg-white/10 rounded-xl text-xs font-bold transition-all text-slate-300">
-               Analyze All Categories
+               Analizar Todo el Ecosistema
             </button>
         </div>
       </div>
@@ -314,16 +313,16 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 relative z-10 mb-20 lg:mb-0">
           <div className="bg-[#131826] p-8 rounded-3xl border border-white/5">
               <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest flex items-center gap-2 mb-6">
-                 <ShieldCheck className="w-5 h-5 text-violet-500" /> Strategic Plan
+                 <ShieldCheck className="w-5 h-5 text-violet-500" /> Plan Estratégico
               </h3>
               <p className="text-[15px] font-medium leading-relaxed text-slate-300">
-                  {analysis?.strategic_plan || "Connect your store to Vanguard AI to generate a powerful, real-time strategic roadmap tailored to your actual MercadoLibre metrics."}
+                  {analysis?.strategic_plan || "Conecta Vanguard AI para generar una hoja de ruta táctica, potente y en tiempo real, adaptada a tus verdaderas métricas de MercadoLibre."}
               </p>
           </div>
 
           <div className="bg-[#131826] p-8 rounded-3xl border border-white/5 h-64 overflow-y-auto custom-scrollbar">
               <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest flex items-center gap-2 mb-6">
-                 <Zap className="w-5 h-5 text-cyan-400" /> Executive Actions
+                 <Zap className="w-5 h-5 text-cyan-400" /> Acciones Ejecutivas
               </h3>
               <div className="space-y-3">
                   {(analysis?.recommended_actions || []).map((act, i) => (
@@ -337,7 +336,7 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
                       </div>
                   ))}
                   {(!analysis?.recommended_actions || analysis.recommended_actions.length === 0) && (
-                      <p className="text-sm text-slate-500 italic">No pending actions.</p>
+                      <p className="text-sm text-slate-500 italic">No hay acciones pendientes.</p>
                   )}
               </div>
           </div>
@@ -361,7 +360,7 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
                  </div>
                  <div>
                    <h3 className="text-sm font-black text-white">VANGUARD EXPERT</h3>
-                   <span className="text-[9px] font-bold text-emerald-400 uppercase">Online Assistant</span>
+                   <span className="text-[9px] font-bold text-emerald-400 uppercase">Asistente Online</span>
                  </div>
                </div>
                <div className="flex gap-2">
@@ -375,7 +374,7 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
                {messages.length === 0 && (
                   <div className="text-center py-10 opacity-50">
                      <ShieldCheck className="w-12 h-12 mx-auto mb-3 text-slate-500" />
-                     <p className="text-xs font-bold text-slate-400">Your AI Strategy Partner is ready.</p>
+                     <p className="text-xs font-bold text-slate-400">Tu Partner Estratégico de IA está listo para operar.</p>
                   </div>
                )}
                {messages.map((msg, i) => (
@@ -413,7 +412,7 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
                         sendMessage();
                       }
                     }}
-                    placeholder="Ask Vanguard about strategy..."
+                    placeholder="Pregunta a Vanguard sobre tu estrategia..."
                     rows={1}
                     className="w-full bg-[#0b0f19] border border-white/10 rounded-full py-3 pl-4 pr-12 text-sm text-white focus:outline-none focus:border-violet-500 transition-all resize-none shadow-inner"
                   />
