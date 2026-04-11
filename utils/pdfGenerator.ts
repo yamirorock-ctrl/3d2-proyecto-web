@@ -3,144 +3,235 @@ import QRCode from 'qrcode';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 
+const loadLogo = async (url: string): Promise<string> => {
+  try {
+    const res = await fetch(url);
+    const blob = await res.blob();
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.readAsDataURL(blob);
+    });
+  } catch (e) {
+    return '';
+  }
+};
+
 export const generateAFIPInvoiceBase64 = async (order: any, cae: string, nro: string, vto: string): Promise<string> => {
-  // Crear documento PDF
   const doc = new jsPDF('p', 'mm', 'a4');
   
-  // Constantes
   const marginX = 15;
+  const contentWidth = 180;
   let cursorY = 20;
 
-  // Header / Logo area
-  doc.setFontSize(24);
-  doc.setFont('helvetica', 'bold');
-  doc.text('FACTURA', 105, cursorY, { align: 'center' });
+  // Cargar Logo (se asume que la URL raiz tiene el logo)
+  const logoBase64 = await loadLogo(window.location.origin + '/LOGO.jpg');
   
-  doc.rect(98, cursorY - 12, 14, 14, 'S');
-  doc.setFontSize(28);
-  doc.text('C', 105, cursorY - 2, { align: 'center' });
+  if (logoBase64) {
+    // Dibujar el logo centrado (aprox 20x20 mm)
+    doc.addImage(logoBase64, 'JPEG', 95, cursorY, 20, 20);
+    cursorY += 28;
+  }
 
-  // Datos Comerciales
+  // Título Principal
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(22);
+  doc.setTextColor(79, 70, 229); // #4f46e5 (Azul/Índigo)
+  doc.text('3D2 Impresiones', 105, cursorY, { align: 'center' });
+  doc.setTextColor(100, 100, 100);
   doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
-  cursorY += 15;
-  doc.text('Creart 3D2', marginX, cursorY);
-  doc.text(`Nro de Comprobante: 0002-${nro.padStart(8, '0')}`, 120, cursorY);
   cursorY += 6;
-  doc.text('Impresión 3D y Corte Láser', marginX, cursorY);
-  doc.text(`Fecha de Emisión: ${format(new Date(order.created_at || new Date()), 'dd/MM/yyyy')}`, 120, cursorY);
-  cursorY += 6;
-  doc.text('CUIT: 20319308451', marginX, cursorY);
-  cursorY += 6;
-  doc.text('Condición frente al IVA: Responsable Monotributo', marginX, cursorY);
+  doc.text('Impresión 3D y Corte Láser', 105, cursorY, { align: 'center' });
   
-  // Separator
   cursorY += 10;
+  doc.setDrawColor(50, 50, 50);
   doc.setLineWidth(0.5);
-  doc.line(marginX, cursorY, 195, cursorY);
+  doc.line(marginX, cursorY, marginX + contentWidth, cursorY);
   
-  // Datos Cliente
-  cursorY += 10;
+  // Banner gris
+  cursorY += 2;
+  doc.setFillColor(245, 245, 245);
+  doc.rect(marginX, cursorY, contentWidth, 8, 'F');
+  doc.setTextColor(100, 100, 100);
+  doc.setFontSize(9);
+  doc.text('Factura Electrónica (C) - Comprobante de Venta', 105, cursorY + 5.5, { align: 'center' });
+  
+  // Headers Azules
+  cursorY += 15;
   doc.setFont('helvetica', 'bold');
-  doc.text('Datos del Cliente:', marginX, cursorY);
-  doc.setFont('helvetica', 'normal');
-  cursorY += 6;
-  doc.text(`Nombre/Razón Social: ${order.customer_name || 'Consumidor Final'}`, marginX, cursorY);
-  cursorY += 6;
-  doc.text(`DNI/CUIT: ${order.customer_dni || 'No especificado'}`, marginX, cursorY);
+  doc.setTextColor(79, 70, 229);
+  doc.setFontSize(12);
+  doc.text('Datos del Cliente', marginX, cursorY);
+  doc.text('Detalles del Pedido', marginX + contentWidth, cursorY, { align: 'right' });
   
-  // Separator
-  cursorY += 10;
-  doc.line(marginX, cursorY, 195, cursorY);
+  doc.setDrawColor(230, 230, 230);
+  doc.setLineWidth(0.3);
+  cursorY += 2;
+  doc.line(marginX, cursorY, marginX + contentWidth, cursorY);
+  
+  // Datos
+  cursorY += 6;
+  doc.setTextColor(50, 50, 50);
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'bold');
+  doc.text('Nombre:', marginX, cursorY);
+  doc.setFont('helvetica', 'normal');
+  doc.text(order.customer_name || 'Consumidor Final', marginX + 16, cursorY);
+  
+  doc.setFont('helvetica', 'bold');
+  doc.text('N° de Comprobante:', marginX + 100, cursorY);
+  doc.setFont('helvetica', 'normal');
+  doc.text(String(nro), marginX + 180, cursorY, { align: 'right' });
+  
+  cursorY += 6;
+  doc.setFont('helvetica', 'bold');
+  doc.text('CUIT/DNI:', marginX, cursorY);
+  doc.setFont('helvetica', 'normal');
+  doc.text((order.customer_dni || '0').toString(), marginX + 18, cursorY);
+  
+  doc.setFont('helvetica', 'bold');
+  doc.text('Fecha:', marginX + 100, cursorY);
+  doc.setFont('helvetica', 'normal');
+  doc.text(format(new Date(order.created_at || new Date()), 'dd/MM/yyyy'), marginX + 180, cursorY, { align: 'right' });
 
-  // Table Header
-  cursorY += 10;
+  cursorY += 6;
   doc.setFont('helvetica', 'bold');
-  doc.text('Descripción', marginX, cursorY);
-  doc.text('Cant.', 110, cursorY, { align: 'center' });
-  doc.text('P. Unit', 140, cursorY, { align: 'right' });
-  doc.text('Subtotal', 195, cursorY, { align: 'right' });
-  
-  doc.setLineWidth(0.2);
-  cursorY += 3;
-  doc.line(marginX, cursorY, 195, cursorY);
-  
-  // Table Body (Items or generic concept if manual)
+  doc.text('Contacto:', marginX, cursorY);
   doc.setFont('helvetica', 'normal');
+  doc.text(order.customer_email || order.customer_phone || 'N/A', marginX + 18, cursorY);
+  
+  doc.setFont('helvetica', 'bold');
+  doc.text('Estado:', marginX + 100, cursorY);
+  doc.setFont('helvetica', 'normal');
+  doc.text('PAGADO', marginX + 180, cursorY, { align: 'right' });
+
+  // Tabla
+  cursorY += 15;
+  doc.setFillColor(249, 250, 251);
+  doc.rect(marginX, cursorY, contentWidth, 8, 'F');
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(10);
+  doc.setTextColor(50, 50, 50);
+  doc.text('Producto', marginX + 2, cursorY + 5.5);
+  doc.text('Cantidad', marginX + 90, cursorY + 5.5);
+  doc.text('Precio Unit.', marginX + 130, cursorY + 5.5);
+  doc.text('Subtotal', marginX + 178, cursorY + 5.5, { align: 'right' });
+  
   cursorY += 8;
+  doc.setLineWidth(0.2);
+  doc.setFont('helvetica', 'normal');
+  
   if (order.items && order.items.length > 0) {
-    order.items.forEach((item: any) => {
-       doc.text(String(item.title || item.product_id).substring(0, 40), marginX, cursorY);
-       doc.text(String(item.quantity), 110, cursorY, { align: 'center' });
-       doc.text(`$${item.price}`, 140, cursorY, { align: 'right' });
-       doc.text(`$${Number(item.price) * Number(item.quantity)}`, 195, cursorY, { align: 'right' });
-       cursorY += 8;
+    const validItems = order.items.filter((item: any) => !item.name?.startsWith?.('[EMPAQUE]'));
+    validItems.forEach((item: any) => {
+       cursorY += 6;
+       doc.text(String(item.title || item.name || item.product_id).substring(0, 45), marginX + 2, cursorY);
+       doc.text(String(item.quantity), marginX + 95, cursorY);
+       doc.text(`$${Number(item.price).toLocaleString('es-AR')}`, marginX + 130, cursorY);
+       doc.text(`$${(Number(item.price) * Number(item.quantity)).toLocaleString('es-AR')}`, marginX + 178, cursorY, { align: 'right' });
+       
+       cursorY += 4;
+       doc.setDrawColor(240, 240, 240);
+       doc.line(marginX, cursorY, marginX + contentWidth, cursorY);
     });
   } else {
-    // Venta Manual Genérica
-    doc.text('Productos Personalizados 3D2', marginX, cursorY);
-    doc.text('1', 110, cursorY, { align: 'center' });
-    doc.text(`$${order.total}`, 140, cursorY, { align: 'right' });
-    doc.text(`$${order.total}`, 195, cursorY, { align: 'right' });
-    cursorY += 8;
+    cursorY += 6;
+    doc.text('Productos 3D2', marginX + 2, cursorY);
+    doc.text('1', marginX + 95, cursorY);
+    doc.text(`$${Number(order.total).toLocaleString('es-AR')}`, marginX + 130, cursorY);
+    doc.text(`$${Number(order.total).toLocaleString('es-AR')}`, marginX + 178, cursorY, { align: 'right' });
+    cursorY += 4;
+    doc.setDrawColor(240, 240, 240);
+    doc.line(marginX, cursorY, marginX + contentWidth, cursorY);
   }
 
-  // Tarifa Envio
+  // Costo de envio (si existe)
   if (order.shipping_cost && Number(order.shipping_cost) > 0) {
-    doc.text('Costo de Envío', marginX, cursorY);
-    doc.text('1', 110, cursorY, { align: 'center' });
-    doc.text(`$${order.shipping_cost}`, 140, cursorY, { align: 'right' });
-    doc.text(`$${order.shipping_cost}`, 195, cursorY, { align: 'right' });
-    cursorY += 8;
+    cursorY += 6;
+    doc.text('Costo de Envío', marginX + 2, cursorY);
+    doc.text('1', marginX + 95, cursorY);
+    doc.text(`$${Number(order.shipping_cost).toLocaleString('es-AR')}`, marginX + 130, cursorY);
+    doc.text(`$${Number(order.shipping_cost).toLocaleString('es-AR')}`, marginX + 178, cursorY, { align: 'right' });
+    cursorY += 4;
+    doc.line(marginX, cursorY, marginX + contentWidth, cursorY);
   }
 
-  // Footer Totales
-  doc.line(marginX, cursorY, 195, cursorY);
+  // Totales
   cursorY += 10;
-  doc.setFontSize(14);
+  doc.setFillColor(249, 250, 251);
+  doc.setDrawColor(230, 230, 230);
+  doc.rect(marginX, cursorY, contentWidth, 12, 'FD');
   doc.setFont('helvetica', 'bold');
-  doc.text('Importe Total:', 140, cursorY);
-  doc.text(`$${order.total}`, 195, cursorY, { align: 'right' });
+  doc.setFontSize(12);
+  doc.text('Total a Pagar:', marginX + 130, cursorY + 8);
+  doc.text(`$${Number(order.total).toLocaleString('es-AR')}`, marginX + 178, cursorY + 8, { align: 'right' });
   
-  // AFIP QR y CAE
-  cursorY += 20;
-  doc.setFontSize(10);
-  doc.setFont('helvetica', 'bold');
-  doc.text('Comprobante Autorizado por AFIP', marginX, cursorY);
+  // Notas
+  if (order.notes) {
+    cursorY += 20;
+    doc.setDrawColor(79, 70, 229);
+    doc.setLineWidth(1);
+    doc.line(marginX, cursorY, marginX, cursorY + 15);
+    
+    doc.setFontSize(9);
+    doc.setTextColor(100, 100, 100);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Notas del Pedido:', marginX + 4, cursorY + 4);
+    doc.setFont('helvetica', 'normal');
+    
+    // Split notes to avoid overflow
+    const splitNotes = doc.splitTextToSize(order.notes, contentWidth - 10);
+    doc.text(splitNotes, marginX + 4, cursorY + 9);
+    cursorY += splitNotes.length * 4;
+  }
   
-  doc.setFont('helvetica', 'normal');
-  cursorY += 6;
-  doc.text(`CAE: ${cae}`, marginX, cursorY);
-  cursorY += 6;
-  doc.text(`Fecha Vto. CAE: ${vto}`, marginX, cursorY);
-
-  // Generar QR de AFIP
+  // Modulo AFIP
+  cursorY = Math.max(cursorY + 30, 220); // Empujar al fondo 
+  doc.setDrawColor(200, 200, 200);
+  doc.setLineWidth(0.5);
+  doc.setLineDashPattern([2, 2], 0);
+  doc.line(marginX, cursorY, marginX + contentWidth, cursorY);
+  doc.setLineDashPattern([], 0);
+  
+  cursorY += 15;
+  
+  // Generar QR
   const afipJson = {
       ver: 1,
       fecha: format(new Date(), 'yyyy-MM-dd'),
       cuit: 20319308451,
       ptoVta: 2,
-      tipoCmp: 11, // Factura C es 11
+      tipoCmp: 11, // Factura C
       nroCmp: Number(nro),
       importe: Number(order.total),
       moneda: "PES",
       ctz: 1,
       tipoDocRec: order.customer_dni ? 96 : 99,
       nroDocRec: order.customer_dni || 0,
-      tipoCodAut: "E", // CAE
+      tipoCodAut: "E", 
       codAut: Number(cae)
   };
 
   const qrDataUrl = `https://www.afip.gob.ar/fe/qr/?p=${btoa(JSON.stringify(afipJson))}`;
   
   try {
-      const qrImage = await QRCode.toDataURL(qrDataUrl, { margin: 1, width: 100 });
-      doc.addImage(qrImage, 'PNG', 140, cursorY - 20, 35, 35);
+      const qrImage = await QRCode.toDataURL(qrDataUrl, { margin: 0, width: 90 });
+      doc.addImage(qrImage, 'PNG', marginX, cursorY - 10, 30, 30);
   } catch(e) {
-      console.error("Error generating QR", e);
+      console.error(e);
   }
 
-  // Return base64 string WITHOUT data:application/pdf;base64,
+  doc.setFontSize(10);
+  doc.setTextColor(50, 50, 50);
+  doc.setFont('helvetica', 'bold');
+  doc.text('Comprobante Autorizado', marginX + 178, cursorY, { align: 'right' });
+  
+  doc.setFont('helvetica', 'normal');
+  doc.text(`CAE: ${cae}`, marginX + 178, cursorY + 6, { align: 'right' });
+  doc.text(`Vto. CAE: ${vto}`, marginX + 178, cursorY + 12, { align: 'right' });
+  
+  // Return base64
   const dataUri = doc.output('datauristring');
   return dataUri.split(',')[1];
 };
