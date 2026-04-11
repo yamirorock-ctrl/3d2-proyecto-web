@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { Zap, Target, DollarSign, Rocket, RefreshCw, BarChart, ShieldCheck, TrendingUp, AlertTriangle, CheckCircle, ChevronRight } from 'lucide-react';
+import { Zap, Target, DollarSign, Rocket, RefreshCw, BarChart, ShieldCheck, TrendingUp, AlertTriangle, CheckCircle, ChevronRight, Send, User } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '../services/supabaseService';
+import { LineChart, Line, BarChart as ReBarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
 
 interface Props {
   userId: string;
@@ -18,7 +18,11 @@ interface StrategicAnalysis {
 
 const MLStrategist: React.FC<Props> = ({ userId }) => {
   const [loading, setLoading] = useState(false);
+  const [chatLoading, setChatLoading] = useState(false);
   const [analysis, setAnalysis] = useState<StrategicAnalysis | null>(null);
+  const [messages, setMessages] = useState<any[]>([]);
+  const [userInput, setUserInput] = useState('');
+  const [chartData, setChartData] = useState<any[]>([]); // Data para los gráficos
   const [goals, setGoals] = useState({
     dailySales: 2,
     monthlyTarget: 50,
@@ -53,13 +57,54 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
         throw new Error(result.error);
       }
 
+      // Procesar data para gráficos (ejemplo: ventas por día)
+      if (metrics.sales?.results) {
+         const dailyMap: any = {};
+         metrics.sales.results.forEach((order: any) => {
+            const date = new Date(order.date_created).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' });
+            dailyMap[date] = (dailyMap[date] || 0) + 1;
+         });
+         const formattedData = Object.keys(dailyMap).map(date => ({ date, sales: dailyMap[date] })).reverse().slice(-7);
+         setChartData(formattedData);
+      }
+
       setAnalysis(result);
+      setMessages([{ role: 'vanguard', content: result.summary }]);
       toast.success('Diagnóstico de Vanguard completado.');
     } catch (err: any) {
       console.error('[MLStrategist Error]:', err);
       toast.error('Vanguard falló: ' + (err.message || 'Error desconocido'));
     } finally {
       setLoading(false);
+    }
+  };
+
+  const sendMessage = async () => {
+    if (!userInput.trim() || chatLoading) return;
+    
+    const newMsg = { role: 'user', content: userInput };
+    setMessages(prev => [...prev, newMsg]);
+    setUserInput('');
+    setChatLoading(true);
+
+    try {
+      const resp = await fetch('/api/ml-manager', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          action: 'strategic-analysis', // Reusamos el mismo para ahora o creamos chat uno
+          isChat: true,
+          history: messages,
+          message: userInput,
+          userId 
+        })
+      });
+      const data = await resp.json();
+      setMessages(prev => [...prev, { role: 'vanguard', content: data.reply || data.summary }]);
+    } catch (e) {
+      toast.error('Error al hablar con Vanguard');
+    } finally {
+      setChatLoading(false);
     }
   };
 
@@ -227,6 +272,128 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
                       </div>
                    </div>
                 </div>
+
+                {/* Gráficos de Tendencia (Estilo MELI) */}
+                <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100">
+                    <div className="flex items-center justify-between mb-8">
+                        <div>
+                            <h3 className="text-xl font-bold text-slate-800">Tendencia de Ventas</h3>
+                            <p className="text-xs text-slate-400 font-medium tracking-wide uppercase">Sincronizado con ML Real-Time</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                             <span className="w-3 h-3 rounded-full bg-indigo-500"></span>
+                             <span className="text-[10px] font-bold text-slate-500">VENTAS DIARIAS</span>
+                        </div>
+                    </div>
+                    
+                    <div className="h-[250px] w-full">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <AreaChart data={chartData.length > 0 ? chartData : [{date: 'No Data', sales: 0}]}>
+                                <defs>
+                                    <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="5%" stopColor="#6366f1" stopOpacity={0.1}/>
+                                        <stop offset="95%" stopColor="#6366f1" stopOpacity={0}/>
+                                    </linearGradient>
+                                </defs>
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                                <XAxis 
+                                    dataKey="date" 
+                                    axisLine={false} 
+                                    tickLine={false} 
+                                    tick={{fontSize: 10, fontWeight: 700, fill: '#64748b'}} 
+                                    dy={10}
+                                />
+                                <YAxis hide />
+                                <Tooltip 
+                                    contentStyle={{borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', fontWeight: 700}}
+                                />
+                                <Area type="monotone" dataKey="sales" stroke="#6366f1" strokeWidth={3} fillOpacity={1} fill="url(#colorSales)" />
+                            </AreaChart>
+                        </ResponsiveContainer>
+                    </div>
+
+                    <div className="mt-6 flex items-center justify-around border-t border-slate-50 pt-6">
+                         <div className="text-center">
+                             <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Total Periodo</p>
+                             <p className="text-xl font-black text-slate-800">{chartData.reduce((acc, curr) => acc + curr.sales, 0)}</p>
+                         </div>
+                         <div className="text-center border-x border-slate-100 px-8">
+                             <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Promedio Diario</p>
+                             <p className="text-xl font-black text-indigo-600">{(chartData.reduce((acc, curr) => acc + curr.sales, 0) / (chartData.length || 1)).toFixed(1)}</p>
+                         </div>
+                         <div className="text-center">
+                             <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Carga Operativa</p>
+                             <p className="text-xl font-black text-emerald-500">MÍNIMA</p>
+                         </div>
+                    </div>
+                </div>
+
+                {/* Chat de Consultoría Estratégica */}
+                <div className="bg-slate-900 rounded-[3rem] overflow-hidden shadow-2xl flex flex-col h-[600px] border border-slate-800">
+                    <div className="p-6 border-b border-slate-800 flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-indigo-500 rounded-2xl flex items-center justify-center">
+                                <ShieldCheck className="w-6 h-6 text-white" />
+                            </div>
+                            <div>
+                                <h3 className="text-white font-bold text-sm">Sala de Consultoría Vanguard</h3>
+                                <div className="flex items-center gap-1.5">
+                                    <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span>
+                                    <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Motor 3.1 Pro Online</span>
+                                </div>
+                            </div>
+                        </div>
+                        <button className="text-slate-500 hover:text-white transition-colors">
+                            <RefreshCw className="w-5 h-5" />
+                        </button>
+                    </div>
+
+                    <div className="flex-1 overflow-y-auto p-6 space-y-4 scrollbar-hide">
+                        {messages.map((msg, i) => (
+                            <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                                <div className={`max-w-[80%] p-4 rounded-3xl ${
+                                    msg.role === 'user' 
+                                    ? 'bg-indigo-600 text-white rounded-tr-sm' 
+                                    : 'bg-slate-800 text-slate-200 rounded-tl-sm border border-slate-700'
+                                }`}>
+                                    <p className="text-sm leading-relaxed">{msg.content}</p>
+                                </div>
+                            </div>
+                        ))}
+                        {chatLoading && (
+                            <div className="flex justify-start">
+                                <div className="bg-slate-800 p-4 rounded-3xl rounded-tl-sm border border-slate-700 flex gap-2">
+                                    <span className="w-2 h-2 bg-indigo-500 rounded-full animate-bounce"></span>
+                                    <span className="w-2 h-2 bg-indigo-500 rounded-full animate-bounce [animation-delay:0.2s]"></span>
+                                    <span className="w-2 h-2 bg-indigo-500 rounded-full animate-bounce [animation-delay:0.4s]"></span>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="p-6 bg-slate-800/50 border-t border-slate-800">
+                        <div className="relative flex items-center">
+                             <input 
+                                value={userInput}
+                                onChange={(e) => setUserInput(e.target.value)}
+                                onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
+                                placeholder="Preguntale algo a Vanguard (ej: '¿Cómo subo las ventas del mate?')"
+                                className="w-full bg-slate-900 border-none rounded-2xl p-4 pr-16 text-slate-300 placeholder:text-slate-600 font-medium focus:ring-2 focus:ring-indigo-500 transition-all"
+                             />
+                             <button 
+                                onClick={sendMessage}
+                                className="absolute right-2 p-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-500 transition-all active:scale-90"
+                             >
+                                <Send className="w-5 h-5" />
+                             </button>
+                        </div>
+                        <p className="text-[10px] text-center text-slate-500 mt-4 font-bold uppercase tracking-widest">
+                            Vanguard tiene acceso a tus costos, stock y métricas reales de MELI
+                        </p>
+                    </div>
+                </div>
+
+                {/* Acciones Recomendadas (Ya existente pero ahora abajo del chat o arriba) */}
 
                 {/* Acciones Recomendadas */}
                 <div className="space-y-4">

@@ -322,7 +322,7 @@ export default async function handler(req, res) {
       }
 
       case 'strategic-analysis': {
-        const { metrics, goals, current_inventory } = req.body;
+        const { metrics, goals, current_inventory, isChat, history, message } = req.body;
         const apiKey = process.env.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
         if (!apiKey) throw new Error("Falta GEMINI_API_KEY en el servidor");
 
@@ -332,26 +332,17 @@ export default async function handler(req, res) {
           systemInstruction: `
             Eres VANGUARD, el Socio Estratégico Senior de 3D2 Store. 
             Tu misión es maximizar la rentabilidad y el crecimiento en Mercado Libre Argentina. 
-            No eres un asistente amable; eres un consultor de negocios senior. Hablas con propiedad, vas al grano y cuidas cada peso como si fuera tuyo.
+            Eres un consultor senior: vas al grano, hablas con propiedad y eres experto en métricas.
 
-            CAPACIDADES Y REGLAS:
-            1. ANALISTA DE MÉTRICAS: Clasificas productos en:
-               - PROTAGONISTAS: Alta venta, buen margen. (Sugerencia: Escalar Ads, cuidar stock).
-               - ZOMBIES: Muchas visitas/clics pero pocas ventas. (Sugerencia: Revisar fotos, precio o cerrar publicación).
-               - ESTANCADOS: No tienen tráfico. (Sugerencia: Cambiar títulos, participar en Promos).
-            
-            2. ESTRATEGA DE PRECIOS Y PROMOS: 
-               - Antes de sugerir un descuento, evalúas si el volumen compensa la baja de margen.
-               - Buscas objetivos: Si la meta es 2 ventas diarias y estamos en 0.5, sugieres acciones agresivas.
-
-            3. CERO ERROR: No inventas datos. Si falta información, la pides.
-            
-            4. ACCIONABLE POR ENCIMA DE TODO: Al final de cada análisis, debes proporcionar una lista de "ACCIONES RECOMENDADAS" que el usuario pueda ejecutar.
-
-            CONTEXTO DEL NEGOCIO:
-            3D2 Store se dedica a Impresión 3D y Corte Láser. Los costos de materiales suelen ser bajos pero el tiempo de máquina es el recurso crítico.
-
-            FORMATO DE SALIDA (JSON):
+            ${isChat ? `
+            MODO CHAT:
+            - Estás conversando con el dueño del negocio. 
+            - Mantén el contexto de la data histórica y las métricas.
+            - Si te preguntan sobre precios o stock, usa la data de inventario proporcionada.
+            - Responde en formato de texto enriquecido (negritas para destacar).
+            ` : `
+            MODO DIAGNÓSTICO:
+            - Responde EXCLUSIVAMENTE en el formato JSON definido:
             {
               "summary": "...",
               "performance_score": 0-100,
@@ -360,8 +351,26 @@ export default async function handler(req, res) {
               "strategic_plan": "...",
               "recommended_actions": [{"action": "...", "item_id": "...", "reason": "...", "impact": "alto|medio|bajo"}]
             }
+            `}
           `
         });
+
+        if (isChat) {
+          const chat = model.startChat({
+            history: (history || []).map(m => ({
+                role: m.role === 'vanguard' ? 'model' : 'user',
+                parts: [{ text: String(m.content) }]
+            }))
+          });
+          
+          const chatPrompt = `DATA ACTUALIZADA:
+            MÉTRICAS: ${JSON.stringify(metrics || {})}
+            INVENTARIO: ${JSON.stringify(current_inventory || [])}
+            MENSAJE USUARIO: ${message}`;
+
+          const result = await chat.sendMessage(chatPrompt);
+          return res.status(200).json({ reply: result.response.text() });
+        }
 
         const prompt = `Analiza: MÉTRICAS: ${JSON.stringify(metrics)} | OBJETIVOS: ${JSON.stringify(goals)} | INVENTARIO: ${JSON.stringify(current_inventory)}`;
         const result = await model.generateContent(prompt);
