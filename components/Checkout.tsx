@@ -164,7 +164,8 @@ const Checkout: React.FC<CheckoutProps> = ({ cart, onClearCart }) => {
         console.log('[ML Quote] Cart items:', cart.map(i => ({ name: i.name, tech: i.technology, qty: i.quantity })));
         console.log('[ML Quote] Calculated dimensions:', dimensions);
 
-        const response = await fetch('/api/ml-quote-shipping', {
+        // Llama al router simplificado y ahorrador de Vercel Functions
+        const response = await fetch('/api/ml-shipping?action=quote', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

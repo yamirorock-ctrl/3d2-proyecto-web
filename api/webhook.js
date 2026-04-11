@@ -555,7 +555,7 @@ export default async function handler(req, res) {
 
             // Llamar al endpoint de crear envío (asíncrono, no bloqueante)
             fetch(
-              `${process.env.VERCEL_URL || "https://3d2-bewhook.vercel.app"}/api/ml-create-shipment`,
+              `${process.env.VERCEL_URL || "https://3d2-bewhook.vercel.app"}/api/ml-shipping?action=create`,
               {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -579,7 +579,7 @@ export default async function handler(req, res) {
               })
               .catch((err) => {
                 console.error(
-                  "[Webhook] Error al llamar ml-create-shipment:",
+                  "[Webhook] Error al llamar ml-shipping?action=create:",
                   err.message,
                 );
               });
