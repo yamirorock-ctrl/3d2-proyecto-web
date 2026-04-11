@@ -480,7 +480,7 @@ const AdminPage: React.FC<Props> = ({ products, onAdd, onEdit, onDelete }) => {
   };
 
   return (
-    <div className="max-w-6xl mx-auto p-3 sm:p-6" onClick={() => setShowSettings(false)}>
+    <div className="max-w-[1920px] w-[96%] mx-auto p-3 sm:p-6 lg:p-8" onClick={() => setShowSettings(false)}>
       <div className="flex flex-col sm:flex-row items-center justify-between mb-6 gap-3">
         <div className="flex items-center gap-4 w-full sm:w-auto">
           <button onClick={() => navigate(-1)} className="p-2 hover:bg-gray-100 rounded-full transition-colors" title="Volver atrás"><ArrowLeft size={20} /></button>
