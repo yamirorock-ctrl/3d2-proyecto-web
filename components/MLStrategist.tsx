@@ -39,7 +39,7 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
 
       // 2. Obtener inventario actual de Supabase
       const { data: inventory } = await supabase
-        .from('current_inventory')
+        .from('inventory')
         .select('*');
 
       // 3. Consultar a VANGUARD
@@ -205,13 +205,13 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
               </div>
 
               <div className="flex-1 overflow-y-auto p-6 space-y-5 scrollbar-hide">
-                  {messages.length === 0 && (
+                  {(messages || []).length === 0 && (
                       <div className="text-center py-16 opacity-20">
                           <Rocket className="w-16 h-16 text-white mx-auto mb-4" />
                           <p className="text-white text-xs font-black uppercase tracking-widest">Iniciá la sesión estratégica</p>
                       </div>
                   )}
-                  {messages.map((msg, i) => (
+                  {(messages || []).map((msg, i) => (
                       <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                           <div className={`max-w-[85%] p-4 rounded-3xl ${
                               msg.role === 'user' 
