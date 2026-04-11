@@ -37,9 +37,9 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
       const metricsResp = await fetch(`/api/ml-manager?action=get-metrics&userId=${userId}`);
       const metrics = await metricsResp.json();
 
-      // 2. Obtener inventario actual de Supabase
+      // 2. Obtener inventario actual de Supabase (Tabla real: products)
       const { data: inventory } = await supabase
-        .from('inventory')
+        .from('products')
         .select('*');
 
       // 3. Consultar a VANGUARD
