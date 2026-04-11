@@ -46,7 +46,7 @@ export const generateAFIPInvoiceBase64 = async (order: any, cae: string, nro: st
   
   cursorY += 5;
   doc.setFontSize(9);
-  doc.text('CUIT: 27409292834 | Condición: Monotributo', 105, cursorY, { align: 'center' });
+  doc.text('CUIT: 20332866266 | Condición: Monotributo', 105, cursorY, { align: 'center' });
   
   cursorY += 8;
   doc.setDrawColor(50, 50, 50);
@@ -213,7 +213,7 @@ export const generateAFIPInvoiceBase64 = async (order: any, cae: string, nro: st
   const afipJson = {
       ver: 1,
       fecha: format(new Date(), 'yyyy-MM-dd'),
-      cuit: 27409292834,
+      cuit: 20332866266,
       ptoVta: 2,
       tipoCmp: 11, // Factura C
       nroCmp: Number(nro),

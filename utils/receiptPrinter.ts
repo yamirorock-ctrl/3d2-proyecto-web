@@ -88,7 +88,7 @@ export const printOrderReceipt = (order: Order, options: { isFiscal: boolean, ca
            <div class="fiscal-header-left">
              <h1>3D2 Impresiones</h1>
              <p>Impresión 3D y Corte Láser</p>
-             <p>CUIT: 27409292834</p>
+             <p>CUIT: 20332866266</p>
              <p>Condición frente al IVA: Monotributo</p>
            </div>
            <div style="position: absolute; left: 50%; top: 10px; transform: translateX(-50%);">
