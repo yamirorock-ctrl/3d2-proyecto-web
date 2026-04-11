@@ -370,14 +370,55 @@ export default async function handler(req, res) {
             MENSAJE USUARIO: ${message}`;
 
           const result = await chat.sendMessage(chatPrompt);
-          return res.status(200).json({ reply: result.response.text() });
+          const reply = result.response.text();
+          
+          // PERSISTENCIA: Guardar historial actualizado
+          try {
+            const updatedHistory = [...history, { role: 'user', content: message }, { role: 'vanguard', content: reply }];
+            await supabase.from('vanguard_memory').upsert({
+                user_id: String(userId),
+                event_type: 'chat_history',
+                content: updatedHistory
+            }, { onConflict: 'user_id,event_type' });
+          } catch (e) { console.error('Error guardando chat:', e); }
+
+          return res.status(200).json({ reply });
         }
 
         const prompt = `Analiza: MÉTRICAS: ${JSON.stringify(metrics)} | OBJETIVOS: ${JSON.stringify(goals)} | INVENTARIO: ${JSON.stringify(current_inventory)}`;
         const result = await model.generateContent(prompt);
         const responseText = result.response.text();
         const cleanJson = responseText.replace(/```json/g, "").replace(/```/g, "").trim();
-        return res.status(200).json(JSON.parse(cleanJson));
+        const finalObj = JSON.parse(cleanJson);
+
+        // PERSISTENCIA: Guardar último diagnóstico y objetivos
+        try {
+          await supabase.from('vanguard_memory').upsert({
+             user_id: String(userId),
+             event_type: 'latest_analysis',
+             content: { analysis: finalObj, goals, chartData: metrics.chartData || [] }
+          }, { onConflict: 'user_id,event_type' });
+        } catch (dbErr) { console.error('Error persistencia:', dbErr); }
+
+        return res.status(200).json(finalObj);
+      }
+
+      case 'get-vanguard-state': {
+        const { userId } = req.query;
+        if (!userId) return res.status(400).json({ error: "Falta userId" });
+
+        const { data } = await supabase
+          .from('vanguard_memory')
+          .select('*')
+          .eq('user_id', String(userId));
+
+        const state = {
+          analysis: data?.find(d => d.event_type === 'latest_analysis')?.content?.analysis || null,
+          goals: data?.find(d => d.event_type === 'latest_analysis')?.content?.goals || null,
+          chat_history: data?.find(d => d.event_type === 'chat_history')?.content || []
+        };
+
+        return res.status(200).json(state);
       }
 
       case 'oauth': {

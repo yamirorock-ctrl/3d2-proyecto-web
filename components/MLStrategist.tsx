@@ -102,6 +102,24 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
     }
   };
 
+  useEffect(() => {
+    const restoreState = async () => {
+      try {
+        const resp = await fetch(`/api/ml-manager?action=get-vanguard-state&userId=${userId}`);
+        const state = await resp.json();
+        
+        if (state.analysis) setAnalysis(state.analysis);
+        if (state.goals) setGoals(state.goals);
+        if (state.chat_history && state.chat_history.length > 0) {
+          setMessages(state.chat_history);
+        }
+      } catch (e) {
+        console.error('Error restaurando estado:', e);
+      }
+    };
+    if (userId) restoreState();
+  }, [userId]);
+
   return (
     <div className="space-y-8 animate-in fade-in duration-1000 pb-20">
       {/* HEADER PREMIUM */}
