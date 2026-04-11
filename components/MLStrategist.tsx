@@ -1,3 +1,4 @@
+import React, { useState, useEffect } from 'react';
 import { Zap, Target, DollarSign, Rocket, RefreshCw, BarChart, ShieldCheck, TrendingUp, AlertTriangle, CheckCircle, ChevronRight, Send, User } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '../services/supabaseService';
@@ -343,7 +344,10 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
                                 </div>
                             </div>
                         </div>
-                        <button className="text-slate-500 hover:text-white transition-colors">
+                        <button 
+                            title="Refrescar historial de chat"
+                            className="text-slate-500 hover:text-white transition-colors"
+                        >
                             <RefreshCw className="w-5 h-5" />
                         </button>
                     </div>
@@ -381,6 +385,7 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
                                 className="w-full bg-slate-900 border-none rounded-2xl p-4 pr-16 text-slate-300 placeholder:text-slate-600 font-medium focus:ring-2 focus:ring-indigo-500 transition-all"
                              />
                              <button 
+                                title="Enviar mensaje a Vanguard"
                                 onClick={sendMessage}
                                 className="absolute right-2 p-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-500 transition-all active:scale-90"
                              >
