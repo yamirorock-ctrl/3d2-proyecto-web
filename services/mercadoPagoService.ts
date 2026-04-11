@@ -1,6 +1,5 @@
 import { OrderItem } from '../types';
 
-const MP_ACCESS_TOKEN = (import.meta as any).env?.VITE_MP_ACCESS;
 const MP_PUBLIC_KEY = (import.meta as any).env?.VITE_MP_PUBLIC;
 
 interface PreferenceItem {
@@ -13,27 +12,17 @@ interface PreferenceItem {
   currency_id: string;
 }
 
-interface PreferenceResponse {
-  id: string;
-  init_point: string; // URL para redirigir al checkout
-  sandbox_init_point?: string;
-}
-
 /**
- * Crear preferencia de pago en MercadoPago
+ * Crear preferencia de pago en MercadoPago vía Backend Proxy
  */
 export async function createPaymentPreference(
   orderId: string,
-  orderNumber: string,
+  _orderNumber: string,
   items: OrderItem[],
   shippingCost: number,
   customerEmail: string
 ): Promise<{ preferenceId: string; initPoint: string } | null> {
-  if (!MP_ACCESS_TOKEN) {
-    console.error('MercadoPago Access Token no configurado');
-    return null;
-  }
-
+  
   // Convertir items del pedido a formato de MercadoPago
   const mpItems: PreferenceItem[] = items.map((item) => ({
     id: String(item.product_id || `item-${item.name.replace(/\s+/g, '-').toLowerCase()}`),
@@ -45,7 +34,6 @@ export async function createPaymentPreference(
     currency_id: 'ARS',
   }));
 
-  // Agregar envío como item separado si tiene costo
   if (shippingCost > 0) {
     mpItems.push({
       id: `shipping-${orderId}`,
@@ -58,17 +46,14 @@ export async function createPaymentPreference(
     });
   }
 
-  // MercadoPago no acepta localhost - usar URL de producción en desarrollo
   const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
   const baseUrl = isLocalhost 
     ? 'https://yamirorock-ctrl.github.io/3d2-proyecto-web' 
     : window.location.origin;
 
-  const preference = {
+  const preferencePayload = {
     items: mpItems,
-    payer: {
-      email: customerEmail,
-    },
+    payer: { email: customerEmail },
     back_urls: {
       success: `${baseUrl}/order-success?order_id=${orderId}`,
       failure: `${baseUrl}/order-failure?order_id=${orderId}`,
@@ -77,63 +62,54 @@ export async function createPaymentPreference(
     auto_return: 'all',
     external_reference: orderId,
     statement_descriptor: '3D2 STORE',
-    notification_url: import.meta.env.VITE_MP_WEBHOOK_URL || `${window.location.origin}/api/webhook`,
+    notification_url: (import.meta as any).env.VITE_MP_WEBHOOK_URL || `${window.location.origin}/api/webhook`,
   };
 
   try {
-    const response = await fetch('https://api.mercadopago.com/checkout/preferences', {
+    const response = await fetch('/api/mercadopago', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${MP_ACCESS_TOKEN}`,
-      },
-      body: JSON.stringify(preference),
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+        action: 'create_preference', 
+        payload: preferencePayload 
+      }),
     });
 
     if (!response.ok) {
       const error = await response.json();
-      console.error('Error al crear preferencia de MercadoPago:', error);
+      console.error('Error al crear preferencia vía proxy:', error);
       return null;
     }
 
-    const data: PreferenceResponse = await response.json();
-
+    const data = await response.json();
     return {
       preferenceId: data.id,
       initPoint: data.init_point,
     };
   } catch (error) {
-    console.error('Error al comunicarse con MercadoPago:', error);
+    console.error('Error al comunicarse con el backend de MercadoPago:', error);
     return null;
   }
 }
 
 /**
- * Obtener información de un pago
+ * Obtener información de un pago vía Backend Proxy
  */
 export async function getPaymentInfo(paymentId: string): Promise<any> {
-  if (!MP_ACCESS_TOKEN) {
-    console.error('MercadoPago Access Token no configurado');
-    return null;
-  }
-
   try {
-    const response = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
-      method: 'GET',
-      headers: {
-        Authorization: `Bearer ${MP_ACCESS_TOKEN}`,
-      },
+    const response = await fetch('/api/mercadopago', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+        action: 'get_payment', 
+        payload: { paymentId } 
+      }),
     });
 
-    if (!response.ok) {
-      const error = await response.json();
-      console.error('Error al obtener información del pago:', error);
-      return null;
-    }
-
+    if (!response.ok) return null;
     return await response.json();
   } catch (error) {
-    console.error('Error al comunicarse con MercadoPago:', error);
+    console.error('Error al obtener info de pago vía proxy:', error);
     return null;
   }
 }
