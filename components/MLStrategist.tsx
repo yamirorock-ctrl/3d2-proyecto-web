@@ -163,6 +163,35 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
     }
   };
 
+  const handleExecuteAction = async (actionData: any) => {
+     toast.loading('Autorizando y conectando con MercadoLibre...', { id: 'execute-action' });
+     
+     try {
+       const res = await fetch('/api/ml-manager', {
+         method: 'POST',
+         headers: { 'Content-Type': 'application/json' },
+         body: JSON.stringify({
+           action: 'execute-hitl',
+           userId,
+           intent: actionData.intent,
+           item_id: actionData.item_id,
+           value: actionData.value
+         })
+       });
+
+       const data = await res.json();
+       if(res.ok) {
+          toast.success(data.message || 'Acción ejecutada con éxito en MercadoLibre', { id: 'execute-action' });
+          sendMessage(`[ADMINISTRADOR]: He aprobado y ejecutado con éxito tu propuesta. Procedió sin errores en la infraestructura ML. Acción: ${actionData.description}`);
+       } else {
+          throw new Error(data.error);
+       }
+     } catch(e: any) {
+        toast.error(`Fallo la ejecución: ${e.message}`, { id: 'execute-action' });
+        sendMessage(`[SISTEMA]: Falla técnica al intentar ejecutar tu propuesta: ${e.message}. Analiza qué pudo haber pasado.`);
+     }
+  };
+
   const sendMessage = async (presetText?: string) => {
     const text = presetText || userInput;
     const currentAttachment = attachment;
@@ -457,7 +486,18 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
                      <p className="text-xs font-bold text-slate-400">Tu Partner Estratégico de IA está listo para operar.</p>
                   </div>
                )}
-               {messages.map((msg, i) => (
+               {messages.map((msg, i) => {
+                  
+                  // Hitl (Human-in-the-Loop) Parser: Captura si Vanguard envía un bloque "```action..."
+                  const actionMatch = msg.content?.match(/```action\n([\s\S]*?)(\n)?```/);
+                  let displayContent = msg.content;
+                  let actionData = null;
+                  if (actionMatch) {
+                    displayContent = msg.content.replace(actionMatch[0], '');
+                    try { actionData = JSON.parse(actionMatch[1]); } catch(e){}
+                  }
+
+                  return (
                   <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                      <div className={`max-w-[85%] p-3.5 rounded-2xl text-[13px] leading-relaxed shadow-sm ${
                        msg.role === 'user' 
@@ -467,10 +507,30 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
                         {msg.attachment && (
                            <img src={msg.attachment} alt="Adjunto" className="w-full rounded-lg mb-2 max-h-40 object-cover border border-white/10" />
                         )}
-                        <p className="whitespace-pre-wrap">{msg.content}</p>
+                        <p className="whitespace-pre-wrap">{displayContent}</p>
+
+                        {/* BLOQUE DE AUTORIZACIÓN (HITL) */}
+                        {actionData && msg.role === 'vanguard' && (
+                           <div className="mt-3 p-3 bg-[#0b0f19] border border-emerald-500/30 rounded-xl shadow-[0_0_15px_rgba(16,185,129,0.1)]">
+                              <div className="flex items-center gap-2 mb-2 text-emerald-400 font-bold text-[10px] uppercase tracking-wider">
+                                 <ShieldCheck size={14}/> Propuesta Ejecutiva Protegida
+                              </div>
+                              <p className="text-slate-300 text-xs mb-3">{actionData.description}</p>
+                              
+                              <div className="flex items-center gap-2">
+                                <button title="Autorizar Acción" onClick={() => handleExecuteAction(actionData)} className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold py-2 px-3 rounded-lg flex items-center justify-center gap-1 transition-colors">
+                                   <CheckCircle size={14} /> Aprobar
+                                </button>
+                                <button title="Rechazar" onClick={() => sendMessage(`[ADMINISTRADOR]: He DENEGADO tu propuesta de "${actionData.description}". Busca una alternativa.`)} className="bg-rose-900/40 hover:bg-rose-800 text-rose-300 border border-rose-500/30 text-xs font-bold py-2 px-3 rounded-lg transition-colors">
+                                   <X size={14} />
+                                </button>
+                              </div>
+                           </div>
+                        )}
                      </div>
                   </div>
-               ))}
+                  );
+               })}
                {chatLoading && (
                  <div className="flex justify-start">
                     <div className="bg-[#1e293b] p-3.5 rounded-2xl rounded-bl-sm border border-white/5 flex gap-1.5">

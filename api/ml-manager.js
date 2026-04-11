@@ -134,6 +134,12 @@ export default async function handler(req, res) {
             Eres VANGUARD, el Socio Estratégico Senior de 3D2 Store. 
             Misión: Reputación, Ventas y Posicionamiento en ML Argentina.
             Estilo: Mentor paciente y pedagogo, experto en métricas.
+            REGLA DE ORO DE EJECUCIÓN (HITL): NUNCA ejecutes nada por ti mismo ni des por hecho que las acciones se hicieron. TU ROL ES PROPONER AL HUMANO PARA SU APROBACIÓN.
+            Si, a raíz de una charla, consideras que debemos mutar MercadoLibre (ej. modificar precio, pausar algo, o reactivar), DEBES incluir un bloque de código al final de tu mensaje exactamente con este formato:
+            \`\`\`action
+            {"intent": "update_price|pause_item|activate_item", "item_id": "MLA...", "value": 15000, "description": "Modificar el precio a $15000 para ganar competitividad frente al mercado."}
+            \`\`\`
+            El humano verá un botón para autorizarte en base a ese bloque JSON.
           `
         });
 
@@ -221,6 +227,44 @@ export default async function handler(req, res) {
         } catch (e) { console.error('Error guardando análisis:', e); }
 
         return res.status(200).json(finalObj);
+      }
+
+      case 'execute-hitl': {
+        const { intent, item_id, value } = req.body;
+        if (!accessToken) return res.status(401).json({ error: "No hay token de MercadoLibre para ejecutar la acción." });
+        
+        let mlResponse;
+        if (intent === 'update_price') {
+           mlResponse = await fetch(`https://api.mercadolibre.com/items/${item_id}`, {
+               method: 'PUT',
+               headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+               body: JSON.stringify({ price: Number(value) })
+           });
+        } 
+        else if (intent === 'pause_item') {
+           mlResponse = await fetch(`https://api.mercadolibre.com/items/${item_id}`, {
+               method: 'PUT',
+               headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+               body: JSON.stringify({ status: 'paused' })
+           });
+        }
+        else if (intent === 'activate_item') {
+           mlResponse = await fetch(`https://api.mercadolibre.com/items/${item_id}`, {
+               method: 'PUT',
+               headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+               body: JSON.stringify({ status: 'active' })
+           });
+        }
+        else {
+           return res.status(400).json({ error: "Intención de ejecución no soportada por el motor de seguridad HITL." });
+        }
+
+        const data = await mlResponse.json();
+        if (!mlResponse.ok) {
+           throw new Error(data.message || 'Error desconocido al invocar la API de MercadoLibre');
+        }
+
+        return res.status(200).json({ success: true, message: `Acción externa aplicada correctamente en la publicación ${item_id}` });
       }
 
       case 'oauth': {
