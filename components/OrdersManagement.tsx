@@ -242,7 +242,7 @@ const OrdersManagement: React.FC = () => {
                 <div className="mb-4">
                   <p className="font-semibold text-gray-700 text-sm mb-2">Productos</p>
                   <div className="space-y-2">
-                    {order.items.map((item, index) => (
+                    {(order.items || []).map((item, index) => (
                       <div key={index} className="flex items-center gap-3 text-sm">
                         <img
                           src={item.image}

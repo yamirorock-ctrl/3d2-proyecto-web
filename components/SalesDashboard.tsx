@@ -204,10 +204,9 @@ const SalesDashboard: React.FC<Props> = ({ orders, payments, onUpdateStatus, onE
       // Ignorar carritos abandonados para top productos
       if (order.status === 'payment_pending' || order.status === 'cancelled') return;
       
-      order.items.forEach(item => {
+      (order.items || []).forEach(item => {
+        if (!item || !item.name) return;
         if (!productCount[item.name]) {
-          productCount[item.name] = { count: 0, total: 0, name: item.name };
-        }
         productCount[item.name].count += item.quantity;
         productCount[item.name].total += item.price * item.quantity;
       });
@@ -242,7 +241,7 @@ const SalesDashboard: React.FC<Props> = ({ orders, payments, onUpdateStatus, onE
       o.total.toFixed(2),
       (o as any).paymentMethod || ((o as any).payment_id ? 'mercadopago' : 'otro'),
       o.status,
-      o.items.filter(i => !i.name.startsWith('[EMPAQUE]')).map(i => `${i.name} (x${i.quantity})`).join('; '),
+      (o.items || []).filter(i => i && i.name && !i.name.startsWith('[EMPAQUE]')).map(i => `${i.name} (x${i.quantity})`).join('; '),
       o.notes || ''
     ]);
     
@@ -937,7 +936,7 @@ const SalesDashboard: React.FC<Props> = ({ orders, payments, onUpdateStatus, onE
                     <div className="mb-3">
                       <p className="text-sm font-medium text-slate-700 mb-2">Productos:</p>
                       <div className="space-y-1">
-                        {order.items.map((item, idx) => (
+                        {(order.items || []).map((item, idx) => (
                           <div key={idx} className="flex justify-between text-sm">
                             <span className="text-slate-600">{item.name} x{item.quantity}</span>
                             <span className="font-medium">${(item.price * item.quantity).toFixed(2)}</span>
