@@ -25,6 +25,12 @@ export default async function handler(req, res) {
         <div style="padding: 30px;">
           <h2 style="color: #10b981;">¡Gracias por tu compra, ${customer_name}! 🚀</h2>
           <p>Tu orden <strong>#${order_number}</strong> ha sido registrada exitosamente.</p>
+          ${attachment_base64 ? `
+          <div style="background: #e0e7ff; color: #3730a3; padding: 15px; border-radius: 8px; margin-top: 15px; border-left: 4px solid #4f46e5; font-size: 14px;">
+            <strong>¡Buenas noticias! 📄</strong><br />
+            Hemos adjuntado el documento oficial con tu Factura Electrónica en este correo.
+          </div>
+          ` : ""}
           
           <div style="background: #f8fafc; padding: 20px; border-radius: 10px; margin: 25px 0;">
             <p style="margin: 0; color: #64748b; font-size: 14px; text-transform: uppercase; font-weight: bold;">Total Pagado</p>
