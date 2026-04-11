@@ -310,8 +310,8 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
                          <ShieldCheck className="w-48 h-48" />
                     </div>
                     <div className="flex-1 z-10">
-                        <h3 className="text-xs font-black text-indigo-600 uppercase tracking-[0.3em] mb-4 font-mono">Executive Summary</h3>
-                        <p className="text-2xl font-bold text-slate-800 leading-relaxed italic">"{analysis.summary}"</p>
+                        <h3 className="text-[10px] font-black text-indigo-600 uppercase tracking-[0.3em] mb-2 font-mono">Executive Summary</h3>
+                        <p className="text-xl font-bold text-slate-800 leading-relaxed italic">"{analysis.summary}"</p>
                     </div>
                     <div className="flex flex-col items-center justify-center p-8 bg-slate-50 rounded-[3rem] border border-slate-100 z-10 shadow-inner">
                          <div className="relative w-28 h-28 mb-3">
@@ -338,19 +338,26 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
                             { label: 'Ingresos', value: `$ ${(analysis?.total_revenue || 460847).toLocaleString()}`, delta: '+185%', color: 'emerald' },
                             { label: 'ACOS', value: `${analysis?.acos || '39,82'}%`, delta: '+29%', color: 'rose' },
                         ].map((m, i) => (
-                            <div key={i} className="min-w-[150px] bg-slate-50 border border-slate-100 rounded-4xl p-5 shadow-sm hover:shadow-md transition-all cursor-pointer group hover:bg-white hover:border-indigo-100">
-                                <div className="flex items-center gap-2 mb-3">
-                                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest truncate">{m.label}</span>
-                                    <div className="w-4 h-4 rounded-full border border-slate-200 flex items-center justify-center text-[8px] text-slate-400 font-bold">?</div>
+                            <div 
+                                key={i} 
+                                onClick={() => {
+                                    setUserInput(`Analiza mis métricas de ${m.label} y dime qué mejorar.`);
+                                    setTimeout(() => sendMessage(), 100);
+                                }}
+                                className="min-w-[170px] bg-slate-50/50 border border-slate-100 rounded-4xl p-7 shadow-sm hover:shadow-lg transition-all cursor-pointer group hover:bg-white hover:border-indigo-100 hover:-translate-y-1"
+                            >
+                                <div className="flex items-center justify-between mb-4">
+                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest truncate">{m.label}</span>
+                                    <div className="w-5 h-5 rounded-full border border-slate-200 flex items-center justify-center text-[9px] text-slate-400 font-bold group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors">?</div>
                                 </div>
-                                <div className="flex items-baseline gap-2 mb-2">
-                                    <span className="text-3xl font-black text-slate-800 tracking-tighter">{m.value}</span>
-                                    <span className={`text-[11px] font-black flex items-center gap-0.5 ${m.delta.startsWith('+') ? 'text-emerald-500' : 'text-rose-500'}`}>
-                                        {m.delta.startsWith('+') ? '▲' : '▼'} {m.delta.replace(/[+-]/, '')}
+                                <div className="flex items-end justify-between gap-2">
+                                    <span className="text-3xl font-black text-slate-800 tracking-tight">{m.value}</span>
+                                    <span className={`text-[11px] font-black px-2 py-0.5 rounded-full ${m.color === 'rose' ? 'bg-rose-50 text-rose-600' : 'bg-emerald-50 text-emerald-600'}`}>
+                                        ▲ {m.delta}
                                     </span>
                                 </div>
-                                <div className="h-1.5 w-full mt-4 rounded-full bg-slate-200 overflow-hidden">
-                                     <div className={`h-full bg-${m.color}-500 w-2/3 opacity-40 animate-pulse`}></div>
+                                <div className="mt-4 w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                                     <div className={`h-full rounded-full w-[65%] bg-${m.color}-500 transition-all duration-1000`} />
                                 </div>
                             </div>
                         ))}
@@ -478,32 +485,32 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
                 {/* FODA PORTFOLIO */}
                 <div className="bg-slate-900 p-10 rounded-[3.5rem] text-white">
                    <h3 className="text-xs font-black text-slate-500 uppercase tracking-[0.4em] mb-8">Intelligence Portfolio Class</h3>
-                   <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                      <div className="bg-white/5 p-6 rounded-4xl border border-white/10 backdrop-blur-md">
-                         <p className="text-indigo-400 font-black text-[11px] mb-5 uppercase flex items-center gap-3">
-                             <TrendingUp className="w-4 h-4" /> Protagonistas
-                         </p>
-                         <div className="space-y-3">
-                            {(analysis.categorized_items?.protagonists || []).map(id => <p key={id} className="text-[11px] font-mono text-slate-300 bg-white/5 p-3 rounded-2xl text-center border border-white/5">#{id}</p>)}
-                         </div>
-                      </div>
-                      <div className="bg-white/5 p-6 rounded-4xl border border-white/10 backdrop-blur-md">
-                         <p className="text-orange-400 font-black text-[11px] mb-5 uppercase flex items-center gap-3">
-                             <Target className="w-4 h-4" /> Estancados
-                         </p>
-                         <div className="space-y-3">
-                            {(analysis.categorized_items?.stagnant || []).map(id => <p key={id} className="text-[11px] font-mono text-slate-300 bg-white/5 p-3 rounded-2xl text-center border border-white/5">#{id}</p>)}
-                         </div>
-                      </div>
-                      <div className="bg-white/5 p-6 rounded-4xl border border-white/10 backdrop-blur-md">
-                         <p className="text-red-400 font-black text-[11px] mb-5 uppercase flex items-center gap-3">
-                             <AlertTriangle className="w-4 h-4" /> Zombies
-                         </p>
-                         <div className="space-y-3">
-                            {(analysis.categorized_items?.zombies || []).map(id => <p key={id} className="text-[11px] font-mono text-slate-300 bg-white/5 p-3 rounded-2xl text-center border border-white/5">#{id}</p>)}
-                         </div>
-                      </div>
-                   </div>
+                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        {[
+                            { title: 'Protagonistas', icon: <TrendingUp size={18} />, color: 'indigo', items: analysis?.categorized_items?.protagonists },
+                            { title: 'Estancados', icon: <Target size={18} />, color: 'amber', items: analysis?.categorized_items?.stagnant },
+                            { title: 'Zombies', icon: <AlertTriangle size={18} />, color: 'rose', items: analysis?.categorized_items?.zombies },
+                        ].map((cat, i) => (
+                            <div 
+                                key={i} 
+                                onClick={() => {
+                                    setUserInput(`Hablemos de mis productos ${cat.title}. ¿Cómo puedo optimizarlos?`);
+                                    setTimeout(() => sendMessage(), 100);
+                                }}
+                                className="bg-slate-900/50 border border-slate-800 p-6 rounded-4xl hover:border-slate-700 transition-all cursor-pointer group"
+                            >
+                                <div className="flex items-center gap-3 mb-4">
+                                    <div className={`text-${cat.color}-500 group-hover:scale-110 transition-transform`}>{cat.icon}</div>
+                                    <h5 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{cat.title}</h5>
+                                </div>
+                                <div className="flex flex-wrap gap-2">
+                                    {cat.items && cat.items.length > 0 ? cat.items.map((item, idx) => (
+                                        <span key={idx} className="bg-slate-800 text-[10px] text-slate-300 px-3 py-1.5 rounded-xl border border-slate-700 font-bold">{item}</span>
+                                    )) : <span className="text-[10px] text-slate-600 font-bold italic">Nada detectado aún</span>}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
                 </div>
 
                 {/* ACCIONES */}
@@ -540,11 +547,16 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
                 </div>
                 
                 {/* ROADMAP */}
-                <div className="bg-indigo-950 p-12 rounded-[5rem] text-white relative shadow-2xl overflow-hidden group">
-                    <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-indigo-600/20 rounded-full blur-[120px] -mr-64 -mt-64 group-hover:scale-110 transition-transform duration-1000"></div>
+                <div className="bg-slate-950 p-12 rounded-[3.5rem] shadow-2xl relative overflow-hidden border border-slate-900 group">
+                    <div className="absolute top-0 right-0 w-80 h-80 bg-indigo-500/10 rounded-full blur-[100px] -mr-40 -mt-40 group-hover:bg-indigo-500/20 transition-all duration-1000"></div>
                     <div className="relative z-10">
-                        <h3 className="font-mono text-indigo-400 text-[11px] font-black mb-8 uppercase tracking-[0.6em]">Vision Strategy 2026</h3>
-                        <p className="text-3xl leading-relaxed font-black text-indigo-50 italic opacity-95 tracking-tight">"{analysis.strategic_plan}"</p>
+                        <div className="flex items-center gap-3 mb-6">
+                            <h3 className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.4em] font-mono">Vision Strategy 2026</h3>
+                            <div className="h-px flex-1 bg-slate-800"></div>
+                        </div>
+                        <p className="text-2xl font-bold text-white leading-relaxed italic pr-12">
+                            "{analysis.strategic_plan}"
+                        </p>
                     </div>
                 </div>
              </div>
