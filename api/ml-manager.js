@@ -163,11 +163,31 @@ export default async function handler(req, res) {
           return res.status(200).json({ reply });
         }
 
-        const prompt = `Analiza y devuelve JSON: MÉTRICAS: ${JSON.stringify(metrics)} | OBJETIVOS: ${JSON.stringify(goals)} | INVENTARIO: ${JSON.stringify(current_inventory)}`;
+        const prompt = `Analiza los siguientes datos y devuelve OBLIGATORIAMENTE un objeto JSON puro con esta estructura exacta:
+        {
+          "summary": "resumen breve",
+          "performance_score": 0-100,
+          "insights": [{"type": "warning|opportunity|success", "title": "...", "description": "..."}],
+          "categorized_items": {"protagonists": [], "stagnant": [], "zombies": []},
+          "strategic_plan": "...",
+          "recommended_actions": [{"action": "...", "item_id": "...", "reason": "...", "impact": "alto|medio|bajo"}],
+          "ads_sales": 0,
+          "organic_sales": 0,
+          "clicks": 0,
+          "total_revenue": 0,
+          "acos": 0
+        }
+        DATOS: MÉTRICAS: ${JSON.stringify(metrics)} | OBJETIVOS: ${JSON.stringify(goals)} | INVENTARIO: ${JSON.stringify(current_inventory)}`;
+        
         const result = await model.generateContent(prompt);
         const responseText = result.response.text();
-        const cleanJson = responseText.replace(/```json/g, "").replace(/```/g, "").trim();
-        const finalObj = JSON.parse(cleanJson);
+        
+        // Extracción robusta de JSON (busca el primer { y el último })
+        const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+        if (!jsonMatch) {
+          throw new Error("La IA no devolvió un formato de datos válido.");
+        }
+        const finalObj = JSON.parse(jsonMatch[0]);
 
         try {
           await supabase.from('vanguard_memory').upsert({
