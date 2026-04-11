@@ -29,6 +29,8 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
   const [messages, setMessages] = useState<any[]>([]);
   const [userInput, setUserInput] = useState('');
   const [chartData, setChartData] = useState<any[]>([]); 
+  const [currentMetrics, setCurrentMetrics] = useState<any>(null);
+  const [currentInventory, setCurrentInventory] = useState<any[]>([]);
   const [goals, setGoals] = useState({
     dailySales: 2,
     monthlyTarget: 50,
@@ -46,6 +48,9 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
       const { data: inventory } = await supabase
         .from('products')
         .select('*');
+      
+      setCurrentMetrics(metrics);
+      setCurrentInventory(inventory || []);
 
       // 3. Consultar a VANGUARD
       const strategistResp = await fetch('/api/ml-manager', {
@@ -116,8 +121,8 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
           isChat: true,
           history: messages,
           message: userInput,
-          metrics,
-          current_inventory: products,
+          metrics: currentMetrics,
+          current_inventory: currentInventory,
           userId 
         })
       });
