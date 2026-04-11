@@ -150,7 +150,7 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
   }, [userId]);
 
   return (
-    <div className="bg-[#0b0f19] text-slate-200 font-sans min-h-screen p-4 sm:p-8 rounded-[2rem] border border-slate-800 relative shadow-2xl overflow-hidden">
+    <div className="bg-[#0b0f19] text-slate-200 font-sans min-h-screen p-4 sm:p-8 rounded-4xl border border-slate-800 relative shadow-2xl overflow-hidden">
       {/* GLOW BACKGROUND EFFECT */}
       <div className="absolute top-0 left-1/4 w-[800px] h-[500px] bg-violet-600/10 rounded-full blur-[120px] pointer-events-none"></div>
       
@@ -158,7 +158,7 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
       <header className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 pb-6 border-b border-white/5 relative z-10 gap-6">
         <div>
            <h1 className="text-3xl font-black tracking-tight text-white flex items-center gap-3">
-              VANGUARD <span className="bg-clip-text text-transparent bg-gradient-to-r from-violet-400 to-cyan-400 italic">OVERVIEW</span>
+              VANGUARD <span className="bg-clip-text text-transparent bg-linear-to-r from-violet-400 to-cyan-400 italic">OVERVIEW</span>
            </h1>
            <p className="text-sm font-medium text-slate-500 mt-1">Track your MercadoLibre metrics in real time.</p>
         </div>
@@ -186,7 +186,7 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
       {/* METRICS ROW (Fauget / Image 1 Style) */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8 relative z-10">
          {/* Total Sales - Primary Gradient Card */}
-         <div className="bg-gradient-to-br from-violet-600 to-indigo-600 rounded-3xl p-6 shadow-[0_10px_30px_rgba(124,58,237,0.3)] relative overflow-hidden group">
+         <div className="bg-linear-to-br from-violet-600 to-indigo-600 rounded-3xl p-6 shadow-[0_10px_30px_rgba(124,58,237,0.3)] relative overflow-hidden group">
             <div className="absolute right-0 top-0 w-32 h-32 bg-white/10 rounded-full blur-2xl -mr-10 -mt-10 group-hover:scale-150 transition-transform duration-700"></div>
             <div className="flex items-start justify-between">
                 <div>
@@ -346,7 +346,7 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
       {/* =========================================
           FLOATING VANGUARD CHAT (Messenger Style)
       =========================================== */}
-      <div className="fixed bottom-6 right-6 z-[100] flex flex-col items-end">
+      <div className="fixed bottom-6 right-6 z-100 flex flex-col items-end">
         {/* Chat Window (Opens Upwards) */}
         {isChatOpen && (
           <div className="w-[360px] sm:w-[400px] h-[580px] bg-[#1a1c23] border border-white/10 rounded-3xl mb-4 shadow-[0_20px_50px_rgba(0,0,0,0.5)] flex flex-col overflow-hidden animate-in slide-in-from-bottom-5 fade-in duration-200">
@@ -365,8 +365,8 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
                  </div>
                </div>
                <div className="flex gap-2">
-                 <button onClick={() => setMessages([])} className="p-2 text-slate-400 hover:text-white transition-colors"><RefreshCw className="w-4 h-4" /></button>
-                 <button onClick={() => { setIsChatOpen(false); setUnreadCount(0); }} className="p-2 text-slate-400 hover:text-white transition-colors"><X className="w-5 h-5" /></button>
+                 <button title="Actualizar chat" onClick={() => setMessages([])} className="p-2 text-slate-400 hover:text-white transition-colors"><RefreshCw className="w-4 h-4" /></button>
+                 <button title="Cerrar chat" onClick={() => { setIsChatOpen(false); setUnreadCount(0); }} className="p-2 text-slate-400 hover:text-white transition-colors"><X className="w-5 h-5" /></button>
                </div>
             </div>
 
@@ -417,7 +417,7 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
                     rows={1}
                     className="w-full bg-[#0b0f19] border border-white/10 rounded-full py-3 pl-4 pr-12 text-sm text-white focus:outline-none focus:border-violet-500 transition-all resize-none shadow-inner"
                   />
-                  <button 
+                  <button title="Enviar mensaje" 
                     onClick={() => sendMessage()}
                     disabled={chatLoading}
                     className="absolute right-1.5 bottom-1.5 p-2 bg-violet-600 text-white rounded-full hover:bg-violet-500 transition-all active:scale-95 disabled:opacity-50"
@@ -430,15 +430,15 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
         )}
 
         {/* Floating Toggle Button */}
-        <button 
+        <button title="Abrir chat de Vanguard"
           onClick={() => { setIsChatOpen(!isChatOpen); setUnreadCount(0); }}
-          className="w-16 h-16 bg-gradient-to-tr from-violet-600 to-cyan-500 rounded-full flex items-center justify-center shadow-[0_10px_30px_rgba(124,58,237,0.5)] hover:scale-110 active:scale-95 transition-all relative z-50 group"
+          className="w-16 h-16 bg-linear-to-tr from-violet-600 to-cyan-500 rounded-full flex items-center justify-center shadow-[0_10px_30px_rgba(124,58,237,0.5)] hover:scale-110 active:scale-95 transition-all relative z-50 group"
         >
           {isChatOpen ? <X className="text-white w-7 h-7 group-hover:rotate-90 transition-transform" /> : <MessageSquare className="text-white w-7 h-7" />}
           
           {/* Unread Message Badge */}
           {!isChatOpen && unreadCount > 0 && (
-             <span className="absolute -top-1 -right-1 flex h-6 w-6 relative">
+             <span className="absolute -top-1 -right-1 flex h-6 w-6">
                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
                <span className="relative inline-flex rounded-full h-6 w-6 bg-rose-500 items-center justify-center text-[10px] font-black text-white border-2 border-[#0b0f19]">
                  {unreadCount}
