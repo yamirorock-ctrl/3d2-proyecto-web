@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Zap, Target, DollarSign, Rocket, RefreshCw, BarChart, ShieldCheck, TrendingUp, AlertTriangle, CheckCircle, ChevronRight, Send, User, Maximize2, MessageSquare } from 'lucide-react';
+import { Zap, Target, DollarSign, Rocket, RefreshCw, BarChart, ShieldCheck, TrendingUp, AlertTriangle, CheckCircle, ChevronRight, Send, User, Maximize2, MessageSquare, X, Activity } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '../services/supabaseService';
 import { ComposedChart, Line, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, Area } from 'recharts';
@@ -31,6 +31,9 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
   const [chartData, setChartData] = useState<any[]>([]); 
   const [currentMetrics, setCurrentMetrics] = useState<any>(null);
   const [currentInventory, setCurrentInventory] = useState<any[]>([]);
+  const [isChatOpen, setIsChatOpen] = useState(false); // FIXED BOT CHAT BUBBLE
+  const [unreadCount, setUnreadCount] = useState(0);
+
   const chatEndRef = useRef<HTMLDivElement>(null);
   const [goals, setGoals] = useState({
     dailySales: 2,
@@ -44,7 +47,7 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages]);
+  }, [messages, isChatOpen]);
 
   const fetchAnalysis = async () => {
     setLoading(true);
@@ -88,6 +91,7 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
       setAnalysis(result);
       if (messages.length === 0) {
         setMessages([{ role: 'vanguard', content: result.summary }]);
+        setUnreadCount(1);
       }
       toast.success('Vanguard ha sincronizado con éxito.');
     } catch (err: any) {
@@ -100,6 +104,10 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
   const sendMessage = async (presetText?: string) => {
     const text = presetText || userInput;
     if (!text.trim() || chatLoading) return;
+    
+    // Open chat automatically if sending a command from dashboard
+    if (presetText && !isChatOpen) setIsChatOpen(true);
+    
     const newMsg = { role: 'user', content: text };
     setMessages(prev => [...prev, newMsg]);
     setUserInput('');
@@ -120,6 +128,7 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
       });
       const data = await resp.json();
       setMessages(prev => [...prev, { role: 'vanguard', content: data.reply }]);
+      if (!isChatOpen) setUnreadCount(prev => prev + 1);
     } catch (e) {
       toast.error('Vanguard perdió la conexión temporalmente.');
     } finally {
@@ -141,307 +150,304 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
   }, [userId]);
 
   return (
-    <div className="flex flex-col gap-8 w-full font-sans text-slate-900 mt-6">
-      {/* HEADER DE COMANDO (LOCAL) */}
-      <div className="bg-white rounded-[2rem] border border-slate-200 px-8 py-6 flex items-center justify-between shadow-sm relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-500/5 rounded-full blur-[100px] -mr-32 -mt-32"></div>
-        <div className="flex items-center gap-4 z-10">
-          <div className="bg-indigo-600 p-3 rounded-2xl shadow-lg shadow-indigo-200">
-            <ShieldCheck className="w-8 h-8 text-white" />
-          </div>
-          <div>
-             <h1 className="text-2xl font-black tracking-tight flex items-center gap-2">
-                VANGUARD <span className="text-indigo-600 font-medium italic">ANALYTICS</span>
-             </h1>
-             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Partner Estratégico Senior</p>
-          </div>
+    <div className="bg-[#0b0f19] text-slate-200 font-sans min-h-screen p-4 sm:p-8 rounded-[2rem] border border-slate-800 relative shadow-2xl overflow-hidden">
+      {/* GLOW BACKGROUND EFFECT */}
+      <div className="absolute top-0 left-1/4 w-[800px] h-[500px] bg-violet-600/10 rounded-full blur-[120px] pointer-events-none"></div>
+      
+      {/* DESKTOP HEADER - Dark Mode Sleek */}
+      <header className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 pb-6 border-b border-white/5 relative z-10 gap-6">
+        <div>
+           <h1 className="text-3xl font-black tracking-tight text-white flex items-center gap-3">
+              VANGUARD <span className="bg-clip-text text-transparent bg-gradient-to-r from-violet-400 to-cyan-400 italic">OVERVIEW</span>
+           </h1>
+           <p className="text-sm font-medium text-slate-500 mt-1">Track your MercadoLibre metrics in real time.</p>
         </div>
 
-        <div className="flex items-center gap-6 z-10">
-            <div className="hidden lg:flex items-center gap-6 px-6 py-3 bg-slate-50 rounded-2xl border border-slate-100">
-                <div className="flex flex-col">
-                    <span className="text-[10px] font-black text-slate-400 uppercase">Status</span>
-                    <span className="text-xs font-bold text-emerald-500 flex items-center gap-1.5 lowercase">
-                        <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span>
-                        Sincronizado
-                    </span>
-                </div>
-                <div className="w-px h-8 bg-slate-200"></div>
-                <div className="flex flex-col">
-                    <span className="text-[10px] font-black text-slate-400 uppercase">Sesión</span>
-                    <span className="text-xs font-bold text-slate-700">Premium 2026</span>
-                </div>
+        <div className="flex items-center gap-4 bg-[#131826] p-2 rounded-2xl border border-white/5">
+            <div className="px-4 py-2">
+               <span className="text-[10px] font-black text-slate-500 uppercase block mb-1">Status</span>
+               <span className="text-xs font-bold text-cyan-400 flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 bg-cyan-400 rounded-full animate-pulse shadow-[0_0_10px_#22d3ee]"></span>
+                  Live Sync
+               </span>
             </div>
+            <div className="w-px h-8 bg-white/10"></div>
             <button 
                 onClick={fetchAnalysis} 
                 disabled={loading} 
-                className="bg-slate-900 text-white px-8 py-4 rounded-2xl font-black text-xs flex items-center gap-2 hover:bg-slate-800 transition-all shadow-xl shadow-slate-200 active:scale-95"
+                className="bg-violet-600 hover:bg-violet-500 text-white px-6 py-3 rounded-xl font-bold text-xs flex items-center gap-2 transition-all shadow-[0_0_20px_rgba(124,58,237,0.3)] disabled:opacity-50"
             >
-                {loading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4 fill-indigo-400 text-indigo-400" />}
-                RE-CALIBRAR ESTRATEGIA
+                {loading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Activity className="w-4 h-4" />}
+                Analyze Now
             </button>
         </div>
-      </div>
+      </header>
 
-      <div className="flex flex-col xl:flex-row gap-8 items-start relative">
-        {/* PANEL IZQUIERDO: DATA & INSIGHTS (Flujo normal) */}
-        <div className="flex-1 space-y-8 w-full min-w-0">
-
-            
-            {/* KPI STRIP */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-               <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:border-indigo-200 transition-colors">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-[11px] font-black text-slate-400 uppercase tracking-wider">Ingresos Totales</span>
-                    <DollarSign className="w-4 h-4 text-emerald-500" />
-                  </div>
-                  <div className="text-2xl font-black text-slate-800">$ {(analysis?.total_revenue || 826200).toLocaleString()}</div>
-                  <div className="mt-2 text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full inline-block">+18% vs mes anterior</div>
-               </div>
-               <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:border-indigo-200 transition-colors">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-[11px] font-black text-slate-400 uppercase tracking-wider">Conversión Ads</span>
-                    <Zap className="w-4 h-4 text-indigo-500" />
-                  </div>
-                  <div className="text-2xl font-black text-slate-800">42,8%</div>
-                  <div className="mt-2 text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full inline-block">Eficiencia Optimizada</div>
-               </div>
-               <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:border-indigo-200 transition-colors">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-[11px] font-black text-slate-400 uppercase tracking-wider">Ventas Orgánicas</span>
-                    <BarChart className="w-4 h-4 text-blue-500" />
-                  </div>
-                  <div className="text-2xl font-black text-slate-800">{analysis?.organic_sales || 27}</div>
-                  <div className="mt-2 text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full inline-block">Fuerza Bruta</div>
-               </div>
-               <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:border-indigo-200 transition-colors">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-[11px] font-black text-slate-400 uppercase tracking-wider">ACOS General</span>
-                    <Target className="w-4 h-4 text-rose-500" />
-                  </div>
-                  <div className="text-2xl font-black text-slate-800">{analysis?.acos || '39,8'}%</div>
-                  <div className="mt-2 text-[10px] font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded-full inline-block">Bajo Control</div>
-               </div>
-            </div>
-
-            {/* MAIN CHART & ANALYSIS */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-              <div className="lg:col-span-2 bg-white p-8 rounded-3xl border border-slate-200 shadow-sm relative group overflow-hidden">
-                <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:scale-110 transition-transform">
-                    <BarChart className="w-32 h-32" />
-                </div>
-                <div className="flex items-center justify-between mb-10">
-                    <div>
-                        <h2 className="text-2xl font-black text-slate-800 tracking-tight">Evolución de Rendimiento</h2>
-                        <p className="text-xs font-bold text-slate-400">Últimos 7 días de operación táctica</p>
+      {/* METRICS ROW (Fauget / Image 1 Style) */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8 relative z-10">
+         {/* Total Sales - Primary Gradient Card */}
+         <div className="bg-gradient-to-br from-violet-600 to-indigo-600 rounded-3xl p-6 shadow-[0_10px_30px_rgba(124,58,237,0.3)] relative overflow-hidden group">
+            <div className="absolute right-0 top-0 w-32 h-32 bg-white/10 rounded-full blur-2xl -mr-10 -mt-10 group-hover:scale-150 transition-transform duration-700"></div>
+            <div className="flex items-start justify-between">
+                <div>
+                    <div className="bg-white/20 p-3 rounded-2xl inline-block mb-4 backdrop-blur-sm">
+                        <DollarSign className="w-6 h-6 text-white" />
                     </div>
+                    <div className="text-3xl font-black text-white">${(analysis?.total_revenue || 82450).toLocaleString()}</div>
+                    <div className="text-xs font-medium text-white/80 mt-1 uppercase tracking-wider">Total Sales (30d)</div>
                 </div>
-                <div className="h-[400px]">
-                  <ResponsiveContainer width="100%" height="100%">
+            </div>
+            <div className="mt-4 flex items-center gap-2 text-xs font-bold text-emerald-300">
+                <TrendingUp className="w-4 h-4" /> +12.5% vs last month
+            </div>
+         </div>
+
+         {/* Secondary Metrics - Dark Cards */}
+         <div className="bg-[#131826] border border-white/5 rounded-3xl p-6 hover:border-violet-500/30 transition-all">
+            <div className="bg-cyan-500/10 p-3 rounded-2xl inline-block mb-4 text-cyan-400">
+                <Target className="w-6 h-6" />
+            </div>
+            <div className="text-3xl font-black text-white">{analysis?.organic_sales || 1250}</div>
+            <div className="text-xs font-medium text-slate-500 mt-1 uppercase tracking-wider">Total Orders</div>
+            <div className="mt-4 flex items-center gap-2 text-xs font-bold text-emerald-400">
+                <TrendingUp className="w-4 h-4" /> +8.3% vs last month
+            </div>
+         </div>
+
+         <div className="bg-[#131826] border border-white/5 rounded-3xl p-6 hover:border-violet-500/30 transition-all">
+            <div className="bg-emerald-500/10 p-3 rounded-2xl inline-block mb-4 text-emerald-400">
+                <Zap className="w-6 h-6" />
+            </div>
+            <div className="text-3xl font-black text-white">42.8%</div>
+            <div className="text-xs font-medium text-slate-500 mt-1 uppercase tracking-wider">Ads Conversion</div>
+            <div className="mt-4 flex items-center gap-2 text-xs font-bold text-emerald-400">
+                <TrendingUp className="w-4 h-4" /> Optimal Rate
+            </div>
+         </div>
+
+         <div className="bg-[#131826] border border-white/5 rounded-3xl p-6 hover:border-violet-500/30 transition-all">
+            <div className="bg-rose-500/10 p-3 rounded-2xl inline-block mb-4 text-rose-400">
+                <BarChart className="w-6 h-6" />
+            </div>
+            <div className="text-3xl font-black text-white">{analysis?.acos || '39.8'}%</div>
+            <div className="text-xs font-medium text-slate-500 mt-1 uppercase tracking-wider">Global ACOS</div>
+            <div className="mt-4 flex items-center gap-2 text-xs font-bold text-slate-400">
+                <CheckCircle className="w-4 h-4 text-emerald-400" /> Controlled
+            </div>
+         </div>
+      </div>
+
+      {/* MAIN CONTENT GRID */}
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 relative z-10 lg:mb-8">
+        
+        {/* BIG CHART (Sales Performance Over Time) */}
+        <div className="xl:col-span-2 bg-[#131826] rounded-3xl p-6 md:p-8 border border-white/5">
+            <div className="flex justify-between items-center mb-8">
+                <div>
+                   <h2 className="text-xl font-bold text-white">Sales Performance Over Time</h2>
+                   <p className="text-xs text-slate-500 mt-1">Line Chart with dual lines (Ads vs Organic)</p>
+                </div>
+                <div className="hidden sm:flex items-center gap-4 text-xs font-medium">
+                    <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-violet-500"></div> Asistidas (Ads)</div>
+                    <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-cyan-400"></div> Orgánicas</div>
+                </div>
+            </div>
+            
+            <div className="h-[350px]">
+                <ResponsiveContainer width="100%" height="100%">
                     <ComposedChart data={chartData.length > 0 ? chartData : [
-                        {date: '04/04', salesAds: 2, salesOrg: 3, clicks: 120},
-                        {date: '05/04', salesAds: 4, salesOrg: 5, clicks: 150},
-                        {date: '06/04', salesAds: 3, salesOrg: 7, clicks: 180},
-                        {date: '07/04', salesAds: 5, salesOrg: 4, clicks: 210},
-                        {date: 'Hoy', salesAds: 8, salesOrg: 9, clicks: 350},
+                        {date: 'W1', salesAds: 18, salesOrg: 12, clicks: 80},
+                        {date: 'W2', salesAds: 30, salesOrg: 4, clicks: 150},
+                        {date: 'W3', salesAds: 25, salesOrg: 20, clicks: 210},
+                        {date: 'W4', salesAds: 40, salesOrg: 15, clicks: 350},
                     ]}>
-                      <defs>
-                        <linearGradient id="colorAds" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#4f46e5" stopOpacity={0.1}/>
-                          <stop offset="95%" stopColor="#4f46e5" stopOpacity={0}/>
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                      <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{fontSize: 11, fontWeight: 700, fill: '#64748b'}} />
-                      <YAxis axisLine={false} tickLine={false} tick={{fontSize: 11, fontWeight: 700, fill: '#64748b'}} />
-                      <Tooltip contentStyle={{borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)'}} />
-                      <Area type="monotone" dataKey="clicks" stroke="#indigo-600" fillOpacity={1} fill="url(#colorAds)" strokeWidth={0} />
-                      <Bar dataKey="salesAds" name="Ads" fill="#4f46e5" radius={[4, 4, 0, 0]} barSize={30} />
-                      <Bar dataKey="salesOrg" name="Orgánico" fill="#bfdbfe" radius={[4, 4, 0, 0]} barSize={30} />
-                      <Line type="monotone" dataKey="totalSales" stroke="#1e293b" strokeWidth={3} dot={{ r: 4, fill: '#1e293b' }} />
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#1e293b" />
+                        <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} dy={10} />
+                        <YAxis axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} dx={-10} />
+                        <Tooltip 
+                            contentStyle={{ backgroundColor: '#0f172a', borderColor: '#1e293b', borderRadius: '12px', color: '#fff' }}
+                            itemStyle={{ color: '#e2e8f0' }}
+                        />
+                        <Line type="monotone" dataKey="salesAds" name="Ads Sales" stroke="#8b5cf6" strokeWidth={4} dot={{r: 5, fill: '#8b5cf6', stroke: '#0f172a', strokeWidth: 2}} activeDot={{r: 8}} />
+                        <Line type="monotone" dataKey="salesOrg" name="Organic Sales" stroke="#22d3ee" strokeWidth={4} dot={{r: 5, fill: '#22d3ee', stroke: '#0f172a', strokeWidth: 2}} />
                     </ComposedChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
-
-              <div className="bg-slate-900 p-8 rounded-3xl text-white flex flex-col justify-between relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/10 rounded-full blur-[80px] -mr-32 -mt-32"></div>
-                <div className="z-10">
-                   <div className="flex items-center gap-3 mb-6">
-                      <Target className="w-5 h-5 text-indigo-400" />
-                      <h3 className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.3em]">Plan Estratégico</h3>
-                   </div>
-                   <p className="text-xl font-bold italic leading-relaxed text-slate-200">
-                      "{analysis?.strategic_plan || "Vanguard está analizando tus próximos movimientos tácticos..."}"
-                   </p>
-                </div>
-                <div className="pt-8 border-t border-white/10 mt-8 z-10">
-                   <div className="flex items-center justify-between text-[11px] font-black text-slate-500 uppercase tracking-widest mb-4">
-                      <span>Eficiencia de Plan</span>
-                      <span>{analysis?.performance_score || 85}%</span>
-                   </div>
-                   <div className="w-full bg-white/5 h-2 rounded-full overflow-hidden">
-                      <div className="h-full bg-indigo-500" style={{ width: `${analysis?.performance_score || 85}%` }}></div>
-                   </div>
-                </div>
-              </div>
+                </ResponsiveContainer>
             </div>
-
-            {/* SMART PANELS */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-               {/* INSIGHTS */}
-               <div className="space-y-4">
-                  <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest px-2 flex items-center gap-2">
-                     <AlertTriangle className="w-4 h-4" /> Hallazgos Críticos
-                  </h3>
-                  <div className="grid grid-cols-1 gap-4">
-                     {(analysis?.insights || []).map((ins, i) => (
-                        <div key={i} className={`p-6 rounded-2xl border flex items-start gap-4 transition-all hover:translate-x-1 ${
-                          ins.type === 'warning' ? 'bg-orange-50/50 border-orange-100' : 
-                          ins.type === 'success' ? 'bg-emerald-50/50 border-emerald-100' : 'bg-blue-50/50 border-blue-100'
-                        }`}>
-                           <div className={`p-3 rounded-xl bg-white shadow-sm shrink-0 ${
-                             ins.type === 'warning' ? 'text-orange-500' : 
-                             ins.type === 'success' ? 'text-emerald-500' : 'text-blue-500'
-                           }`}>
-                              {ins.type === 'warning' ? <AlertTriangle size={20} /> : <CheckCircle size={20} />}
-                           </div>
-                           <div>
-                              <h4 className="font-black text-slate-800 text-sm mb-1">{ins.title}</h4>
-                              <p className="text-xs font-medium text-slate-500 leading-relaxed">{ins.description}</p>
-                           </div>
-                        </div>
-                     ))}
-                  </div>
-               </div>
-
-               {/* MANDATORY ACTIONS */}
-               <div className="space-y-4">
-                  <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest px-2 flex items-center gap-2">
-                     <Rocket className="w-4 h-4" /> Próximos Movimientos
-                  </h3>
-                  <div className="space-y-4">
-                    {(analysis?.recommended_actions || []).map((act, i) => (
-                      <div key={i} onClick={() => sendMessage(`Hablemos sobre ${act.action} para el recurso ${act.item_id}`)} className="bg-white p-6 rounded-2xl border border-slate-200 flex items-center justify-between group cursor-pointer hover:bg-slate-50 hover:border-indigo-200 transition-all">
-                        <div className="flex items-center gap-5">
-                          <div className="w-12 h-12 bg-slate-900 text-white rounded-xl flex items-center justify-center group-hover:bg-indigo-600 transition-colors">
-                            <TrendingUp size={20} />
-                          </div>
-                          <div>
-                            <span className="text-[10px] font-black text-indigo-600 uppercase tracking-tighter">{act.action}</span>
-                            <p className="font-bold text-slate-800 text-sm">{act.reason}</p>
-                          </div>
-                        </div>
-                        <ChevronRight className="text-slate-300 group-hover:text-indigo-600 transition-colors" />
-                      </div>
-                    ))}
-                  </div>
-               </div>
-            </div>
-
-            {/* PORTFOLIO CLASSIFICATION */}
-            <div className="pt-10">
-               <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest mb-6 text-center">Clasificación Inteligente de Ecosistema</h3>
-               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                   {[
-                      { title: 'Protagonistas', type: 'success', icon: <Rocket />, list: analysis?.categorized_items?.protagonists },
-                      { title: 'Estancados', type: 'warning', icon: <Target />, list: analysis?.categorized_items?.stagnant },
-                      { title: 'Zombies', type: 'danger', icon: <Maximize2 />, list: analysis?.categorized_items?.zombies },
-                   ].map((cat, i) => (
-                      <div key={i} onClick={() => sendMessage(`Dime más sobre mis productos ${cat.title}`)} className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all cursor-pointer group">
-                          <div className="flex items-center gap-3 mb-6">
-                              <div className="bg-slate-50 p-2 rounded-lg text-slate-400 group-hover:text-indigo-600 group-hover:bg-indigo-50 transition-colors">{cat.icon}</div>
-                              <h4 className="text-sm font-black text-slate-800 uppercase tracking-widest">{cat.title}</h4>
-                          </div>
-                          <div className="flex flex-wrap gap-2">
-                             {cat.list && cat.list.length > 0 ? cat.list.map((it, idx) => (
-                               <span key={idx} className="bg-slate-50 text-[10px] font-black text-slate-600 px-3 py-1.5 rounded-xl border border-slate-100">{it}</span>
-                             )) : <span className="text-[10px] text-slate-400 italic">No hay registros</span>}
-                          </div>
-                      </div>
-                   ))}
-               </div>
-            </div>
-
         </div>
 
-        {/* PANEL DERECHO: VANGUARD EXPERT CHAT (STICKY LOCAL) */}
-        <aside className="w-full xl:w-[450px] xl:sticky xl:top-8 bg-white border border-slate-200 rounded-[2.5rem] flex flex-col shadow-xl h-[800px] shrink-0 overflow-hidden relative z-10 transition-all">
-          <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-slate-900 rounded-xl flex items-center justify-center">
-                 <User className="w-6 h-6 text-white" />
-              </div>
-              <div>
-                <h3 className="text-sm font-black text-slate-800">VANGUARD EXPERT</h3>
-                <div className="flex items-center gap-2">
-                  <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span>
-                  <span className="text-[9px] font-black text-emerald-600 uppercase">Partner Online</span>
-                </div>
-              </div>
-            </div>
-            <button title="Reiniciar chat" onClick={() => setMessages([])} className="p-2 text-slate-400 hover:text-slate-900 transition-colors">
-              <RefreshCw className="w-4 h-4" />
-            </button>
-          </div>
-
-          <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-slate-50/30 scrollbar-hide">
-             {messages.length === 0 && (
-                <div className="text-center py-20 opacity-30 px-10">
-                   <MessageSquare className="w-12 h-12 mx-auto mb-4 text-slate-400" />
-                   <p className="text-xs font-black uppercase tracking-widest leading-relaxed">Inicia una auditoría estratégica con Vanguard</p>
-                </div>
-             )}
-             {messages.map((msg, i) => (
-                <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                   <div className={`max-w-[90%] p-4 rounded-2xl shadow-sm ${
-                     msg.role === 'user' 
-                     ? 'bg-indigo-600 text-white rounded-tr-none' 
-                     : 'bg-white border border-slate-100 text-slate-800 rounded-tl-none font-medium'
-                   }`}>
-                      <p className="text-[13px] leading-relaxed whitespace-pre-wrap">{msg.content}</p>
+        {/* TOP SELLING PRODUCTS / PORTFOLIO CLASS */}
+        <div className="xl:col-span-1 bg-[#131826] rounded-3xl p-6 md:p-8 border border-white/5 flex flex-col justify-between">
+            <div>
+               <div className="flex justify-between items-center mb-6">
+                   <div>
+                       <h3 className="text-lg font-bold text-white">Portfolio Classification</h3>
+                       <p className="text-xs text-slate-500 mt-1">AI-driven matrix</p>
                    </div>
-                </div>
-             ))}
-             {chatLoading && (
-               <div className="flex justify-start">
-                  <div className="bg-white p-4 rounded-2xl border border-slate-100 flex gap-1.5">
-                    <span className="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-bounce"></span>
-                    <span className="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-bounce [animation-delay:0.2s]"></span>
-                    <span className="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-bounce [animation-delay:0.4s]"></span>
-                  </div>
                </div>
-             )}
-             <div ref={chatEndRef} />
+               
+               <div className="space-y-4">
+                  {[
+                     { title: 'Protagonistas (Star)', icon: <Rocket size={16} />, color: 'violet', value: analysis?.categorized_items?.protagonists?.length || 5, bg: 'bg-violet-500/20 text-violet-400' },
+                     { title: 'Estancados (Stagnant)', icon: <Target size={16} />, color: 'cyan', value: analysis?.categorized_items?.stagnant?.length || 12, bg: 'bg-cyan-500/20 text-cyan-400' },
+                     { title: 'Zombies (Dead)', icon: <AlertTriangle size={16} />, color: 'rose', value: analysis?.categorized_items?.zombies?.length || 3, bg: 'bg-rose-500/20 text-rose-400' },
+                  ].map((cat, i) => (
+                      <div key={i} onClick={() => sendMessage(`Muéstrame el listado y plan para mis productos ${cat.title}`)} className="bg-[#0b0f19] p-4 rounded-2xl flex items-center justify-between group cursor-pointer hover:border-violet-500/50 border border-transparent transition-all">
+                          <div className="flex items-center gap-4">
+                              <div className={`p-3 rounded-xl ${cat.bg}`}>{cat.icon}</div>
+                              <div>
+                                 <h4 className="font-bold text-sm text-slate-200">{cat.title}</h4>
+                                 <p className="text-xs text-slate-500">{cat.value} Publications</p>
+                              </div>
+                          </div>
+                      </div>
+                  ))}
+               </div>
+            </div>
+
+            <button onClick={() => sendMessage("Dame un resumen de mi Portfolio")} className="w-full mt-6 py-3 bg-white/5 hover:bg-white/10 rounded-xl text-xs font-bold transition-all text-slate-300">
+               Analyze All Categories
+            </button>
+        </div>
+      </div>
+
+      {/* STRATEGY & ACTIONS */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 relative z-10 mb-20 lg:mb-0">
+          <div className="bg-[#131826] p-8 rounded-3xl border border-white/5">
+              <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest flex items-center gap-2 mb-6">
+                 <ShieldCheck className="w-5 h-5 text-violet-500" /> Strategic Plan
+              </h3>
+              <p className="text-[15px] font-medium leading-relaxed text-slate-300">
+                  {analysis?.strategic_plan || "Connect your store to Vanguard AI to generate a powerful, real-time strategic roadmap tailored to your actual MercadoLibre metrics."}
+              </p>
           </div>
 
-          <div className="p-6 border-t border-slate-100 bg-white shadow-[0_-10px_30px_-15px_rgba(0,0,0,0.1)]">
-             <div className="relative">
-                <textarea 
-                  value={userInput}
-                  onChange={(e) => setUserInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && !e.shiftKey) {
-                      e.preventDefault();
-                      sendMessage();
-                    }
-                  }}
-                  placeholder="Escribe tu consulta estratégica..."
-                  rows={2}
-                  className="w-full bg-slate-50 border-slate-200 rounded-xl py-3 px-4 pr-12 text-sm text-slate-800 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all resize-none font-medium placeholder:text-slate-400"
-                />
-                <button 
-                  onClick={() => sendMessage()}
-                  disabled={chatLoading}
-                  className="absolute right-3 bottom-3 p-2 bg-slate-900 text-white rounded-lg hover:bg-indigo-600 transition-all active:scale-90 disabled:opacity-50"
-                >
-                  <Send className="w-4 h-4" />
-                </button>
-             </div>
-             <p className="text-[8px] text-center text-slate-400 mt-3 font-black uppercase tracking-widest">Powered by Vanguard Intelligence v3.1</p>
+          <div className="bg-[#131826] p-8 rounded-3xl border border-white/5 h-64 overflow-y-auto custom-scrollbar">
+              <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest flex items-center gap-2 mb-6">
+                 <Zap className="w-5 h-5 text-cyan-400" /> Executive Actions
+              </h3>
+              <div className="space-y-3">
+                  {(analysis?.recommended_actions || []).map((act, i) => (
+                      <div key={i} onClick={() => sendMessage(`Ejecutar: ${act.action} para ${act.item_id}`)} className="flex items-start gap-4 p-4 rounded-2xl bg-[#0b0f19] hover:bg-violet-900/20 cursor-pointer border border-[#1e293b] hover:border-violet-500/30 transition-all">
+                          <div className="shrink-0 mt-1 w-2 h-2 rounded-full bg-cyan-400 shadow-[0_0_8px_#22d3ee]"></div>
+                          <div>
+                              <h4 className="text-xs font-bold text-white mb-1 uppercase">{act.action}</h4>
+                              <p className="text-[11px] text-slate-400">{act.reason}</p>
+                          </div>
+                          <ChevronRight className="shrink-0 ml-auto w-4 h-4 text-slate-600" />
+                      </div>
+                  ))}
+                  {(!analysis?.recommended_actions || analysis.recommended_actions.length === 0) && (
+                      <p className="text-sm text-slate-500 italic">No pending actions.</p>
+                  )}
+              </div>
           </div>
-        </aside>
       </div>
+
+      {/* =========================================
+          FLOATING VANGUARD CHAT (Messenger Style)
+      =========================================== */}
+      <div className="fixed bottom-6 right-6 z-[100] flex flex-col items-end">
+        {/* Chat Window (Opens Upwards) */}
+        {isChatOpen && (
+          <div className="w-[360px] sm:w-[400px] h-[580px] bg-[#1a1c23] border border-white/10 rounded-3xl mb-4 shadow-[0_20px_50px_rgba(0,0,0,0.5)] flex flex-col overflow-hidden animate-in slide-in-from-bottom-5 fade-in duration-200">
+            {/* Header */}
+            <div className="bg-[#131826] p-4 flex justify-between items-center border-b border-white/5">
+               <div className="flex items-center gap-3">
+                 <div className="relative">
+                    <div className="w-10 h-10 bg-violet-600 rounded-full flex items-center justify-center shadow-lg">
+                       <User className="w-5 h-5 text-white" />
+                    </div>
+                    <div className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-400 border-2 border-[#131826] rounded-full"></div>
+                 </div>
+                 <div>
+                   <h3 className="text-sm font-black text-white">VANGUARD EXPERT</h3>
+                   <span className="text-[9px] font-bold text-emerald-400 uppercase">Online Assistant</span>
+                 </div>
+               </div>
+               <div className="flex gap-2">
+                 <button onClick={() => setMessages([])} className="p-2 text-slate-400 hover:text-white transition-colors"><RefreshCw className="w-4 h-4" /></button>
+                 <button onClick={() => { setIsChatOpen(false); setUnreadCount(0); }} className="p-2 text-slate-400 hover:text-white transition-colors"><X className="w-5 h-5" /></button>
+               </div>
+            </div>
+
+            {/* Messages Area */}
+            <div className="flex-1 overflow-y-auto p-5 space-y-4 bg-[#0b0f19] custom-scrollbar">
+               {messages.length === 0 && (
+                  <div className="text-center py-10 opacity-50">
+                     <ShieldCheck className="w-12 h-12 mx-auto mb-3 text-slate-500" />
+                     <p className="text-xs font-bold text-slate-400">Your AI Strategy Partner is ready.</p>
+                  </div>
+               )}
+               {messages.map((msg, i) => (
+                  <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                     <div className={`max-w-[85%] p-3.5 rounded-2xl text-[13px] leading-relaxed shadow-sm ${
+                       msg.role === 'user' 
+                       ? 'bg-violet-600 text-white rounded-br-sm' 
+                       : 'bg-[#1e293b] text-slate-200 rounded-bl-sm border border-white/5'
+                     }`}>
+                        <p className="whitespace-pre-wrap">{msg.content}</p>
+                     </div>
+                  </div>
+               ))}
+               {chatLoading && (
+                 <div className="flex justify-start">
+                    <div className="bg-[#1e293b] p-3.5 rounded-2xl rounded-bl-sm border border-white/5 flex gap-1.5">
+                      <span className="w-1.5 h-1.5 bg-violet-400 rounded-full animate-bounce"></span>
+                      <span className="w-1.5 h-1.5 bg-violet-400 rounded-full animate-bounce [animation-delay:0.2s]"></span>
+                      <span className="w-1.5 h-1.5 bg-violet-400 rounded-full animate-bounce [animation-delay:0.4s]"></span>
+                    </div>
+                 </div>
+               )}
+               <div ref={chatEndRef} />
+            </div>
+
+            {/* Input Area */}
+            <div className="p-4 bg-[#131826] border-t border-white/5">
+               <div className="relative">
+                  <textarea 
+                    value={userInput}
+                    onChange={(e) => setUserInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        sendMessage();
+                      }
+                    }}
+                    placeholder="Ask Vanguard about strategy..."
+                    rows={1}
+                    className="w-full bg-[#0b0f19] border border-white/10 rounded-full py-3 pl-4 pr-12 text-sm text-white focus:outline-none focus:border-violet-500 transition-all resize-none shadow-inner"
+                  />
+                  <button 
+                    onClick={() => sendMessage()}
+                    disabled={chatLoading}
+                    className="absolute right-1.5 bottom-1.5 p-2 bg-violet-600 text-white rounded-full hover:bg-violet-500 transition-all active:scale-95 disabled:opacity-50"
+                  >
+                    <Send className="w-4 h-4" />
+                  </button>
+               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Floating Toggle Button */}
+        <button 
+          onClick={() => { setIsChatOpen(!isChatOpen); setUnreadCount(0); }}
+          className="w-16 h-16 bg-gradient-to-tr from-violet-600 to-cyan-500 rounded-full flex items-center justify-center shadow-[0_10px_30px_rgba(124,58,237,0.5)] hover:scale-110 active:scale-95 transition-all relative z-50 group"
+        >
+          {isChatOpen ? <X className="text-white w-7 h-7 group-hover:rotate-90 transition-transform" /> : <MessageSquare className="text-white w-7 h-7" />}
+          
+          {/* Unread Message Badge */}
+          {!isChatOpen && unreadCount > 0 && (
+             <span className="absolute -top-1 -right-1 flex h-6 w-6 relative">
+               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+               <span className="relative inline-flex rounded-full h-6 w-6 bg-rose-500 items-center justify-center text-[10px] font-black text-white border-2 border-[#0b0f19]">
+                 {unreadCount}
+               </span>
+             </span>
+          )}
+        </button>
+      </div>
+      
     </div>
   );
 };
