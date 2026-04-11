@@ -602,9 +602,9 @@ const SalesDashboard: React.FC<Props> = ({ orders, payments, onUpdateStatus, onE
             <TrendingUp size={20} className="text-indigo-600" />
             Top 5 Productos (Ingresos)
           </h4>
-          <div className="h-64 w-full min-w-0 overflow-hidden">
+          <div className="h-64 w-full min-w-0 min-h-[256px] overflow-hidden">
             {mounted && (
-              <ResponsiveContainer width="100%" height={256}>
+              <ResponsiveContainer width="100%" height={256} minWidth={0}>
                 <BarChart data={metrics.topProducts} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                 <defs>
                   <linearGradient id="colorBar" x1="0" y1="0" x2="0" y2="1">
@@ -632,9 +632,9 @@ const SalesDashboard: React.FC<Props> = ({ orders, payments, onUpdateStatus, onE
             <Banknote size={20} className="text-emerald-600" />
             Distribución de Ingresos
           </h4>
-          <div className="h-64 w-full min-w-0 overflow-hidden">
+          <div className="h-64 w-full min-w-0 min-h-[256px] overflow-hidden">
             {(mounted && metrics.total > 0) ? (
-              <ResponsiveContainer width="100%" height={256}>
+              <ResponsiveContainer width="100%" height={256} minWidth={0}>
                 <PieChart>
                   <Pie
                     data={[
