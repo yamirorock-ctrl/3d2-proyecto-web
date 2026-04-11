@@ -54,7 +54,7 @@ export default async function handler(req, res) {
         "Authorization": `Bearer ${RESEND_API_KEY}`
       },
       body: JSON.stringify({
-        from: "Creart 3D2 <onboarding@resend.dev>",
+        from: "Creart 3D2 <ventas@creart3d2.com>",
         to: ["creart3d2@gmail.com", customer_email].filter(Boolean),
         subject: `Confirmación de Orden #${order_number} - Creart 3D2`,
         html: emailHtml
