@@ -8,29 +8,28 @@ import { createClient } from "@supabase/supabase-js";
 
 // Variables de servidor sin prefijo VITE, con fallback a VITE_* para compatibilidad
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
-const SUPABASE_ANON_KEY = process.env.VITE_SUPABASE_ANON_TOKEN;
+const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_TOKEN;
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
 const MP_ACCESS_TOKEN =
   process.env.MP_ACCESS_TOKEN ||
   process.env.MP_ACCESS ||
   process.env.VITE_MP_ACCESS;
 
 // Validación inicial: loguear qué está faltando
-if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+if (!SUPABASE_URL || (!SUPABASE_ANON_KEY && !SUPABASE_SERVICE_ROLE_KEY)) {
   console.error("[Webhook] CRÍTICO: Faltan variables de entorno de Supabase", {
     SUPABASE_URL: Boolean(SUPABASE_URL),
     SUPABASE_ANON_KEY: Boolean(SUPABASE_ANON_KEY),
+    SUPABASE_SERVICE_ROLE_KEY: Boolean(SUPABASE_SERVICE_ROLE_KEY)
   });
 }
-if (!MP_ACCESS_TOKEN) {
-  console.error(
-    "[Webhook] CRÍTICO: Falta MP_ACCESS_TOKEN para consultar pagos",
-  );
-}
 
-// Crear cliente Supabase solo si tenemos las credenciales
+// Crear cliente Supabase usando Service Role si existe (para saltar RLS en backend)
 let supabase = null;
-if (SUPABASE_URL && SUPABASE_ANON_KEY) {
-  supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const supabaseKey = SUPABASE_SERVICE_ROLE_KEY || SUPABASE_ANON_KEY;
+if (SUPABASE_URL && supabaseKey) {
+  supabase = createClient(SUPABASE_URL, supabaseKey);
 }
 
 export default async function handler(req, res) {
