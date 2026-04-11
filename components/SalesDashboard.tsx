@@ -207,6 +207,8 @@ const SalesDashboard: React.FC<Props> = ({ orders, payments, onUpdateStatus, onE
       (order.items || []).forEach(item => {
         if (!item || !item.name) return;
         if (!productCount[item.name]) {
+          productCount[item.name] = { count: 0, total: 0, name: item.name };
+        }
         productCount[item.name].count += item.quantity;
         productCount[item.name].total += item.price * item.quantity;
       });
