@@ -358,7 +358,7 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
                 <div className="bg-slate-900 p-10 rounded-[3.5rem] text-white">
                    <h3 className="text-xs font-black text-slate-500 uppercase tracking-[0.4em] mb-8">Intelligence Portfolio Class</h3>
                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                      <div className="bg-white/5 p-6 rounded-[2rem] border border-white/10 backdrop-blur-md">
+                      <div className="bg-white/5 p-6 rounded-4xl border border-white/10 backdrop-blur-md">
                          <p className="text-indigo-400 font-black text-[11px] mb-5 uppercase flex items-center gap-3">
                              <TrendingUp className="w-4 h-4" /> Protagonistas
                          </p>
@@ -366,7 +366,7 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
                             {analysis.categorized_items.protagonists.map(id => <p key={id} className="text-[11px] font-mono text-slate-300 bg-white/5 p-3 rounded-2xl text-center border border-white/5">#{id}</p>)}
                          </div>
                       </div>
-                      <div className="bg-white/5 p-6 rounded-[2rem] border border-white/10 backdrop-blur-md">
+                      <div className="bg-white/5 p-6 rounded-4xl border border-white/10 backdrop-blur-md">
                          <p className="text-orange-400 font-black text-[11px] mb-5 uppercase flex items-center gap-3">
                              <Target className="w-4 h-4" /> Estancados
                          </p>
@@ -374,7 +374,7 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
                             {analysis.categorized_items.stagnant.map(id => <p key={id} className="text-[11px] font-mono text-slate-300 bg-white/5 p-3 rounded-2xl text-center border border-white/5">#{id}</p>)}
                          </div>
                       </div>
-                      <div className="bg-white/5 p-6 rounded-[2rem] border border-white/10 backdrop-blur-md">
+                      <div className="bg-white/5 p-6 rounded-4xl border border-white/10 backdrop-blur-md">
                          <p className="text-red-400 font-black text-[11px] mb-5 uppercase flex items-center gap-3">
                              <AlertTriangle className="w-4 h-4" /> Zombies
                          </p>
@@ -394,7 +394,7 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
                       <div key={idx} className="bg-white p-8 rounded-[3.5rem] border border-slate-100 flex items-center justify-between group hover:shadow-2xl hover:border-indigo-300 transition-all duration-700 shadow-xl shadow-slate-100 relative overflow-hidden">
                          <div className="absolute left-0 top-0 w-2 h-full bg-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity"></div>
                          <div className="flex items-center gap-8">
-                            <div className="w-20 h-20 bg-indigo-50 rounded-[2rem] flex items-center justify-center group-hover:bg-indigo-600 group-hover:text-white transition-all shadow-inner">
+                            <div className="w-20 h-20 bg-indigo-50 rounded-4xl flex items-center justify-center group-hover:bg-indigo-600 group-hover:text-white transition-all shadow-inner">
                                <TrendingUp className="w-10 h-10" />
                             </div>
                             <div>
