@@ -325,10 +325,10 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
                     </div>
                 </div>
 
-                {/* GRÁFICOS MELI STYLE */}
-                <div className="bg-white p-10 rounded-[3.5rem] shadow-sm border border-slate-100">
-                    {/* Metric Cards Grid - ML Ads Style */}
-                    <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-10 overflow-x-auto pb-4 no-scrollbar">
+                {/* GRÁFICOS MELI STYLE - ESPACIADO MEJORADO */}
+                <div className="bg-white p-12 rounded-[4rem] shadow-sm border border-slate-100">
+                    {/* Metric Cards Grid - ML Ads Style con más aire */}
+                    <div className="grid grid-cols-2 lg:grid-cols-5 gap-6 mb-12 overflow-x-auto pb-6 no-scrollbar">
                         {[
                             { label: 'Ventas por Prod. Ads', value: analysis?.ads_sales || '17', delta: '+183%', color: 'blue' },
                             { label: 'Ventas sin Prod. Ads', value: analysis?.organic_sales || '6', delta: '+200%', color: 'blue' },
@@ -341,9 +341,9 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
                                     <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest truncate">{m.label}</span>
                                     <div className="w-4 h-4 rounded-full border border-slate-200 flex items-center justify-center text-[8px] text-slate-400 font-bold">?</div>
                                 </div>
-                                <div className="flex items-baseline gap-2">
-                                    <span className="text-2xl font-black text-slate-800 tracking-tighter">{m.value}</span>
-                                    <span className={`text-[10px] font-black flex items-center gap-0.5 ${m.delta.startsWith('+') ? 'text-emerald-500' : 'text-rose-500'}`}>
+                                <div className="flex items-baseline gap-2 mb-2">
+                                    <span className="text-3xl font-black text-slate-800 tracking-tighter">{m.value}</span>
+                                    <span className={`text-[11px] font-black flex items-center gap-0.5 ${m.delta.startsWith('+') ? 'text-emerald-500' : 'text-rose-500'}`}>
                                         {m.delta.startsWith('+') ? '▲' : '▼'} {m.delta.replace(/[+-]/, '')}
                                     </span>
                                 </div>
@@ -367,7 +367,7 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
                         </div>
                     </div>
                     
-                    <div className="h-[380px] w-full min-h-[380px]">
+                    <div className="h-[420px] w-full min-h-[420px]">
                         <ResponsiveContainer width="100%" height="100%" minWidth={0} debounce={100}>
                             <ComposedChart data={chartData.length > 0 ? chartData : [
                                 {date: '04 abr', salesAds: 1, salesOrg: 0, clicks: 120},
@@ -436,7 +436,7 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
                         </div>
                     </div>
 
-                    <div className="mt-12 flex items-center justify-around border-t border-slate-50 pt-10">
+                    <div className="mt-16 flex items-center justify-around border-t border-slate-50 pt-12">
                          <div className="text-center">
                              <p className="text-[11px] font-black text-slate-400 uppercase mb-2 tracking-widest">Ventas Totales</p>
                              <p className="text-3xl font-black text-slate-800">{chartData.reduce((acc, curr) => acc + (curr.totalSales || 0), 0) || 17}</p>
