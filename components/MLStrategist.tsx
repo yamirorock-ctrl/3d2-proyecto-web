@@ -41,11 +41,11 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
       // 2. Obtener inventario actual para que el socio sepa qué podemos vender
       const { data: inventory } = await supabase.from('products').select('name, stock, ml_item_id');
 
-      // 3. Consultar a VANGUARD
-      const strategistResp = await fetch('/api/ml-strategist', {
+      // 3. Consultar a VANGUARD vía el endpoint compartido (ahorro de funciones Vercel)
+      const strategistResp = await fetch('/api/ml-manager', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ metrics, goals, current_inventory: inventory })
+        body: JSON.stringify({ action: 'strategic-analysis', userId, metrics, goals, current_inventory: inventory })
       });
       const result = await strategistResp.json();
 

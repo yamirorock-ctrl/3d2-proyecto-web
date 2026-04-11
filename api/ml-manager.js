@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.VITE_SUPABASE_ANON_TOKEN;
@@ -318,6 +319,84 @@ export default async function handler(req, res) {
                 return res.status(400).json({ error: createData.message || 'Error al crear en ML', details: createData.cause });
             }
         }
+      }
+
+      case 'strategic-analysis': {
+        const { metrics, goals, current_inventory } = req.body;
+        const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+        const model = genAI.getGenerativeModel({ 
+          model: "gemini-3.1-pro",
+          systemInstruction: `
+            Eres VANGUARD, el Socio Estratégico Senior de 3D2 Store. 
+            Tu misión es maximizar la rentabilidad y el crecimiento en Mercado Libre Argentina. 
+            No eres un asistente amable; eres un consultor de negocios senior. Hablas con propiedad, vas al grano y cuidas cada peso como si fuera tuyo.
+
+            CAPACIDADES Y REGLAS:
+            1. ANALISTA DE MÉTRICAS: Clasificas productos en:
+               - PROTAGONISTAS: Alta venta, buen margen. (Sugerencia: Escalar Ads, cuidar stock).
+               - ZOMBIES: Muchas visitas/clics pero pocas ventas. (Sugerencia: Revisar fotos, precio o cerrar publicación).
+               - ESTANCADOS: No tienen tráfico. (Sugerencia: Cambiar títulos, participar en Promos).
+            
+            2. ESTRATEGA DE PRECIOS Y PROMOS: 
+               - Antes de sugerir un descuento, evalúas si el volumen compensa la baja de margen.
+               - Buscas objetivos: Si la meta es 2 ventas diarias y estamos en 0.5, sugieres acciones agresivas.
+
+            3. CERO ERROR: No inventas datos. Si falta información, la pides.
+            
+            4. ACCIONABLE POR ENCIMA DE TODO: Al final de cada análisis, debes proporcionar una lista de "ACCIONES RECOMENDADAS" que el usuario pueda ejecutar.
+
+            CONTEXTO DEL NEGOCIO:
+            3D2 Store se dedica a Impresión 3D y Corte Láser. Los costos de materiales suelen ser bajos pero el tiempo de máquina es el recurso crítico.
+
+            FORMATO DE SALIDA (JSON):
+            {
+              "summary": "...",
+              "performance_score": 0-100,
+              "insights": [{"type": "warning|opportunity|success", "title": "...", "description": "..."}],
+              "categorized_items": {"protagonists": [], "stagnant": [], "zombies": []},
+              "strategic_plan": "...",
+              "recommended_actions": [{"action": "...", "item_id": "...", "reason": "...", "impact": "alto|medio|bajo"}]
+            }
+          `
+        });
+
+        const prompt = `Analiza: MÉTRICAS: ${JSON.stringify(metrics)} | OBJETIVOS: ${JSON.stringify(goals)} | INVENTARIO: ${JSON.stringify(current_inventory)}`;
+        const result = await model.generateContent(prompt);
+        const responseText = result.response.text();
+        const cleanJson = responseText.replace(/```json/g, "").replace(/```/g, "").trim();
+        return res.status(200).json(JSON.parse(cleanJson));
+      }
+
+      case 'oauth': {
+        const { code } = req.body;
+        const client_id = process.env.VITE_ML_APP_ID || process.env.ML_APP_ID;
+        const client_secret = process.env.VITE_ML_APP_SECRET || process.env.VITE_ML_CLIENT_SECRET || process.env.ML_APP_SECRET;
+        const redirect_uri = process.env.VITE_ML_REDIRECT_URI || process.env.ML_REDIRECT_URI;
+
+        const tokenUrl = 'https://api.mercadolibre.com/oauth/token';
+        const params = new URLSearchParams({
+          grant_type: 'authorization_code',
+          client_id: String(client_id),
+          client_secret: String(client_secret),
+          code: String(code),
+          redirect_uri: String(redirect_uri)
+        });
+
+        const r = await fetch(tokenUrl, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: params.toString() });
+        const data = await r.json();
+        if (!r.ok) return res.status(r.status).json({ error: 'OAuth failed', details: data });
+
+        const payload = {
+          user_id: String(data.user_id),
+          access_token: data.access_token,
+          refresh_token: data.refresh_token,
+          expires_in: data.expires_in,
+          scope: data.scope,
+          token_type: data.token_type,
+          updated_at: new Date().toISOString()
+        };
+        await supabase.from('ml_tokens').upsert(payload, { onConflict: 'user_id' });
+        return res.status(200).json({ ok: true, user_id: data.user_id });
       }
 
       default:

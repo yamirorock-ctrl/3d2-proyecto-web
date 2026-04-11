@@ -36,10 +36,10 @@ export default function MLCallback() {
 
     (async () => {
       try {
-        const r = await fetch('/api/ml-oauth', {
+        const r = await fetch('/api/ml-manager', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ code })
+          body: JSON.stringify({ action: 'oauth', userId: session?.user.id, code })
         });
         const data = await r.json();
         // Log completo en consola para depuración
