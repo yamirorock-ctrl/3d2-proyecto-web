@@ -134,6 +134,7 @@ const Navbar: React.FC<NavbarProps> = ({ cartCount, onOpenCart, onGoHome, onOpen
             <button
               onClick={onOpenCart}
               className="relative p-2 text-slate-900 hover:bg-slate-100 rounded-full transition-all group"
+              title="Ver carrito"
             >
               <ShoppingCart size={24} strokeWidth={2} className="group-hover:text-indigo-600 transition-colors" />
               {cartCount > 0 && (
@@ -145,6 +146,7 @@ const Navbar: React.FC<NavbarProps> = ({ cartCount, onOpenCart, onGoHome, onOpen
             <button 
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
               className="md:hidden p-2 text-slate-900 hover:bg-slate-100 rounded-lg transition-colors"
+              title="Menú principal"
             >
               <Menu size={24} />
             </button>

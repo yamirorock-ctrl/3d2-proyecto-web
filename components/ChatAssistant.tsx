@@ -185,6 +185,7 @@ const ChatAssistant: React.FC<ChatAssistantProps> = ({ products }) => {
             <button 
               onClick={(e) => { e.stopPropagation(); setIsMinimized(true); }}
               className="p-1 hover:bg-white/20 rounded-lg transition-colors"
+              title="Minimizar chat"
             >
               <Minimize2 size={16} />
             </button>
@@ -192,6 +193,7 @@ const ChatAssistant: React.FC<ChatAssistantProps> = ({ products }) => {
           <button 
             onClick={(e) => { e.stopPropagation(); setIsOpen(false); setIsMinimized(false); }}
             className="p-1 hover:bg-white/20 rounded-lg transition-colors"
+            title="Cerrar chat"
           >
             <X size={16} />
           </button>
@@ -254,7 +256,10 @@ const ChatAssistant: React.FC<ChatAssistantProps> = ({ products }) => {
                                 <h4 className="font-semibold text-slate-800 text-xs line-clamp-1 mb-1">{rec.name}</h4>
                                 <div className="flex justify-between items-center">
                                     <span className="text-indigo-600 font-bold text-sm">${rec.price?.toLocaleString()}</span>
-                                    <button className="p-1.5 bg-indigo-50 text-indigo-600 rounded-lg hover:bg-indigo-600 hover:text-white transition-colors">
+                                    <button 
+                                      className="p-1.5 bg-indigo-50 text-indigo-600 rounded-lg hover:bg-indigo-600 hover:text-white transition-colors"
+                                      title="Ver producto"
+                                    >
                                         <Eye size={14} />
                                     </button>
                                 </div>
@@ -294,6 +299,7 @@ const ChatAssistant: React.FC<ChatAssistantProps> = ({ products }) => {
                 onClick={handleSend}
                 disabled={!input.trim() || isLoading}
                 className="absolute right-2 p-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:bg-gray-300 disabled:cursor-not-allowed transition-all shadow-md hover:shadow-lg active:scale-95"
+                title="Enviar mensaje"
               >
                 <Send size={18} />
               </button>
