@@ -15,6 +15,11 @@ interface StrategicAnalysis {
   categorized_items: { protagonists: string[]; stagnant: string[]; zombies: string[] };
   strategic_plan: string;
   recommended_actions: Array<{ action: string; item_id: string; reason: string; impact: 'alto' | 'medio' | 'bajo' }>;
+  ads_sales?: number;
+  organic_sales?: number;
+  clicks?: number;
+  total_revenue?: number;
+  acos?: string | number;
 }
 
 const MLStrategist: React.FC<Props> = ({ userId }) => {
@@ -413,7 +418,7 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
                                 <Bar yAxisId="left" dataKey="salesAds" name="Ventas por Ads" fill="#3b82f6" radius={[6, 6, 0, 0]} barSize={25} />
                                 <Bar yAxisId="left" dataKey="salesOrg" name="Ventas Orgánicas" fill="#bfdbfe" radius={[6, 6, 0, 0]} barSize={25} />
                                 <Line yAxisId="right" type="monotone" dataKey="clicks" name="Clicks / Visitas" stroke="#a855f7" strokeWidth={4} dot={{ r: 4, fill: '#a855f7', strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 6, strokeWidth: 0 }} />
-                                <Legend verticalAlign="bottom" height={40} iconType="circle" wrapperStyle={{ paddingTop: '20px', fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase', tracking: '0.1em' }} />
+                                <Legend verticalAlign="bottom" height={40} iconType="circle" wrapperStyle={{ paddingTop: '20px', fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.1em' }} />
                             </ComposedChart>
                         </ResponsiveContainer>
                     </div>
