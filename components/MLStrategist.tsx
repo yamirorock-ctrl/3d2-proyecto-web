@@ -48,11 +48,16 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
         body: JSON.stringify({ action: 'strategic-analysis', userId, metrics, goals, current_inventory: inventory })
       });
       const result = await strategistResp.json();
+      
+      if (result.error) {
+        throw new Error(result.error);
+      }
 
       setAnalysis(result);
       toast.success('Diagnóstico de Vanguard completado.');
     } catch (err: any) {
-      toast.error('Vanguard falló: ' + err.message);
+      console.error('[MLStrategist Error]:', err);
+      toast.error('Vanguard falló: ' + (err.message || 'Error desconocido'));
     } finally {
       setLoading(false);
     }
@@ -181,7 +186,7 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
 
                 {/* Insights Rápidos */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                   {analysis.insights.map((insight, idx) => (
+                   {analysis?.insights?.map((insight, idx) => (
                      <div key={idx} className={`p-5 rounded-3xl border ${
                        insight.type === 'warning' ? 'bg-orange-50 border-orange-100' :
                        insight.type === 'success' ? 'bg-emerald-50 border-emerald-100' :
@@ -203,21 +208,21 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
                    <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-4">Portafolio Estratégico</h3>
                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       <div className="bg-white p-4 rounded-2xl shadow-sm">
-                         <p className="text-indigo-600 font-bold text-xs mb-2">PROTAGONISTAS ({analysis.categorized_items.protagonists.length})</p>
+                         <p className="text-indigo-600 font-bold text-xs mb-2">PROTAGONISTAS ({analysis?.categorized_items?.protagonists?.length || 0})</p>
                          <div className="space-y-1">
-                            {analysis.categorized_items.protagonists.map(id => <p key={id} className="text-[10px] font-mono text-slate-400">#{id}</p>)}
+                            {analysis?.categorized_items?.protagonists?.map(id => <p key={id} className="text-[10px] font-mono text-slate-400">#{id}</p>)}
                          </div>
                       </div>
                       <div className="bg-white p-4 rounded-2xl shadow-sm">
-                         <p className="text-orange-500 font-bold text-xs mb-2">ESTANCADOS ({analysis.categorized_items.stagnant.length})</p>
+                         <p className="text-orange-500 font-bold text-xs mb-2">ESTANCADOS ({analysis?.categorized_items?.stagnant?.length || 0})</p>
                          <div className="space-y-1">
-                            {analysis.categorized_items.stagnant.map(id => <p key={id} className="text-[10px] font-mono text-slate-400">#{id}</p>)}
+                            {analysis?.categorized_items?.stagnant?.map(id => <p key={id} className="text-[10px] font-mono text-slate-400">#{id}</p>)}
                          </div>
                       </div>
                       <div className="bg-white p-4 rounded-2xl shadow-sm">
-                         <p className="text-red-600 font-bold text-xs mb-2">ZOMBIES ({analysis.categorized_items.zombies.length})</p>
+                         <p className="text-red-600 font-bold text-xs mb-2">ZOMBIES ({analysis?.categorized_items?.zombies?.length || 0})</p>
                          <div className="space-y-1">
-                            {analysis.categorized_items.zombies.map(id => <p key={id} className="text-[10px] font-mono text-slate-400">#{id}</p>)}
+                            {analysis?.categorized_items?.zombies?.map(id => <p key={id} className="text-[10px] font-mono text-slate-400">#{id}</p>)}
                          </div>
                       </div>
                    </div>
@@ -228,7 +233,7 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
                    <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2">
                       <Rocket className="w-6 h-6 text-indigo-500" /> Acciones Sugeridas para vos:
                    </h3>
-                   {analysis.recommended_actions.map((act, idx) => (
+                   {analysis?.recommended_actions?.map((act, idx) => (
                       <div key={idx} className="bg-white p-6 rounded-[2.2rem] border border-slate-100 flex items-center justify-between group hover:shadow-xl hover:border-indigo-200 transition-all duration-300">
                          <div className="flex items-center gap-4">
                             <div className="w-12 h-12 bg-indigo-50 rounded-2xl flex items-center justify-center group-hover:bg-indigo-500 group-hover:text-white transition-colors">
