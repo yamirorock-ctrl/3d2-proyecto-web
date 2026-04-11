@@ -121,7 +121,7 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
             <button 
                 onClick={fetchAnalysis}
                 disabled={loading}
-                className="bg-white text-slate-950 px-10 py-5 rounded-[2rem] font-black text-lg flex items-center gap-3 hover:bg-indigo-50 transition-all shadow-2xl active:scale-95 disabled:opacity-50"
+                className="bg-white text-slate-950 px-10 py-5 rounded-4xl font-black text-lg flex items-center gap-3 hover:bg-indigo-50 transition-all shadow-2xl active:scale-95 disabled:opacity-50"
             >
                 {loading ? <RefreshCw className="w-6 h-6 animate-spin" /> : <Zap className="w-6 h-6 fill-indigo-600" />}
                 SINCRONIZAR ESTRATEGIA
@@ -195,7 +195,7 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
                   )}
                   {messages.map((msg, i) => (
                       <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                          <div className={`max-w-[85%] p-4 rounded-[1.5rem] ${
+                          <div className={`max-w-[85%] p-4 rounded-3xl ${
                               msg.role === 'user' 
                               ? 'bg-indigo-600 text-white rounded-tr-sm shadow-xl' 
                               : 'bg-white/5 text-slate-200 rounded-tl-sm border border-white/10 backdrop-blur-md'
