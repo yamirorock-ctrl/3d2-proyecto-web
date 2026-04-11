@@ -12,9 +12,6 @@ const AdminLogin: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [errorMSG, setErrorMSG] = useState<string|null>(null);
 
-  // Read admin secret for basic protection
-  const ADMIN_SECRET = ((import.meta as any).env?.VITE_ADMIN_SECRET || 'modozen').trim();
-
   useEffect(() => {
     // If already admin, go to panel
     if (isAdmin) {

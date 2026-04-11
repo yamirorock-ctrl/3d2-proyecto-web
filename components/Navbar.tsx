@@ -27,23 +27,6 @@ const Navbar: React.FC<NavbarProps> = ({ cartCount, onOpenCart, onGoHome, onOpen
   const [search, setSearch] = useState('');
   const [showSearch, setShowSearch] = useState(false);
   const navigate = useNavigate();
-  // Leer el secreto desde env; fallback a 'modozen' si falta
-  const ADMIN_SECRET = ((import.meta as any).env?.VITE_ADMIN_SECRET || 'modozen').trim();
-
-  const issueAdminEntry = (secret: string) => {
-    const s = (secret || '').trim();
-    if (!s) { alert('Secreto requerido'); return; }
-    const ts = Date.now();
-    const minute = Math.floor(ts / 60000);
-    const raw = s + ':' + minute;
-    const token = btoa(unescape(encodeURIComponent(raw))).replace(/=+$/,'');
-    try {
-      sessionStorage.setItem('admin_entry_token', token);
-      sessionStorage.setItem('admin_entry_ts', String(ts));
-    } catch {}
-    // Forzamos la redirección real para evitar problemas de ruteo
-    window.location.href = '/admin/login';
-  };
   // Logo local servido desde /public respetando la base de Vite
   // Usar logo JPG absoluto desde /public
   const logoUrl = `/LOGO.jpg`;
@@ -111,19 +94,11 @@ const Navbar: React.FC<NavbarProps> = ({ cartCount, onOpenCart, onGoHome, onOpen
                   onKeyDown={(e)=>{
                     if (e.key === 'Enter') {
                       e.preventDefault(); // Evitar submit
-                      const s = search.trim().toLowerCase();
-                      if ((ADMIN_SECRET && s === ADMIN_SECRET.toLowerCase()) || s === 'modozen') {
-                        console.log('Modo Zen activado');
-                        issueAdminEntry(ADMIN_SECRET || 'modozen');
-                        setSearch('');
-                        setShowSearch(false);
-                      } else {
-                        if (search.trim() && onSearch) {
-                          onSearch(search.trim());
-                        }
-                        setSearch('');
-                        setShowSearch(false);
+                      if (search.trim() && onSearch) {
+                        onSearch(search.trim());
                       }
+                      setSearch('');
+                      setShowSearch(false);
                     } else if (e.key === 'Escape') {
                       setShowSearch(false);
                     }
@@ -211,23 +186,6 @@ const Navbar: React.FC<NavbarProps> = ({ cartCount, onOpenCart, onGoHome, onOpen
                     onKeyDown={(e)=>{
                       if (e.key === 'Enter') {
                         e.preventDefault();
-                        // Secret Admin Entry
-                        const s = search.trim().toLowerCase();
-                        if ((ADMIN_SECRET && s === ADMIN_SECRET.toLowerCase()) || s === 'modozen') {
-                          const ts = Date.now();
-                          const minute = Math.floor(ts / 60000);
-                          const raw = ADMIN_SECRET + ':' + minute;
-                          const token = btoa(unescape(encodeURIComponent(raw))).replace(/=+$/,'');
-                          try {
-                            sessionStorage.setItem('admin_entry_token', token);
-                            sessionStorage.setItem('admin_entry_ts', String(ts));
-                          } catch {}
-                          window.location.href = '/admin/login'; // Force reload/redirect
-                          setSearch('');
-                          setIsMobileMenuOpen(false);
-                          return;
-                        }
-                        
                         if (search.trim() && onSearch) {
                           onSearch(search.trim());
                         }
