@@ -431,14 +431,21 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
               </h3>
               <div className="space-y-3">
                   {(analysis?.recommended_actions || []).map((act, i) => (
-                      <div key={i} onClick={() => sendMessage(`Ejecutar: ${act.action} para ${act.item_id}`)} className="flex items-start gap-4 p-4 rounded-2xl bg-[#0b0f19] hover:bg-violet-900/20 cursor-pointer border border-[#1e293b] hover:border-violet-500/30 transition-all">
-                          <div className="shrink-0 mt-1 w-2 h-2 rounded-full bg-cyan-400 shadow-[0_0_8px_#22d3ee]"></div>
-                          <div>
-                              <h4 className="text-xs font-bold text-white mb-1 uppercase">{act.action}</h4>
-                              <p className="text-[11px] text-slate-400">{act.reason}</p>
-                          </div>
-                          <ChevronRight className="shrink-0 ml-auto w-4 h-4 text-slate-600" />
-                      </div>
+                       <div key={i} className="flex items-center gap-4 p-4 rounded-2xl bg-[#0b0f19] border border-[#1e293b] hover:border-violet-500/30 transition-all">
+                           <div className="shrink-0 w-2 h-2 rounded-full bg-cyan-400 shadow-[0_0_8px_#22d3ee]"></div>
+                           <div className="flex-1">
+                               <h4 className="text-xs font-bold text-white mb-1 uppercase">{act.action}</h4>
+                               <p className="text-[11px] text-slate-400">{act.reason}</p>
+                           </div>
+                           {act.intent && (
+                             <button 
+                               onClick={() => handleExecuteAction(act)}
+                               className="shrink-0 bg-cyan-500 hover:bg-cyan-400 text-black px-3 py-2 rounded-xl text-[10px] font-black transition-all shadow-[0_0_15px_rgba(34,211,238,0.2)]"
+                             >
+                               APROBAR
+                             </button>
+                           )}
+                       </div>
                   ))}
                   {(!analysis?.recommended_actions || analysis.recommended_actions.length === 0) && (
                       <p className="text-sm text-slate-500 italic">No hay acciones pendientes.</p>

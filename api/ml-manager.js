@@ -416,13 +416,16 @@ export default async function handler(req, res) {
           "insights": [{"type": "warning|opportunity|success", "title": "...", "description": "..."}],
           "categorized_items": {"protagonists": [], "stagnant": [], "zombies": []},
           "strategic_plan": "...",
-          "recommended_actions": [{"action": "...", "item_id": "...", "reason": "...", "impact": "alto|medio|bajo"}],
+          "recommended_actions": [{"intent": "update_price|pause_item|activate_item", "action": "Título legible", "item_id": "MLA...", "value": "nuevo_valor_si_aplica", "reason": "...", "impact": "alto|medio|bajo"}],
           "ads_sales": 0,
           "organic_sales": 0,
           "clicks": 0,
           "total_revenue": 0,
           "acos": 0
         }
+        
+        IMPORTANTE: Para las acciones recomendadas, usa estrictamente los intents: 'update_price' (requiere value numérico), 'pause_item' o 'activate_item'.
+        
         DATOS: MÉTRICAS: ${JSON.stringify(metrics)} | OBJETIVOS: ${JSON.stringify(goals)} | INVENTARIO: ${JSON.stringify(current_inventory)}`;
         
         const result = await model.generateContent(prompt);
