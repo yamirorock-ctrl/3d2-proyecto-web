@@ -254,32 +254,65 @@ export default async function handler(req, res) {
 
       case 'get-metrics': {
         const mlUserId = dbToken.user_id;
-        const searchRes = await fetch(`https://api.mercadolibre.com/users/${mlUserId}/items/search?status=active`, {
-            headers: { Authorization: `Bearer ${accessToken}` }
-        });
-        const searchData = await searchRes.json();
-        const mlIds = (searchData.results || []).slice(0, 20);
+        const headers = { Authorization: `Bearer ${accessToken}` };
 
+        // 1. Datos base: Items, Órdenes y Campañas generales
         const dateFrom = new Date();
         dateFrom.setDate(dateFrom.getDate() - 30);
-        const ordersRes = await fetch(`https://api.mercadolibre.com/orders/search?seller=${mlUserId}&order.date_created.from=${dateFrom.toISOString()}`, {
-            headers: { Authorization: `Bearer ${accessToken}` }
-        });
-        const ordersData = await ordersRes.json();
 
-        const adsRes = await fetch(`https://api.mercadolibre.com/advertising/advertising_campaigns/search?seller_id=${mlUserId}`, {
-            headers: { Authorization: `Bearer ${accessToken}` }
-        });
-        const adsData = await adsRes.json();
+        const [searchRes, ordersRes, adsRes, userRes, questionsRes] = await Promise.all([
+          fetch(`https://api.mercadolibre.com/users/${mlUserId}/items/search?status=active`, { headers }),
+          fetch(`https://api.mercadolibre.com/orders/search?seller=${mlUserId}&order.date_created.from=${dateFrom.toISOString()}`, { headers }),
+          fetch(`https://api.mercadolibre.com/advertising/advertising_campaigns/search?seller_id=${mlUserId}`, { headers }),
+          fetch(`https://api.mercadolibre.com/users/${mlUserId}`, { headers }),
+          fetch(`https://api.mercadolibre.com/questions/search?seller_id=${mlUserId}&status=unanswered`, { headers })
+        ]);
+
+        const [searchData, ordersData, adsData, userData, questionsData] = await Promise.all([
+          searchRes.json(), ordersRes.json(), adsRes.json(), userRes.json(), questionsRes.json()
+        ]);
+
+        const mlIds = (searchData.results || []).slice(0, 10);
+
+        // 2. Métricas profundas por Item (Visitas y Salud)
+        const itemsMetrics = await Promise.all(mlIds.map(async (id) => {
+          const [vRes, detRes] = await Promise.all([
+            fetch(`https://api.mercadolibre.com/items/${id}/visits/time_window?last=30&unit=day`, { headers }),
+            fetch(`https://api.mercadolibre.com/items/${id}`, { headers })
+          ]);
+          const [vData, detData] = await Promise.all([vRes.json(), detRes.json()]);
+          return {
+            id,
+            title: detData.title,
+            visits_30d: vData.total_visits || 0,
+            price: detData.price,
+            permalink: detData.permalink,
+            manufacturing_days: detData.sale_terms?.find(t => t.id === 'MANUFACTURING_TIME')?.value_name || '0',
+            health: detData.health
+          };
+        }));
+
+        // 3. Radar de Competencia (Ejemplo para el Producto Estrella)
+        const competitorRes = await fetch(`https://api.mercadolibre.com/sites/MLA/search?q=Cartel de bienvenida bebé&limit=5`);
+        const competitorData = await competitorRes.json();
+        const competition = (competitorData.results || []).map(r => ({
+          title: r.title,
+          price: r.price,
+          free_shipping: r.shipping?.free_shipping,
+          listing_type: r.listing_type_id
+        }));
 
         return res.status(200).json({
            account_id: mlUserId,
+           reputation: userData.seller_reputation,
+           unanswered_questions: questionsData.total || 0,
            items_count: searchData.paging?.total || 0,
            recent_orders: ordersData.results?.length || 0,
            orders_summary: ordersData.results?.slice(0, 10) || [],
            ads: adsData.results || [],
-           top_items: mlIds,
-           sales: ordersData // Para compatibilidad con el front que lo usa para el gráfico
+           top_items: itemsMetrics,
+           competition,
+           sales: ordersData
         });
       }
 
@@ -291,14 +324,20 @@ export default async function handler(req, res) {
           model: "gemini-3.1-pro-preview",
           systemInstruction: `
             Eres VANGUARD, el Socio Estratégico Senior de 3D2 Store. 
-            Misión: Reputación, Ventas y Posicionamiento en ML Argentina.
-            Estilo: Mentor paciente y pedagogo, experto en métricas.
-            REGLA DE ORO DE EJECUCIÓN (HITL): NUNCA ejecutes nada por ti mismo ni des por hecho que las acciones se hicieron. TU ROL ES PROPONER AL HUMANO PARA SU APROBACIÓN.
-            Si, a raíz de una charla, consideras que debemos mutar MercadoLibre (ej. modificar precio, pausar algo, o reactivar), DEBES incluir un bloque de código al final de tu mensaje exactamente con este formato:
-            \`\`\`action
-            {"intent": "update_price|pause_item|activate_item", "item_id": "MLA...", "value": 15000, "description": "Modificar el precio a $15000 para ganar competitividad frente al mercado."}
-            \`\`\`
-            El humano verá un botón para autorizarte en base a ese bloque JSON.
+            Misión: Reputación (Misión #1), Ventas y Rentabilidad Neta real.
+            Estilo: Consultor senior, directo y obsesionado con el margen.
+            
+            REGLAS DE ANÁLISIS MEJORADAS:
+            1. REPUTACIÓN Y SALUD: Vigila la tasa de reclamos y demoras. Si detectas Manufacturing Days altos con demoras, sugiere ampliar plazos o pausar preventivamente.
+            2. PUBLICIDAD (ADS): Analiza el ACOS. Si el ACOS es mayor al margen de producto, sugiere pausar Ads. Prioriza inversión en Protagonistas.
+            3. RENTABILIDAD QUIRÚRGICA: 
+               - Costo de Material: Asume $20,000 ARS por 1kg de filamento PETG/PLA. Si un producto usa 172g, el costo base es (172/1000 * 20000).
+               - Impuestos/Comisiones: Calcula ~15% de comisión ML (Gold) + ~10% de retenciones impositivas estimadas.
+               - Sugiere subas de precio si la Ganancia Neta es < 20%.
+            4. RADAR DE COMPETENCIA: Compara el precio del "Cartel de bienvenida" con los 5 competidores del radar. Si estamos >15% arriba sin Envío Gratis, sugiere ajuste.
+            5. EMBUDO ORGÁNICO: Si un ítem tiene >500 visitas/mes pero <1% de conversión, el problema no es tráfico, es la publicación (fotos/precio). Sugiere cambios.
+
+            REGLA DE ORO HITL: NUNCA ejecutes nada solo. Propón mediante bloques \`\`\`action.
           `
         });
 
