@@ -431,15 +431,16 @@ export default async function handler(req, res) {
           try {
             const userContent = attachment ? `🖼️ [Imagen adjunta enviada] ${message}` : message;
             
-            // Recuperamos el historial persistente real para no pisar lo antiguo (>24h)
-            const { data: currentMemory } = await supabase
-              .from('vanguard_memory')
-              .select('content')
-              .eq('user_id', String(userId))
-              .eq('event_type', 'chat_history')
-              .maybeSingle();
-
-            const persistentHistory = currentMemory?.content || [];
+            let persistentHistory = [];
+            if (supabase) {
+              const { data: currentMemory } = await supabase
+                .from('vanguard_memory')
+                .select('content')
+                .eq('user_id', String(userId))
+                .eq('event_type', 'chat_history')
+                .maybeSingle();
+              persistentHistory = currentMemory?.content || [];
+            }
             
             const updatedHistory = [
               ...persistentHistory, 
