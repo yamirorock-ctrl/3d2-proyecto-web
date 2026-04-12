@@ -273,7 +273,7 @@ export default async function handler(req, res) {
         const [searchRes, ordersRes, adsRes, userRes, questionsRes] = await Promise.all([
           fetch(`https://api.mercadolibre.com/users/${mlUserId}/items/search?status=active`, { headers }),
           fetch(`https://api.mercadolibre.com/orders/search?seller=${mlUserId}&order.date_created.from=${dateFrom.toISOString()}`, { headers }),
-          fetch(`https://api.mercadolibre.com/advertising/product_ads/campaigns?seller_id=${mlUserId}`, { headers }),
+          fetch(`https://api.mercadolibre.com/advertising/product_ads/campaigns`, { headers }),
           fetch(`https://api.mercadolibre.com/users/${mlUserId}`, { headers }),
           fetch(`https://api.mercadolibre.com/questions/search?seller_id=${mlUserId}&status=unanswered`, { headers })
         ]);
@@ -391,22 +391,15 @@ export default async function handler(req, res) {
             longTermContext = `\n[MEMORIA DE SESIONES ANTERIORES (>24hs)]:\n${archivedHistory.map(h => `${h.role}: ${h.content.substring(0, 100)}...`).join('\n')}\n`;
           }
           const contextPrompt = `
-            SOLICITUD: ${message || 'Revisa esta imagen'}
-            
-            CONTEXTO REAL DE MERCADOLIBRE (ACTUALIZADO: ADS + COMPETENCIA ACTIVOS):
-            A partir de ahora, tienes visibilidad completa sobre:
-            1. MERCADO ADS: En el campo 'ads' verás el presupuesto y estado de las campañas.
-            2. COMPETENCIA: En el campo 'competition' verás a los 5 rivales directos de tus productos estrella.
-            Usa estos datos para auditar la inversión y proponer ajustes de precio agresivos si es necesario.
-            
-            DATOS DE LA SESIÓN:
-            - MÉTRICAS DE CUENTA: ${JSON.stringify(metrics || {})}
-            - PRODUCTOS ACTIVOS: ${JSON.stringify(metrics?.top_items || [])}
-            - OBJETIVOS: ${JSON.stringify(goals || {})}
-            - STOCK INTERNO: ${JSON.stringify(current_inventory || [])}
-            
-            REGLA: Si hay discrepancia entre el Stock Interno y MercadoLibre, prioriza la advertencia al usuario. 
-            Usa las descripciones y fotos de 'PRODUCTOS ACTIVOS' para responder dudas sobre publicaciones.
+            SOLICITUD ACTUAL: ${message || 'Sin mensaje adicional'}
+            ---
+            DATOS DE APOYO (Solo úsalos si la charla lo requiere):
+            - ADS: ${JSON.stringify(metrics?.ads || [])}
+            - RIVALES: ${JSON.stringify(metrics?.competition || [])}
+            - TOP ITEMS: ${JSON.stringify((metrics?.top_items || []).map(i => ({ id: i.id, title: i.title, status: i.status })))}
+            ---
+            REGLA DE ORO DE VANGUARD: 
+            Responde exclusivamente a la SOLICITUD ACTUAL. No repitas el análisis de todo el ecosistema (Rendimiento, Clasificación, etc.) a menos que el usuario te pida un "Reporte Completo". Sé un socio que conversa, no una máquina que imprime reportes en cada turno.
           `;
           
           chatParts.push({ text: longTermContext + contextPrompt });
