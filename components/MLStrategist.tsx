@@ -286,46 +286,57 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
                     <div className="bg-white/20 p-3 rounded-2xl inline-block mb-4 backdrop-blur-sm">
                         <DollarSign className="w-6 h-6 text-white" />
                     </div>
-                    <div className="text-3xl font-black text-white">${(analysis?.total_revenue || 82450).toLocaleString()}</div>
-                    <div className="text-xs font-medium text-white/80 mt-1 uppercase tracking-wider">Ventas Totales (30d)</div>
+                    <div className="text-3xl font-black text-white">${(analysis?.total_revenue || 0).toLocaleString()}</div>
+                    <div className="text-xs font-medium text-white/80 mt-1 uppercase tracking-wider">Ventas Proyectadas (30d)</div>
                 </div>
             </div>
             <div className="mt-4 flex items-center gap-2 text-xs font-bold text-emerald-300">
-                <TrendingUp className="w-4 h-4" /> +12.5% vs mes anterior
+                <TrendingUp className="w-4 h-4" /> Vanguard Activo
             </div>
          </div>
 
-         {/* Secondary Metrics - Dark Cards */}
-         <div className="bg-[#131826] border border-white/5 rounded-3xl p-6 hover:border-violet-500/30 transition-all">
-            <div className="bg-cyan-500/10 p-3 rounded-2xl inline-block mb-4 text-cyan-400">
-                <Target className="w-6 h-6" />
+         {/* Reputation Card */}
+         <div className="bg-[#131826] border border-white/5 rounded-3xl p-6 hover:border-violet-500/30 transition-all cursor-pointer" onClick={() => sendMessage("Explícame el estado de mi reputación")}>
+            <div className="flex justify-between items-start mb-4">
+               <div className="bg-emerald-500/10 p-3 rounded-2xl text-emerald-400">
+                   <ShieldCheck className="w-6 h-6" />
+               </div>
+               <div className={`px-2 py-1 rounded-lg text-[10px] font-bold uppercase ${
+                 currentMetrics?.reputation?.level_id?.includes('5') ? 'bg-emerald-500/20 text-emerald-400' : 'bg-yellow-500/20 text-yellow-400'
+               }`}>
+                 {currentMetrics?.reputation?.level_id?.split('_')[1] || 'Sin Nivel'}
+               </div>
             </div>
-            <div className="text-3xl font-black text-white">{analysis?.organic_sales || 1250}</div>
-            <div className="text-xs font-medium text-slate-500 mt-1 uppercase tracking-wider">Órdenes Totales</div>
+            <div className="text-3xl font-black text-white flex items-center gap-2">
+               {currentMetrics?.reputation?.transactions?.total || 0}
+            </div>
+            <div className="text-xs font-medium text-slate-500 mt-1 uppercase tracking-wider">Ventas del Período</div>
             <div className="mt-4 flex items-center gap-2 text-xs font-bold text-emerald-400">
-                <TrendingUp className="w-4 h-4" /> +8.3% vs mes anterior
+                <CheckCircle className="w-4 h-4" /> Reputación Protegida
             </div>
          </div>
 
-         <div className="bg-[#131826] border border-white/5 rounded-3xl p-6 hover:border-violet-500/30 transition-all">
-            <div className="bg-emerald-500/10 p-3 rounded-2xl inline-block mb-4 text-emerald-400">
-                <Zap className="w-6 h-6" />
+         {/* Questions Card */}
+         <div className="bg-[#131826] border border-white/5 rounded-3xl p-6 hover:border-violet-500/30 transition-all cursor-pointer" onClick={() => sendMessage("Tengo preguntas sin responder, ¿qué debo priorizar?")}>
+            <div className="bg-violet-500/10 p-3 rounded-2xl inline-block mb-4 text-violet-400">
+                <MessageSquare className="w-6 h-6" />
             </div>
-            <div className="text-3xl font-black text-white">42.8%</div>
-            <div className="text-xs font-medium text-slate-500 mt-1 uppercase tracking-wider">Conversión Ads</div>
-            <div className="mt-4 flex items-center gap-2 text-xs font-bold text-emerald-400">
-                <TrendingUp className="w-4 h-4" /> Tasa Óptima
+            <div className="text-3xl font-black text-white">{currentMetrics?.unanswered_questions || 0}</div>
+            <div className="text-xs font-medium text-slate-500 mt-1 uppercase tracking-wider">Preguntas Pendientes</div>
+            <div className="mt-4 flex items-center gap-2 text-xs font-bold text-rose-400">
+                <Zap className="w-4 h-4" /> ¡La velocidad vende!
             </div>
          </div>
 
-         <div className="bg-[#131826] border border-white/5 rounded-3xl p-6 hover:border-violet-500/30 transition-all">
+         {/* Ads ACOS Card */}
+         <div className="bg-[#131826] border border-white/5 rounded-3xl p-6 hover:border-violet-500/30 transition-all cursor-pointer" onClick={() => sendMessage("Analiza mi ACOS y el rendimiento publicitario")}>
             <div className="bg-rose-500/10 p-3 rounded-2xl inline-block mb-4 text-rose-400">
-                <BarChart className="w-6 h-6" />
+                <Activity className="w-6 h-6" />
             </div>
-            <div className="text-3xl font-black text-white">{analysis?.acos || '39.8'}%</div>
-            <div className="text-xs font-medium text-slate-500 mt-1 uppercase tracking-wider">ACOS Global</div>
-            <div className="mt-4 flex items-center gap-2 text-xs font-bold text-slate-400">
-                <CheckCircle className="w-4 h-4 text-emerald-400" /> Bajo Control
+            <div className="text-3xl font-black text-white">{analysis?.acos || 0}%</div>
+            <div className="text-xs font-medium text-slate-500 mt-1 uppercase tracking-wider">ACOS (Costo Ads)</div>
+            <div className="mt-4 flex items-center gap-2 text-xs font-bold text-emerald-400">
+                <BarChart className="w-4 h-4" /> Bajo Control de IA
             </div>
          </div>
       </div>
@@ -436,9 +447,56 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
           </div>
       </div>
 
-      {/* =========================================
-          FLOATING VANGUARD CHAT (Messenger Style Draggable)
-      =========================================== */}
+      {/* MARKET RADAR & ORGANIC FUNNEL */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 relative z-10 mt-6 mb-20 lg:mb-8">
+          {/* Market Radar (Competition) */}
+          <div className="bg-[#131826] p-6 rounded-3xl border border-white/5">
+              <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest flex items-center gap-2 mb-6">
+                 <ShieldCheck className="w-5 h-5 text-emerald-500" /> Radar de Mercado (Competencia)
+              </h3>
+              <div className="space-y-3">
+                  {(currentMetrics?.competition || []).map((comp: any, i: number) => (
+                      <div key={i} className="flex items-center justify-between p-3 rounded-2xl bg-[#0b0f19] border border-white/5">
+                          <div className="flex flex-col">
+                              <span className="text-xs font-bold text-white truncate w-48 sm:w-64">{comp.title}</span>
+                              <span className="text-[10px] text-slate-500">{comp.listing_type === 'gold_pro' ? 'Premium' : 'Clásica'}</span>
+                          </div>
+                          <div className="text-right">
+                              <div className="text-sm font-black text-emerald-400">${comp.price.toLocaleString()}</div>
+                              {comp.free_shipping && <div className="text-[10px] text-cyan-400 font-bold">Envío Gratis</div>}
+                          </div>
+                      </div>
+                  ))}
+                  {(!currentMetrics?.competition || currentMetrics.competition.length === 0) && (
+                      <p className="text-xs text-slate-500 italic">No hay datos de competencia disponibles.</p>
+                  )}
+              </div>
+          </div>
+
+          {/* Organic Funnel (Visits) */}
+          <div className="bg-[#131826] p-6 rounded-3xl border border-white/5">
+              <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest flex items-center gap-2 mb-6">
+                 <Zap className="w-5 h-5 text-cyan-400" /> Embudo Orgánico (Top 5 Visitas)
+              </h3>
+              <div className="space-y-3">
+                  {(currentMetrics?.top_items || []).slice(0, 5).map((item: any, i: number) => (
+                      <div key={i} className="flex items-center justify-between p-3 rounded-2xl bg-[#0b0f19] border border-white/5">
+                          <div className="flex flex-col">
+                              <span className="text-xs font-bold text-white truncate w-48 sm:w-64">{item.title}</span>
+                              <span className="text-[10px] text-slate-500">Salud: {Math.round(item.health || 0 * 100)}%</span>
+                          </div>
+                          <div className="text-right">
+                              <div className="text-sm font-black text-white">{item.visits_30d}</div>
+                              <div className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Visitas (30d)</div>
+                          </div>
+                      </div>
+                  ))}
+                  {(!currentMetrics?.top_items || currentMetrics.top_items.length === 0) && (
+                      <p className="text-xs text-slate-500 italic">No hay datos de tráfico orgánico.</p>
+                  )}
+              </div>
+          </div>
+      </div>
       <div 
         className="fixed z-100 flex flex-col items-end drop-shadow-2xl"
         style={{ 
