@@ -357,7 +357,7 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
                 </div>
             </div>
             
-            <div className="h-[350px] w-full" style={{ minHeight: '350px' }}>
+            <div className="h-[350px] w-full vanguard-chart-container">
                 <ResponsiveContainer width="100%" height="100%">
                     <ComposedChart data={chartData.length > 0 ? chartData : [
                         {date: 'W1', salesAds: 18, salesOrg: 12, clicks: 80},
@@ -505,10 +505,10 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
           </div>
       </div>
       <div 
-        className="fixed z-100 flex flex-col items-end drop-shadow-2xl"
+        className="fixed z-100 flex flex-col items-end drop-shadow-2xl vanguard-floating-bubble"
         style={{ 
-          bottom: `${position.bottom}px`, 
-          right: `${position.right}px` 
+          '--bottom': `${position.bottom}px`, 
+          '--right': `${position.right}px` 
         } as React.CSSProperties}
       >
         {/* Chat Window (Opens Upwards) */}

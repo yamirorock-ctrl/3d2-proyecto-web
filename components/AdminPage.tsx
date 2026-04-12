@@ -18,7 +18,6 @@ import FinancialDashboard from './FinancialDashboard';
 import AIMonitor from './AIMonitor';
 import AdminPromptEditor from './AdminPromptEditor';
 import { useAdminNotifications } from '../hooks/useAdminNotifications';
-import PreSalesManager from './PreSalesManager';
 import AdminConfig from './AdminConfig';
 import { ArcaManager } from './ArcaManager';
 

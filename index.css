@@ -89,6 +89,7 @@
 /* 3D Bubble Effect */
 .glass-bubble {
   background: rgba(255, 255, 255, 0.1);
+  -webkit-backdrop-filter: blur(10px);
   backdrop-filter: blur(10px);
   border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 50%;
@@ -126,3 +127,31 @@
   animation: wander 20s ease-in-out infinite;
 }
 
+
+/* Vanguard Strategist Utility Classes */
+.vanguard-chart-container {
+  min-height: 350px;
+}
+
+.vanguard-chat-bubble {
+  min-height: 500px;
+}
+
+.vanguard-floating-bubble {
+  bottom: var(--bottom, 24px);
+  right: var(--right, 24px);
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 5px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}

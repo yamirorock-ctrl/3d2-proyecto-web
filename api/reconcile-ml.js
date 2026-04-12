@@ -62,7 +62,7 @@ async function syncAllItems() {
         }
     }
 
-    const { data: sbProducts } = await supabase.from('products').select('id, name, ml_item_id');
+    const { data: sbProducts } = await supabase.from('products').select('id, name, ml_item_id, ml_status');
 
     console.log("\n⚖️ Comparando...");
     let updates = 0;
@@ -77,12 +77,17 @@ async function syncAllItems() {
         });
 
         if (match) {
-            if (match.ml_item_id !== mlProduct.id) {
-                console.log(`[ACTION] Actualizando vinculación: ${match.name} -> ${mlProduct.id}`);
-                await supabase.from('products').update({ ml_item_id: mlProduct.id }).eq('id', match.id);
+            const needsUpdate = match.ml_item_id !== mlProduct.id || match.ml_status !== mlProduct.status;
+            if (needsUpdate) {
+                console.log(`[ACTION] Sincronizando: ${match.name} -> ID: ${mlProduct.id}, Status: ${mlProduct.status}`);
+                await supabase.from('products').update({ 
+                    ml_item_id: mlProduct.id,
+                    ml_status: mlProduct.status,
+                    ml_permalink: mlProduct.permalink
+                }).eq('id', match.id);
                 updates++;
             } else {
-                console.log(`[MATCH] ${match.name} está correctamente vinculado.`);
+                console.log(`[MATCH] ${match.name} está correctamente vinculado y activo.`);
             }
         } else {
             console.log(`[NOT-FOUND] Publicación "${mlProduct.title}" no existe en el catálogo web.`);
