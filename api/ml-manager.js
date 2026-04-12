@@ -273,7 +273,7 @@ export default async function handler(req, res) {
         const [searchRes, ordersRes, adsRes, userRes, questionsRes] = await Promise.all([
           fetch(`https://api.mercadolibre.com/users/${mlUserId}/items/search?status=active`, { headers }),
           fetch(`https://api.mercadolibre.com/orders/search?seller=${mlUserId}&order.date_created.from=${dateFrom.toISOString()}`, { headers }),
-          fetch(`https://api.mercadolibre.com/advertising/advertising_campaigns/search?seller_id=${mlUserId}`, { headers }),
+          fetch(`https://api.mercadolibre.com/advertising/product_ads/campaigns/search?seller_id=${mlUserId}`, { headers }),
           fetch(`https://api.mercadolibre.com/users/${mlUserId}`, { headers }),
           fetch(`https://api.mercadolibre.com/questions/search?seller_id=${mlUserId}&status=unanswered`, { headers })
         ]);
@@ -307,15 +307,21 @@ export default async function handler(req, res) {
           };
         }));
 
-        // 3. Radar de Competencia (Ejemplo para el Producto Estrella)
-        const competitorRes = await fetch(`https://api.mercadolibre.com/sites/MLA/search?q=Cartel de bienvenida bebé&limit=5`);
-        const competitorData = await competitorRes.json();
-        const competition = (competitorData.results || []).map(r => ({
-          title: r.title,
-          price: r.price,
-          free_shipping: r.shipping?.free_shipping,
-          listing_type: r.listing_type_id
-        }));
+        // 3. Radar de Competencia Dinámico (Usa el producto activo más importante)
+        let competition = [];
+        if (itemsMetrics.length > 0) {
+          const topProductTitle = itemsMetrics[0].title;
+          const competitorRes = await fetch(`https://api.mercadolibre.com/sites/MLA/search?q=${encodeURIComponent(topProductTitle)}&limit=5`);
+          const competitorData = await competitorRes.json();
+          competition = (competitorData.results || []).map(r => ({
+            title: r.title,
+            price: r.price,
+            free_shipping: r.shipping?.free_shipping,
+            listing_type: r.listing_type_id,
+            sold_quantity: r.sold_quantity || 0,
+            permalink: r.permalink
+          }));
+        }
 
         return res.status(200).json({
            account_id: mlUserId,
