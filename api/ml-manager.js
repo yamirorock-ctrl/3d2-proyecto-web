@@ -366,14 +366,19 @@ export default async function handler(req, res) {
         DATOS: MÉTRICAS: ${JSON.stringify(metrics)} | OBJETIVOS: ${JSON.stringify(goals)} | INVENTARIO: ${JSON.stringify(current_inventory)}`;
         
         const result = await model.generateContent(prompt);
-        const responseText = result.response.text();
+        let responseText = result.response.text();
+        
+        // Limpiar bloques de código markdown si existen
+        responseText = responseText.replace(/```json/g, "").replace(/```/g, "").trim();
         
         // Extracción robusta de JSON (busca el primer { y el último })
         const jsonMatch = responseText.match(/\{[\s\S]*\}/);
         if (!jsonMatch) {
           throw new Error("La IA no devolvió un formato de datos válido.");
         }
-        const finalObj = JSON.parse(jsonMatch[0]);
+        
+        let jsonString = jsonMatch[0];
+        const finalObj = JSON.parse(jsonString);
 
         try {
           if (supabase) {
