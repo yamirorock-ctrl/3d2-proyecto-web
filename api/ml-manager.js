@@ -311,20 +311,23 @@ export default async function handler(req, res) {
 
         // 3. Radar de Competencia Dinámico (Usa el producto activo más importante)
         let competition = [];
-        if (itemsMetrics.length > 0) {
-          // Usamos solo las primeras 4 palabras para que la búsqueda sea más amplia y efectiva
-          const topProductTitle = itemsMetrics[0].title.split(' ').slice(0, 4).join(' ');
-          const competitorRes = await fetch(`https://api.mercadolibre.com/sites/MLA/search?q=${encodeURIComponent(topProductTitle)}&limit=5`);
-          const competitorData = await competitorRes.json();
-          competition = (competitorData.results || []).map(r => ({
-            title: r.title,
-            price: r.price,
-            free_shipping: r.shipping?.free_shipping,
-            listing_type: r.listing_type_id,
-            sold_quantity: r.sold_quantity || 0,
-            permalink: r.permalink
-          }));
-        }
+        try {
+          if (itemsMetrics.length > 0) {
+            const topProductTitle = itemsMetrics[0].title.split(' ').slice(0, 4).join(' ');
+            const competitorRes = await fetch(`https://api.mercadolibre.com/sites/MLA/search?q=${encodeURIComponent(topProductTitle)}&limit=5`);
+            const competitorData = await competitorRes.json();
+            competition = (competitorData.results || []).map(r => ({
+              title: r.title,
+              price: r.price,
+              free_shipping: r.shipping?.free_shipping,
+              listing_type: r.listing_type_id,
+              sold_quantity: r.sold_quantity || 0,
+              permalink: r.permalink
+            }));
+          }
+        } catch (e) { console.error("Radar fail", e); }
+
+        const finalAds = adsData.results || (Array.isArray(adsData) ? adsData : (adsData.campaigns || []));
 
         return res.status(200).json({
            account_id: mlUserId,
@@ -333,7 +336,7 @@ export default async function handler(req, res) {
            items_count: searchData.paging?.total || 0,
            recent_orders: ordersData.results?.length || 0,
            orders_summary: ordersData.results?.slice(0, 10) || [],
-           ads: adsData.results || (Array.isArray(adsData) ? adsData : []),
+           ads: finalAds,
            top_items: itemsMetrics,
            competition,
            sales: ordersData,
@@ -341,7 +344,8 @@ export default async function handler(req, res) {
              ads_status: adsRes.status,
              search_status: searchRes.status,
              competition_count: competition.length,
-             items_metrics_count: itemsMetrics.length
+             items_metrics_count: itemsMetrics.length,
+             ads_raw: JSON.stringify(adsData).substring(0, 500) // Telemetría para debug
            }
         });
       }
