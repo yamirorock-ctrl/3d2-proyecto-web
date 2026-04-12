@@ -282,7 +282,8 @@ export default async function handler(req, res) {
           searchRes.json(), ordersRes.json(), adsRes.json(), userRes.json(), questionsRes.json()
         ]);
 
-        const mlIds = (searchData.results || []).slice(0, 10);
+        // 1. Obtención de productos activos (Aumentamos el límite a 25 para evitar el recorte reportado)
+        const mlIds = (searchData.results || []).slice(0, 25);
 
         // 2. Métricas profundas por Item (Visitas, Salud y DESCRIPCIÓN)
         const itemsMetrics = await Promise.all(mlIds.map(async (id) => {
@@ -393,13 +394,15 @@ export default async function handler(req, res) {
           const contextPrompt = `
             SOLICITUD ACTUAL: ${message || 'Sin mensaje adicional'}
             ---
-            DATOS DE APOYO (Solo úsalos si la charla lo requiere):
+            CONTEXTO ESTRATÉGICO (CONOCIMIENTO DE FONDO):
+            - REPUTACIÓN: ${JSON.stringify(metrics?.reputation || {})}
+            - ÓRDENES (30d): ${metrics?.recent_orders || 0} órdenes. Recientes: ${JSON.stringify(metrics?.orders_summary?.slice(0, 5) || [])}
             - ADS: ${JSON.stringify(metrics?.ads || [])}
-            - RIVALES: ${JSON.stringify(metrics?.competition || [])}
-            - TOP ITEMS: ${JSON.stringify((metrics?.top_items || []).map(i => ({ id: i.id, title: i.title, status: i.status })))}
+            - COMPETENCIA: ${JSON.stringify(metrics?.competition || [])}
+            - STOCK INTERNO (DB): ${JSON.stringify((current_inventory || []).map(i => ({ id: i.id, stock: i.stock, cost: i.cost_usd || i.production_cost })))}
+            - CATÁLOGO ML: ${JSON.stringify((metrics?.top_items || []).map(i => ({ id: i.id, title: i.title, status: i.status, visits: i.visits_30d })))}
             ---
-            REGLA DE ORO DE VANGUARD: 
-            Responde exclusivamente a la SOLICITUD ACTUAL. No repitas el análisis de todo el ecosistema (Rendimiento, Clasificación, etc.) a menos que el usuario te pida un "Reporte Completo". Sé un socio que conversa, no una máquina que imprime reportes en cada turno.
+            REGLA DE VANGUARD: Responde directamente a la SOLICITUD ACTUAL. Usa los DATOS ESTRATÉGICOS solo para validar tu respuesta o si el usuario te lo pide. No imprimas reportes completos por defecto.
           `;
           
           chatParts.push({ text: longTermContext + contextPrompt });
