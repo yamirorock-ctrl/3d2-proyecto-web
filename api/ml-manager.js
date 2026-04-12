@@ -273,7 +273,7 @@ export default async function handler(req, res) {
         const [searchRes, ordersRes, adsRes, userRes, questionsRes] = await Promise.all([
           fetch(`https://api.mercadolibre.com/users/${mlUserId}/items/search?status=active`, { headers }),
           fetch(`https://api.mercadolibre.com/orders/search?seller=${mlUserId}&order.date_created.from=${dateFrom.toISOString()}`, { headers }),
-          fetch(`https://api.mercadolibre.com/advertising/product_ads/campaigns`, { headers }),
+          fetch(`https://api.mercadolibre.com/advertising/product_ads/campaigns/search?user_id=${mlUserId}`, { headers }),
           fetch(`https://api.mercadolibre.com/users/${mlUserId}`, { headers }),
           fetch(`https://api.mercadolibre.com/questions/search?seller_id=${mlUserId}&status=unanswered`, { headers })
         ]);
