@@ -349,35 +349,35 @@ export default async function handler(req, res) {
         const { metrics, goals, current_inventory, isChat, history, message, attachment } = req.body;
         const apiKey = process.env.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
         const genAI = new GoogleGenerativeAI(apiKey);
-        const model = genAI.getGenerativeModel({ 
-          model: "gemini-3.1-pro-preview",
-          systemInstruction: `
-            Eres VANGUARD, el Socio Estratégico Senior de 3D2 Store. 
-            Misión: Reputación (Misión #1), Ventas y Rentabilidad Neta real.
-            PROTOCOLO:
-            1. BREVEDAD OBLIGATORIA: Respuestas de máximo 200 palabras. Sé 70% más breve.
-            2. NO SALUDAR: Si hay historial, directo al grano.
-            3. ALERTAS DE STATUS: Si un producto tiene 'status' pausado o bajo revisión (como el Panda), avisa de inmediato.
-            4. ESTILO: Socio estratégico asertivo y extremadamente conciso.
-          `,
-          generationConfig: {
-            maxOutputTokens: 1200,
-            temperature: 0.7,
-            responseMimeType: "application/json"
-          }
-        });
-
+        
         if (isChat) {
-          // Segmentación de memoria: 24 horas para "chat activo"
+          // 1. Configuración para CHAT (Fluido y Dinámico)
+          const chatModel = genAI.getGenerativeModel({ 
+            model: "gemini-3.1-pro-preview",
+            systemInstruction: `
+              Eres VANGUARD, el Socio Estratégico Senior de 3D2 Store. 
+              DINAMISMO ADAPTATIVO: No tienes límite de palabras, pero eres eficiente. 
+              - Si el usuario saluda o hace una duda simple: Respuesta corta y cordial.
+              - Si se debate estrategia o fallos técnicos: Respuesta profunda, detallada y analítica.
+              - No uses introducciones repetitivas. No te presentes si ya hay historial.
+              - Tu objetivo es una charla fluida, natural y humana.
+            `
+          });
+
           const rollingLimit = new Date();
           rollingLimit.setHours(rollingLimit.getHours() - 24);
           
           const rawHistory = history || [];
-          const activeHistory = rawHistory.filter(h => !h.timestamp || new Date(h.timestamp) > rollingLimit);
+          // Filtramos y aseguramos que el historial para Gemini empiece SIEMPRE con un USER
+          let activeHistory = rawHistory.filter(h => !h.timestamp || new Date(h.timestamp) > rollingLimit);
+          while (activeHistory.length > 0 && activeHistory[0].role === 'vanguard') {
+            activeHistory.shift(); 
+          }
+          
           const archivedHistory = rawHistory.filter(h => h.timestamp && new Date(h.timestamp) <= rollingLimit);
 
-          const chat = model.startChat({
-            history: (activeHistory || []).map(m => ({
+          const chat = chatModel.startChat({
+            history: activeHistory.map(m => ({
                 role: m.role === 'vanguard' ? 'model' : 'user',
                 parts: [{ text: String(m.content) }]
             }))
@@ -455,26 +455,37 @@ export default async function handler(req, res) {
           return res.status(200).json({ reply });
         }
 
-        const prompt = `Analiza los siguientes datos y devuelve OBLIGATORIAMENTE un objeto JSON puro con esta estructura exacta:
+        // 2. Configuración para ANÁLISIS ESTRATÉGICO (JSON Puro)
+        const analysisModel = genAI.getGenerativeModel({ 
+          model: "gemini-3.1-pro-preview",
+          systemInstruction: `
+            Eres VANGUARD (Misión: Análisis de Datos). 
+            Debes devolver OBLIGATORIAMENTE un JSON puro.
+            - Alertas de Status: Si un producto tiene 'status' pausado/review, márcalo en alerts.
+            - Publicidad: Analiza el presupuesto y ROAS.
+            - Radar: Analiza a los competidores inyectados.
+          `,
+          generationConfig: {
+            maxOutputTokens: 1500,
+            temperature: 0.7,
+            responseMimeType: "application/json"
+          }
+        });
+
+        const prompt = `Analiza los siguientes datos y devuelve un objeto JSON puro con esta estructura:
         {
-          "summary": "resumen breve",
+          "summary": "resumen estratégico",
           "performance_score": 0-100,
           "insights": [{"type": "warning|opportunity|success", "title": "...", "description": "..."}],
           "categorized_items": {"protagonists": [], "stagnant": [], "zombies": []},
           "strategic_plan": "...",
-          "recommended_actions": [{"intent": "update_price|pause_item|activate_item", "action": "Título legible", "item_id": "MLA...", "value": "nuevo_valor_si_aplica", "reason": "...", "impact": "alto|medio|bajo"}],
-          "ads_sales": 0,
-          "organic_sales": 0,
-          "clicks": 0,
-          "total_revenue": 0,
-          "acos": 0
+          "recommended_actions": [{"intent": "update_price|pause_item|activate_item", "action": "Título", "item_id": "MLA...", "value": "val", "reason": "...", "impact": "alto"}],
+          "ads_sales": 0, "organic_sales": 0, "clicks": 0, "total_revenue": 0, "acos": 0
         }
-        
-        IMPORTANTE: Para las acciones recomendadas, usa estrictamente los intents: 'update_price' (requiere value numérico), 'pause_item' o 'activate_item'.
         
         DATOS: MÉTRICAS: ${JSON.stringify(metrics)} | OBJETIVOS: ${JSON.stringify(goals)} | INVENTARIO: ${JSON.stringify(current_inventory)}`;
         
-        const result = await model.generateContent(prompt);
+        const result = await analysisModel.generateContent(prompt);
         let responseText = result.response.text();
         
         let finalObj;
