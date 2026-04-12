@@ -330,10 +330,16 @@ export default async function handler(req, res) {
            items_count: searchData.paging?.total || 0,
            recent_orders: ordersData.results?.length || 0,
            orders_summary: ordersData.results?.slice(0, 10) || [],
-           ads: adsData.results || [],
+           ads: adsData.results || (Array.isArray(adsData) ? adsData : []),
            top_items: itemsMetrics,
            competition,
-           sales: ordersData
+           sales: ordersData,
+           debug_info: {
+             ads_status: adsRes.status,
+             search_status: searchRes.status,
+             competition_count: competition.length,
+             items_metrics_count: itemsMetrics.length
+           }
         });
       }
 
