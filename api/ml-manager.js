@@ -88,10 +88,17 @@ export default async function handler(req, res) {
           .select('*')
           .eq('user_id', String(userId));
 
+        const history = data?.find(d => d.event_type === 'chat_history')?.content || [];
+        
+        // Solo enviamos al UI lo de las últimas 24h para el "chat limpio"
+        const rollingLimit = new Date();
+        rollingLimit.setHours(rollingLimit.getHours() - 24);
+        const activeChat = history.filter(h => !h.timestamp || new Date(h.timestamp) > rollingLimit);
+
         const state = {
           analysis: data?.find(d => d.event_type === 'latest_analysis')?.content?.analysis || null,
           goals: data?.find(d => d.event_type === 'latest_analysis')?.content?.goals || null,
-          chat_history: data?.find(d => d.event_type === 'chat_history')?.content || []
+          chat_history: activeChat
         };
         return res.status(200).json(state);
       }
@@ -341,7 +348,8 @@ export default async function handler(req, res) {
                a) El usuario lo pida explícitamente.
                b) Se haya llegado a un acuerdo claro en la charla sobre qué paso dar.
             3. ANÁLISIS POR DEMANDA: Si el usuario hace una consulta general, analiza discretamente y guía la conversación. No lances planes estructurados de 5 pasos si no hay un problema activo que lo amerite.
-            4. DINAMISMO Y FLUIDEZ (Estilo Humano): 
+            4. MEMORIA DE LARGO PLAZO: Tienes acceso a un bloque llamado "MEMORIA DE SESIONES ANTERIORES (>24hs)". Si el usuario te pide "revisar el plan de ayer" o se refiere a charlas pasadas, consulta ese bloque para dar continuidad.
+            5. DINAMISMO Y FLUIDEZ (Estilo Humano): 
                - Sé ADAPTABLE: Si la duda es corta o puntual, responde de forma concisa y directa. 
                - Profundiza solo cuando el debate estratégico o la complejidad de los datos lo exijan.
                - Evita respuestas de 3000 caracteres por defecto. Tu objetivo es una conversación fluida, no un reporte eterno en cada turno.
@@ -361,14 +369,28 @@ export default async function handler(req, res) {
         });
 
         if (isChat) {
+          // Segmentación de memoria: 24 horas para "chat activo"
+          const rollingLimit = new Date();
+          rollingLimit.setHours(rollingLimit.getHours() - 24);
+          
+          const rawHistory = history || [];
+          const activeHistory = rawHistory.filter(h => !h.timestamp || new Date(h.timestamp) > rollingLimit);
+          const archivedHistory = rawHistory.filter(h => h.timestamp && new Date(h.timestamp) <= rollingLimit);
+
           const chat = model.startChat({
-            history: (history || []).map(m => ({
+            history: (activeHistory || []).map(m => ({
                 role: m.role === 'vanguard' ? 'model' : 'user',
                 parts: [{ text: String(m.content) }]
             }))
           });
           
           let chatParts = [];
+          
+          // Resumen de Memoria Larga (HITL History)
+          let longTermContext = "";
+          if (archivedHistory.length > 0) {
+            longTermContext = `\n[MEMORIA DE SESIONES ANTERIORES (>24hs)]:\n${archivedHistory.map(h => `${h.role}: ${h.content.substring(0, 100)}...`).join('\n')}\n`;
+          }
           const contextPrompt = `
             SOLICITUD: ${message || 'Revisa esta imagen'}
             
@@ -381,7 +403,7 @@ export default async function handler(req, res) {
             Usa las descripciones y fotos de 'PRODUCTOS ACTIVOS' para responder dudas sobre publicaciones.
           `;
           
-          chatParts.push({ text: contextPrompt });
+          chatParts.push({ text: longTermContext + contextPrompt });
           
           if (attachment) {
             try {
@@ -393,18 +415,30 @@ export default async function handler(req, res) {
 
           const result = await chat.sendMessage(chatParts);
           const reply = result.response.text();
-          
           try {
-            // Regla de Oro: Limpiamos los attachments del history para que la BD no explote guardando bytes innecesarios.
-            const cleanHistory = (history || []).map(h => ({ role: h.role, content: h.content }));
             const userContent = attachment ? `🖼️ [Imagen adjunta enviada] ${message}` : message;
             
-            const updatedHistory = [...cleanHistory, { role: 'user', content: String(userContent) }, { role: 'vanguard', content: String(reply) }];
+            // Recuperamos el historial persistente real para no pisar lo antiguo (>24h)
+            const { data: currentMemory } = await supabase
+              .from('vanguard_memory')
+              .select('content')
+              .eq('user_id', String(userId))
+              .eq('event_type', 'chat_history')
+              .maybeSingle();
+
+            const persistentHistory = currentMemory?.content || [];
+            
+            const updatedHistory = [
+              ...persistentHistory, 
+              { role: 'user', content: String(userContent), timestamp: new Date().toISOString() }, 
+              { role: 'vanguard', content: String(reply), timestamp: new Date().toISOString() }
+            ];
             if (supabase) {
               await supabase.from('vanguard_memory').upsert({
                   user_id: String(userId),
                   event_type: 'chat_history',
-                  content: updatedHistory
+                  content: updatedHistory,
+                  updated_at: new Date().toISOString()
               }, { onConflict: 'user_id,event_type' });
             }
           } catch (e) { 
