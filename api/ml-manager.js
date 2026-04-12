@@ -276,17 +276,30 @@ export default async function handler(req, res) {
         const dateFrom = new Date();
         dateFrom.setDate(dateFrom.getDate() - 30);
 
-        const [searchRes, ordersRes, adsRes, userRes, questionsRes] = await Promise.all([
+        const [searchRes, ordersRes, userRes, questionsRes, adsAuthRes] = await Promise.all([
           fetch(`https://api.mercadolibre.com/users/${mlUserId}/items/search?status=active`, { headers }),
           fetch(`https://api.mercadolibre.com/orders/search?seller=${mlUserId}&order.date_created.from=${dateFrom.toISOString()}`, { headers }),
-          fetch(`https://api.mercadolibre.com/advertising/product_ads/campaigns/search?user_id=${mlUserId}`, { headers }),
           fetch(`https://api.mercadolibre.com/users/${mlUserId}`, { headers }),
-          fetch(`https://api.mercadolibre.com/questions/search?seller_id=${mlUserId}&status=unanswered`, { headers })
+          fetch(`https://api.mercadolibre.com/questions/search?seller_id=${mlUserId}&status=unanswered`, { headers }),
+          // Paso 1 de Ads V2: Obtener el ID de Anunciante
+          fetch(`https://api.mercadolibre.com/advertising/advertisers?product_id=PADS`, { headers: { ...headers, 'api-version': '1' } })
         ]);
 
-        const [searchData, ordersData, adsData, userData, questionsData] = await Promise.all([
-          searchRes.json(), ordersRes.json(), adsRes.json(), userRes.json(), questionsRes.json()
+        const [searchData, ordersData, userData, questionsData, adsAuthData] = await Promise.all([
+          searchRes.json(), ordersRes.json(), userRes.json(), questionsRes.json(), adsAuthRes.json()
         ]);
+
+        // Paso 2 de Ads V2: Consultar campañas usando Advertiser ID + Site ID
+        let adsData = { results: [] };
+        let adsStatus = 0;
+        const advertiser = (adsAuthData.advertisers || []).find(a => a.site_id === 'MLA'); // Buscamos Argentina
+        if (advertiser) {
+          const dateTo = new Date();
+          const adsUrl = `https://api.mercadolibre.com/advertising/MLA/advertisers/${advertiser.advertiser_id}/product_ads/campaigns/search?date_from=${dateFrom.toISOString().split('T')[0]}&date_to=${dateTo.toISOString().split('T')[0]}&metrics=clicks,prints,cost,acos,roas`;
+          const adsSearchRes = await fetch(adsUrl, { headers: { ...headers, 'api-version': '2' } });
+          adsData = await adsSearchRes.json();
+          adsStatus = adsSearchRes.status;
+        }
 
         // 1. Obtención de productos activos (Aumentamos el límite a 25 para evitar el recorte reportado)
         const mlIds = (searchData.results || []).slice(0, 25);
@@ -347,7 +360,7 @@ export default async function handler(req, res) {
            competition,
            sales: ordersData,
            debug_info: {
-             ads_status: adsRes.status,
+             ads_status: adsStatus,
              search_status: searchRes.status,
              competition_count: competition.length,
              items_metrics_count: itemsMetrics.length,
