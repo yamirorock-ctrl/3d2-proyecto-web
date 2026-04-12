@@ -394,10 +394,17 @@ export default async function handler(req, res) {
           const contextPrompt = `
             SOLICITUD: ${message || 'Revisa esta imagen'}
             
-            CONTEXTO REAL DE MERCADOLIBRE (DATOS OFICIALES API):
+            CONTEXTO REAL DE MERCADOLIBRE (ACTUALIZADO: ADS + COMPETENCIA ACTIVOS):
+            A partir de ahora, tienes visibilidad completa sobre:
+            1. MERCADO ADS: En el campo 'ads' verás el presupuesto y estado de las campañas.
+            2. COMPETENCIA: En el campo 'competition' verás a los 5 rivales directos de tus productos estrella.
+            Usa estos datos para auditar la inversión y proponer ajustes de precio agresivos si es necesario.
+            
+            DATOS DE LA SESIÓN:
             - MÉTRICAS DE CUENTA: ${JSON.stringify(metrics || {})}
-            - PRODUCTOS ACTIVOS (Full Data): ${JSON.stringify(metrics?.top_items || [])}
-            - STOCK INTERNO (Referencia): ${JSON.stringify(current_inventory || [])}
+            - PRODUCTOS ACTIVOS: ${JSON.stringify(metrics?.top_items || [])}
+            - OBJETIVOS: ${JSON.stringify(goals || {})}
+            - STOCK INTERNO: ${JSON.stringify(current_inventory || [])}
             
             REGLA: Si hay discrepancia entre el Stock Interno y MercadoLibre, prioriza la advertencia al usuario. 
             Usa las descripciones y fotos de 'PRODUCTOS ACTIVOS' para responder dudas sobre publicaciones.
