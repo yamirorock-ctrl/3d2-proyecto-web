@@ -519,6 +519,7 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
                }
              }}
           >
+            <div className="bg-[#131826] p-4 flex justify-between items-center border-b border-white/5">
                <div className="flex items-center gap-3">
                  <div className="relative">
                     <div className="w-10 h-10 bg-violet-600 rounded-full flex items-center justify-center shadow-lg">
