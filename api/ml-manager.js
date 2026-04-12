@@ -368,17 +368,35 @@ export default async function handler(req, res) {
         const result = await model.generateContent(prompt);
         let responseText = result.response.text();
         
-        // Limpiar bloques de código markdown si existen
-        responseText = responseText.replace(/```json/g, "").replace(/```/g, "").trim();
-        
-        // Extracción robusta de JSON (busca el primer { y el último })
-        const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-        if (!jsonMatch) {
+        // Función de extracción quirúrgica de JSON
+        const extractJson = (text) => {
+          const firstBrace = text.indexOf('{');
+          const lastBrace = text.lastIndexOf('}');
+          if (firstBrace === -1 || lastBrace === -1) return null;
+          
+          let candidate = text.substring(firstBrace, lastBrace + 1);
+          // Intentar limpiar marcadores de markdown remanentes dentro del bloque
+          candidate = candidate.replace(/```json/g, "").replace(/```/g, "").trim();
+          
+          // Si todavía hay problemas, intentamos parsear por bloques si la IA mandó basura intermedia
+          try {
+            return JSON.parse(candidate);
+          } catch (e) {
+            // Reintento: buscar el primer bloque completo válido
+            const matches = text.match(/\{[\s\S]*?\}/g);
+            if (matches) {
+              for (const m of matches) {
+                try { return JSON.parse(m); } catch (i) {}
+              }
+            }
+            throw e;
+          }
+        };
+
+        const finalObj = extractJson(responseText);
+        if (!finalObj) {
           throw new Error("La IA no devolvió un formato de datos válido.");
         }
-        
-        let jsonString = jsonMatch[0];
-        const finalObj = JSON.parse(jsonString);
 
         try {
           if (supabase) {
@@ -463,7 +481,8 @@ export default async function handler(req, res) {
     return res.status(500).json({ 
       error: error.message, 
       context: 'Error en ml-manager',
-      action: action
+      action: action,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
   }
 }
