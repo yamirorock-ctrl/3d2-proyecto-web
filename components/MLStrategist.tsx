@@ -441,7 +441,10 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
       =========================================== */}
       <div 
         className="fixed z-100 flex flex-col items-end drop-shadow-2xl"
-        style={{ bottom: `${position.bottom}px`, right: `${position.right}px` }}
+        style={{ 
+          bottom: `${position.bottom}px`, 
+          right: `${position.right}px` 
+        } as React.CSSProperties}
       >
         {/* Chat Window (Opens Upwards) */}
         {isChatOpen && (
