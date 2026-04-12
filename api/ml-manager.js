@@ -273,7 +273,7 @@ export default async function handler(req, res) {
         const [searchRes, ordersRes, adsRes, userRes, questionsRes] = await Promise.all([
           fetch(`https://api.mercadolibre.com/users/${mlUserId}/items/search?status=active`, { headers }),
           fetch(`https://api.mercadolibre.com/orders/search?seller=${mlUserId}&order.date_created.from=${dateFrom.toISOString()}`, { headers }),
-          fetch(`https://api.mercadolibre.com/advertising/product_ads/campaigns/search?seller_id=${mlUserId}`, { headers }),
+          fetch(`https://api.mercadolibre.com/advertising/product_ads/campaigns?seller_id=${mlUserId}`, { headers }),
           fetch(`https://api.mercadolibre.com/users/${mlUserId}`, { headers }),
           fetch(`https://api.mercadolibre.com/questions/search?seller_id=${mlUserId}&status=unanswered`, { headers })
         ]);
@@ -302,6 +302,7 @@ export default async function handler(req, res) {
             description: descData.plain_text || '',
             pictures: (detData.pictures || []).slice(0, 3).map((p) => p.url),
             manufacturing_days: detData.sale_terms?.find((t) => t.id === 'MANUFACTURING_TIME')?.value_name || '0',
+            status: detData.status,
             health: detData.health,
             professionalism: Math.round((detData.health || 0) * 100)
           };
@@ -310,7 +311,8 @@ export default async function handler(req, res) {
         // 3. Radar de Competencia Dinámico (Usa el producto activo más importante)
         let competition = [];
         if (itemsMetrics.length > 0) {
-          const topProductTitle = itemsMetrics[0].title;
+          // Usamos solo las primeras 4 palabras para que la búsqueda sea más amplia y efectiva
+          const topProductTitle = itemsMetrics[0].title.split(' ').slice(0, 4).join(' ');
           const competitorRes = await fetch(`https://api.mercadolibre.com/sites/MLA/search?q=${encodeURIComponent(topProductTitle)}&limit=5`);
           const competitorData = await competitorRes.json();
           competition = (competitorData.results || []).map(r => ({
@@ -352,26 +354,16 @@ export default async function handler(req, res) {
           systemInstruction: `
             Eres VANGUARD, el Socio Estratégico Senior de 3D2 Store. 
             Misión: Reputación (Misión #1), Ventas y Rentabilidad Neta real.
-            Estilo: Consultor estratégico, observador y analítico. 
-            
-            PROTOCOLO VANGUARD (Mente Crítica):
-            1. PRIORIDAD AL DIÁLOGO: Tu objetivo principal es PENSAR junto al usuario. No te apresures a proponer cambios técnicos (\`\`\`action) sin antes haber debatido la estrategia.
-            2. EQUILIBRIO CONVERSACIONAL: Adapta tu extensión a la complejidad. Si es algo simple, sé breve. Si es un debate estratégico, sé detallado. Busca una charla fluida y natural, no un reporte fijo.
-            3. NO SALUDAR: Si hay historial, NO vuelvas a presentarte ni a decir "Hola".
-            4. MEMORIA: Usa el bloque "MEMORIA ANTERIOR" solo si el usuario te lo pide.
-            5. ESTILO: Sé un socio estratégico asertivo. No uses plantillas rígidas ni introducciones innecesarias.
-            
-            REGLAS DE BUSINESS INTELLIGENCE:
-            1. REPUTACIÓN Y SALUD: Detecta riesgos de demora antes que ML. Sugiere ampliar plazos si el stock es bajo o hay muchas ventas de "custom items".
-            2. PUBLICIDAD (ADS): Vigila el ACOS vs Margen. Si gastamos más de lo que ganamos, abre el debate.
-            3. RENTABILIDAD QUIRÚRGICA: 
-               - Material: $20,000/kg PETG. (Costo = peso_gramos * 20).
-               - Impuestos/Comisiones: ~25% total (15% ML + 10% Retenciones).
-               - Solo sugiere subir precios si el Margen Neto es < 20%.
-            4. COMPETENCIA Y EMBUDO: Usa el 'Radar' para fundamentar tus sugerencias, no como única verdad.
-            
-            REGLA DE ORO: Eres el cerebro, el humano es el ejecutor. No seas un bot de comandos, sé un socio de negocios natural y asertivo.
-          `
+            PROTOCOLO:
+            1. BREVEDAD OBLIGATORIA: Respuestas de máximo 200 palabras. Sé 70% más breve.
+            2. NO SALUDAR: Si hay historial, directo al grano.
+            3. ALERTAS DE STATUS: Si un producto tiene 'status' pausado o bajo revisión (como el Panda), avisa de inmediato.
+            4. ESTILO: Socio estratégico asertivo y extremadamente conciso.
+          `,
+          generationConfig: {
+            maxOutputTokens: 350,
+            temperature: 0.7
+          }
         });
 
         if (isChat) {
