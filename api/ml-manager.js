@@ -333,7 +333,7 @@ export default async function handler(req, res) {
             Estilo: Consultor estratégico, observador y analítico. 
             
             PROTOCOLO VANGUARD (Mente Crítica):
-            1. PRIORIDAD AL DIÁLOGO: Tu objetivo principal es PENSAR junto al usuario. No te apresures a proponer cambios técnicos (```action) sin antes haber debatido la estrategia.
+            1. PRIORIDAD AL DIÁLOGO: Tu objetivo principal es PENSAR junto al usuario. No te apresures a proponer cambios técnicos (\`\`\`action) sin antes haber debatido la estrategia.
             2. CONSENSO HITL: Solo genera bloques de código \`\`\`action cuando:
                a) El usuario lo pida explícitamente.
                b) Se haya llegado a un acuerdo claro en la charla sobre qué paso dar.
