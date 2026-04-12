@@ -361,8 +361,9 @@ export default async function handler(req, res) {
             4. ESTILO: Socio estratégico asertivo y extremadamente conciso.
           `,
           generationConfig: {
-            maxOutputTokens: 1000,
-            temperature: 0.7
+            maxOutputTokens: 1200,
+            temperature: 0.7,
+            responseMimeType: "application/json"
           }
         });
 
@@ -476,34 +477,18 @@ export default async function handler(req, res) {
         const result = await model.generateContent(prompt);
         let responseText = result.response.text();
         
-        // Función de extracción quirúrgica de JSON
-        const extractJson = (text) => {
-          const firstBrace = text.indexOf('{');
-          const lastBrace = text.lastIndexOf('}');
-          if (firstBrace === -1 || lastBrace === -1) return null;
-          
-          let candidate = text.substring(firstBrace, lastBrace + 1);
-          // Intentar limpiar marcadores de markdown remanentes dentro del bloque
-          candidate = candidate.replace(/```json/g, "").replace(/```/g, "").trim();
-          
-          // Si todavía hay problemas, intentamos parsear por bloques si la IA mandó basura intermedia
-          try {
-            return JSON.parse(candidate);
-          } catch (e) {
-            // Reintento: buscar el primer bloque completo válido
-            const matches = text.match(/\{[\s\S]*?\}/g);
-            if (matches) {
-              for (const m of matches) {
-                try { return JSON.parse(m); } catch (i) {}
-              }
-            }
-            throw e;
+        let finalObj;
+        try {
+          finalObj = JSON.parse(responseText.trim());
+        } catch (e) {
+          // Fallback por si acaso hay algún marcador remanente
+          const firstBrace = responseText.indexOf('{');
+          const lastBrace = responseText.lastIndexOf('}');
+          if (firstBrace !== -1 && lastBrace !== -1) {
+            finalObj = JSON.parse(responseText.substring(firstBrace, lastBrace + 1));
+          } else {
+            throw new Error("La IA no devolvió un formato JSON válido.");
           }
-        };
-
-        const finalObj = extractJson(responseText);
-        if (!finalObj) {
-          throw new Error("La IA no devolvió un formato de datos válido.");
         }
 
         try {
