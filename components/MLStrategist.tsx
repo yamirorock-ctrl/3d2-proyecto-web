@@ -505,7 +505,20 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
         } as React.CSSProperties}
       >
         {/* Chat Window (Opens Upwards) */}
-            <div className="bg-[#131826] p-4 flex justify-between items-center border-b border-white/5">
+        {isChatOpen && (
+          <div 
+             className="w-[360px] sm:w-[400px] h-[580px] bg-[#1a1c23] border border-white/10 rounded-3xl mb-4 shadow-[0_20px_50px_rgba(0,0,0,0.5)] flex flex-col overflow-hidden animate-in slide-in-from-bottom-5 fade-in duration-200"
+             onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
+             onDrop={(e) => {
+               e.preventDefault(); e.stopPropagation();
+               const file = e.dataTransfer.files?.[0];
+               if (file && file.type.startsWith('image/')) {
+                 const reader = new FileReader();
+                 reader.onload = () => setAttachment({ url: reader.result as string, type: file.type });
+                 reader.readAsDataURL(file);
+               }
+             }}
+          >
                <div className="flex items-center gap-3">
                  <div className="relative">
                     <div className="w-10 h-10 bg-violet-600 rounded-full flex items-center justify-center shadow-lg">

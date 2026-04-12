@@ -290,8 +290,8 @@ export default async function handler(req, res) {
             stock: detData.available_quantity,
             permalink: detData.permalink,
             description: descData.plain_text || '',
-            pictures: (detData.pictures || []).slice(0, 3).map((p: any) => p.url),
-            manufacturing_days: detData.sale_terms?.find((t: any) => t.id === 'MANUFACTURING_TIME')?.value_name || '0',
+            pictures: (detData.pictures || []).slice(0, 3).map((p) => p.url),
+            manufacturing_days: detData.sale_terms?.find((t) => t.id === 'MANUFACTURING_TIME')?.value_name || '0',
             health: detData.health,
             professionalism: Math.round((detData.health || 0) * 100)
           };
