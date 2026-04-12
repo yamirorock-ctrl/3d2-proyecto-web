@@ -31,19 +31,25 @@ export default async function handler(req, res) {
     let accessToken = null;
     let dbToken = null;
 
-    if (needsToken) {
-      const { data, error: tokenError } = await supabase
-        .from('ml_tokens')
-        .select('*')
-        .order('updated_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
+      if (needsToken) {
+        // Buscamos el token vinculado específicamente a ESTE usuario de la plataforma
+        const { data, error: tokenError } = await supabase
+          .from('ml_tokens')
+          .select('*')
+          .eq('user_id', String(userId))
+          .order('updated_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
 
-      if (tokenError || !data || !data.access_token) {
-        return res.status(401).json({ error: 'No hay token de ML vinculado.' });
-      }
-      dbToken = data;
-      accessToken = dbToken.access_token;
+        if (tokenError || !data || !data.access_token) {
+          // Fallback: Si no hay por ID específico, intentamos el último global para evitar bloqueo total en el simulador
+          const { data: globalData } = await supabase.from('ml_tokens').select('*').order('updated_at', { ascending: false }).limit(1).maybeSingle();
+          if (!globalData) return res.status(401).json({ error: 'No hay token de ML vinculado.' });
+          dbToken = globalData;
+        } else {
+          dbToken = data;
+        }
+        accessToken = dbToken.access_token;
 
       // Refresh Token IF EXPIRED (30 mins grace)
       const now = new Date();
@@ -263,7 +269,7 @@ export default async function handler(req, res) {
       }
 
       case 'get-metrics': {
-        const mlUserId = dbToken.user_id;
+        const mlUserId = dbToken.ml_user_id || dbToken.user_id; // Priorizar ID numérico de ML
         const headers = { Authorization: `Bearer ${accessToken}` };
 
         // 1. Datos base: Items, Órdenes y Campañas generales
@@ -558,7 +564,7 @@ export default async function handler(req, res) {
       }
 
       case 'oauth': {
-        const { code } = req.body;
+        const { code, userId: supabaseUserId } = req.body;
         const client_id = process.env.VITE_ML_APP_ID || process.env.ML_APP_ID;
         const client_secret = process.env.VITE_ML_APP_SECRET || process.env.VITE_ML_CLIENT_SECRET || process.env.ML_APP_SECRET;
         const redirect_uri = process.env.VITE_ML_REDIRECT_URI || process.env.ML_REDIRECT_URI;
@@ -570,7 +576,8 @@ export default async function handler(req, res) {
         if (!r.ok) return res.status(r.status).json({ error: 'OAuth failed', details: data });
 
         const payload = {
-          user_id: String(data.user_id),
+          user_id: supabaseUserId || String(data.user_id), // Guardamos el ID de Supabase para filtrado
+          ml_user_id: String(data.user_id),              // Guardamos el ID de ML para los endpoints
           access_token: data.access_token,
           refresh_token: data.refresh_token,
           expires_in: data.expires_in,
