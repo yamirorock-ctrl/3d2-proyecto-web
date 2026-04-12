@@ -455,51 +455,54 @@ export default async function handler(req, res) {
           return res.status(200).json({ reply });
         }
 
-        // 2. Configuración para ANÁLISIS ESTRATÉGICO (JSON Puro)
         const analysisModel = genAI.getGenerativeModel({ 
           model: "gemini-3.1-pro-preview",
           systemInstruction: `
-            Eres VANGUARD (Misión: Análisis de Datos). 
-            Debes devolver OBLIGATORIAMENTE un JSON puro.
-            - Alertas de Status: Si un producto tiene 'status' pausado/review, márcalo en alerts.
-            - Publicidad: Analiza el presupuesto y ROAS.
-            - Radar: Analiza a los competidores inyectados.
+            Eres VANGUARD, Socio Estratégico de Datos.
+            Analiza Métricas, Ads y Competencia. 
+            Devuelve un JSON con: summary, performance_score (0-100), insights, categorized_items, strategic_plan, recommended_actions y métricas de ads.
           `,
           generationConfig: {
             maxOutputTokens: 1500,
-            temperature: 0.7,
-            responseMimeType: "application/json"
+            temperature: 0.7
           }
         });
 
-        const prompt = `Analiza los siguientes datos y devuelve un objeto JSON puro con esta estructura:
+        const prompt = `Devuelve un objeto JSON con el análisis de estos datos:
         {
-          "summary": "resumen estratégico",
-          "performance_score": 0-100,
-          "insights": [{"type": "warning|opportunity|success", "title": "...", "description": "..."}],
-          "categorized_items": {"protagonists": [], "stagnant": [], "zombies": []},
-          "strategic_plan": "...",
-          "recommended_actions": [{"intent": "update_price|pause_item|activate_item", "action": "Título", "item_id": "MLA...", "value": "val", "reason": "...", "impact": "alto"}],
+          "summary": "resumen", "performance_score": 80, 
+          "insights": [{"type":"warning","title":"..","description":".."}],
+          "categorized_items": {"protagonists":[], "stagnant":[], "zombies":[]},
+          "strategic_plan": "..",
+          "recommended_actions": [{"intent":"update_price","action":"..","item_id":"MLA..","value":0,"reason":"..","impact":"alto"}],
           "ads_sales": 0, "organic_sales": 0, "clicks": 0, "total_revenue": 0, "acos": 0
         }
-        
-        DATOS: MÉTRICAS: ${JSON.stringify(metrics)} | OBJETIVOS: ${JSON.stringify(goals)} | INVENTARIO: ${JSON.stringify(current_inventory)}`;
+        DATOS: ${JSON.stringify(metrics).substring(0, 30000)} | INV: ${JSON.stringify(current_inventory).substring(0, 5000)}`;
         
         const result = await analysisModel.generateContent(prompt);
         let responseText = result.response.text();
         
-        let finalObj;
+        let finalObj = null;
         try {
-          finalObj = JSON.parse(responseText.trim());
-        } catch (e) {
-          // Fallback por si acaso hay algún marcador remanente
           const firstBrace = responseText.indexOf('{');
           const lastBrace = responseText.lastIndexOf('}');
           if (firstBrace !== -1 && lastBrace !== -1) {
-            finalObj = JSON.parse(responseText.substring(firstBrace, lastBrace + 1));
-          } else {
-            throw new Error("La IA no devolvió un formato JSON válido.");
+            const jsonPart = responseText.substring(firstBrace, lastBrace + 1);
+            finalObj = JSON.parse(jsonPart);
           }
+        } catch (e) { console.error("Parse fail", e); }
+
+        if (!finalObj) {
+           // Objeto de emergencia para no romper el dashboard
+           finalObj = {
+             summary: "Error analizando datos en tiempo real. Por favor, intenta de nuevo.",
+             performance_score: 0,
+             insights: [{type: 'warning', title: 'Fallo de Formato', description: 'La IA no pudo estructurar los datos correctamente.'}],
+             categorized_items: { protagonists: [], stagnant: [], zombies: [] },
+             strategic_plan: "No disponible.",
+             recommended_actions: [],
+             ads_sales: 0, organic_sales: 0, clicks: 0, total_revenue: 0, acos: 0
+           };
         }
 
         try {
