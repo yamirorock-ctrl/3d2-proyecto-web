@@ -274,21 +274,26 @@ export default async function handler(req, res) {
 
         const mlIds = (searchData.results || []).slice(0, 10);
 
-        // 2. Métricas profundas por Item (Visitas y Salud)
+        // 2. Métricas profundas por Item (Visitas, Salud y DESCRIPCIÓN)
         const itemsMetrics = await Promise.all(mlIds.map(async (id) => {
-          const [vRes, detRes] = await Promise.all([
+          const [vRes, detRes, descRes] = await Promise.all([
             fetch(`https://api.mercadolibre.com/items/${id}/visits/time_window?last=30&unit=day`, { headers }),
-            fetch(`https://api.mercadolibre.com/items/${id}`, { headers })
+            fetch(`https://api.mercadolibre.com/items/${id}`, { headers }),
+            fetch(`https://api.mercadolibre.com/items/${id}/description`, { headers })
           ]);
-          const [vData, detData] = await Promise.all([vRes.json(), detRes.json()]);
+          const [vData, detData, descData] = await Promise.all([vRes.json(), detRes.json(), descRes.json()]);
           return {
             id,
             title: detData.title,
             visits_30d: vData.total_visits || 0,
             price: detData.price,
+            stock: detData.available_quantity,
             permalink: detData.permalink,
-            manufacturing_days: detData.sale_terms?.find(t => t.id === 'MANUFACTURING_TIME')?.value_name || '0',
-            health: detData.health
+            description: descData.plain_text || '',
+            pictures: (detData.pictures || []).slice(0, 3).map((p: any) => p.url),
+            manufacturing_days: detData.sale_terms?.find((t: any) => t.id === 'MANUFACTURING_TIME')?.value_name || '0',
+            health: detData.health,
+            professionalism: Math.round((detData.health || 0) * 100)
           };
         }));
 
@@ -345,24 +350,31 @@ export default async function handler(req, res) {
           const chat = model.startChat({
             history: (history || []).map(m => ({
                 role: m.role === 'vanguard' ? 'model' : 'user',
-                // Evitamos pasar las fotos dentro del historial viejo a la IA para no quemar tokens inútilmente.
                 parts: [{ text: String(m.content) }]
             }))
           });
           
           let chatParts = [];
-          chatParts.push({ text: `MENSAJE USUARIO: ${message || 'Revisa esta imagen adjunta'} | MÉTRICAS: ${JSON.stringify(metrics || {})} | STOCK: ${JSON.stringify(current_inventory || [])}` });
+          const contextPrompt = `
+            SOLICITUD: ${message || 'Revisa esta imagen'}
+            
+            CONTEXTO REAL DE MERCADOLIBRE (DATOS OFICIALES API):
+            - MÉTRICAS DE CUENTA: ${JSON.stringify(metrics || {})}
+            - PRODUCTOS ACTIVOS (Full Data): ${JSON.stringify(metrics?.top_items || [])}
+            - STOCK INTERNO (Referencia): ${JSON.stringify(current_inventory || [])}
+            
+            REGLA: Si hay discrepancia entre el Stock Interno y MercadoLibre, prioriza la advertencia al usuario. 
+            Usa las descripciones y fotos de 'PRODUCTOS ACTIVOS' para responder dudas sobre publicaciones.
+          `;
+          
+          chatParts.push({ text: contextPrompt });
           
           if (attachment) {
             try {
               const base64Data = attachment.split(',')[1];
               const mimeType = attachment.split(';')[0].split(':')[1];
-              chatParts.push({
-                 inlineData: { data: base64Data, mimeType }
-              });
-            } catch (err) {
-              console.error("Error parseando el attachment base64", err);
-            }
+              chatParts.push({ inlineData: { data: base64Data, mimeType } });
+            } catch (err) { console.error("Error attachment", err); }
           }
 
           const result = await chat.sendMessage(chatParts);
