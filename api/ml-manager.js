@@ -27,7 +27,7 @@ export default async function handler(req, res) {
 
   try {
     // Solo requerir Token de ML si la acción lo necesita
-    const needsToken = ['get-metrics', 'strategic-analysis', 'suggest-title', 'bulk-sync-stock', 'sync-product', 'get-promotions', 'auto-link'].includes(action);
+    const needsToken = ['get-metrics', 'strategic-analysis', 'suggest-title', 'bulk-sync-stock', 'sync-product', 'get-promotions', 'auto-link', 'execute-hitl'].includes(action);
     let accessToken = null;
     let dbToken = null;
 
@@ -47,7 +47,10 @@ export default async function handler(req, res) {
 
       // Refresh Token IF EXPIRED (30 mins grace)
       const now = new Date();
-      const expiresAt = new Date(dbToken.expires_at || 0);
+      const updatedAt = new Date(dbToken.updated_at || 0);
+      const expiresIn = dbToken.expires_in || 21600; // Default ML: 6h
+      const expiresAt = new Date(updatedAt.getTime() + expiresIn * 1000);
+      
       if (now >= expiresAt || (expiresAt - now < 1800000)) {
         const client_id = process.env.VITE_ML_APP_ID || process.env.ML_APP_ID;
         const client_secret = process.env.VITE_ML_APP_SECRET || process.env.VITE_ML_CLIENT_SECRET || process.env.ML_APP_SECRET;
@@ -68,7 +71,7 @@ export default async function handler(req, res) {
           await supabase.from('ml_tokens').update({
             access_token: refreshData.access_token,
             refresh_token: refreshData.refresh_token,
-            expires_at: new Date(Date.now() + refreshData.expires_in * 1000).toISOString(),
+            expires_in: refreshData.expires_in,
             updated_at: new Date().toISOString()
           }).eq('user_id', dbToken.user_id);
         } else {
@@ -522,7 +525,7 @@ export default async function handler(req, res) {
           user_id: String(data.user_id),
           access_token: data.access_token,
           refresh_token: data.refresh_token,
-          expires_at: new Date(Date.now() + data.expires_in * 1000).toISOString(),
+          expires_in: data.expires_in,
           updated_at: new Date().toISOString()
         };
         await supabase.from('ml_tokens').upsert(payload, { onConflict: 'user_id' });

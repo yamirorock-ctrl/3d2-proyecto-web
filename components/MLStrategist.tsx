@@ -357,7 +357,7 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
                 </div>
             </div>
             
-            <div className="h-[350px]">
+            <div className="h-[350px] w-full" style={{ minHeight: '350px' }}>
                 <ResponsiveContainer width="100%" height="100%">
                     <ComposedChart data={chartData.length > 0 ? chartData : [
                         {date: 'W1', salesAds: 18, salesOrg: 12, clicks: 80},
