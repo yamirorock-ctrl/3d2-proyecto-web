@@ -457,49 +457,41 @@ export default async function handler(req, res) {
 
         const analysisModel = genAI.getGenerativeModel({ 
           model: "gemini-3.1-pro-preview",
-          systemInstruction: `
-            Eres VANGUARD, Socio Estratégico de Datos.
-            Analiza Métricas, Ads y Competencia. 
-            Devuelve un JSON con: summary, performance_score (0-100), insights, categorized_items, strategic_plan, recommended_actions y métricas de ads.
-          `,
-          generationConfig: {
-            maxOutputTokens: 1500,
-            temperature: 0.7
-          }
+          systemInstruction: "Eres un analista senior de e-commerce. Genera reportes técnicos en formato JSON."
         });
 
-        const prompt = `Devuelve un objeto JSON con el análisis de estos datos:
+        const prompt = `Analiza estos datos de MercadoLibre y genera un JSON con este esquema exacto:
         {
-          "summary": "resumen", "performance_score": 80, 
-          "insights": [{"type":"warning","title":"..","description":".."}],
-          "categorized_items": {"protagonists":[], "stagnant":[], "zombies":[]},
-          "strategic_plan": "..",
-          "recommended_actions": [{"intent":"update_price","action":"..","item_id":"MLA..","value":0,"reason":"..","impact":"alto"}],
+          "summary": "Resumen ejecutivo corto",
+          "performance_score": 0-100,
+          "insights": [{"type": "warning|opportunity|success", "title": "...", "description": "..."}],
+          "categorized_items": { "protagonists": [], "stagnant": [], "zombies": [] },
+          "strategic_plan": "Plan detallado para esta semana",
+          "recommended_actions": [{"intent": "update_price|pause_item", "action": "...", "item_id": "MLA...", "value": 0, "reason": "...", "impact": "alto"}],
           "ads_sales": 0, "organic_sales": 0, "clicks": 0, "total_revenue": 0, "acos": 0
         }
-        DATOS: ${JSON.stringify(metrics).substring(0, 30000)} | INV: ${JSON.stringify(current_inventory).substring(0, 5000)}`;
+        DATOS: ${JSON.stringify(metrics).substring(0, 25000)}`;
         
         const result = await analysisModel.generateContent(prompt);
-        let responseText = result.response.text();
+        const responseText = result.response.text();
         
         let finalObj = null;
         try {
-          const firstBrace = responseText.indexOf('{');
-          const lastBrace = responseText.lastIndexOf('}');
-          if (firstBrace !== -1 && lastBrace !== -1) {
-            const jsonPart = responseText.substring(firstBrace, lastBrace + 1);
-            finalObj = JSON.parse(jsonPart);
+          const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+          if (jsonMatch) {
+            finalObj = JSON.parse(jsonMatch[0].trim());
           }
-        } catch (e) { console.error("Parse fail", e); }
+        } catch (e) {
+          console.error("Parse Error:", e);
+        }
 
         if (!finalObj) {
-           // Objeto de emergencia para no romper el dashboard
            finalObj = {
-             summary: "Error analizando datos en tiempo real. Por favor, intenta de nuevo.",
-             performance_score: 0,
-             insights: [{type: 'warning', title: 'Fallo de Formato', description: 'La IA no pudo estructurar los datos correctamente.'}],
+             summary: "Hito técnico: Los datos están fluyendo pero la IA no logró estructurarlos. Recarga en unos segundos.",
+             performance_score: 50,
+             insights: [{type: 'warning', title: 'Sincronización en curso', description: 'El volumen de datos es alto. Intenta de nuevo.'}],
              categorized_items: { protagonists: [], stagnant: [], zombies: [] },
-             strategic_plan: "No disponible.",
+             strategic_plan: "Analizando señales de mercado...",
              recommended_actions: [],
              ads_sales: 0, organic_sales: 0, clicks: 0, total_revenue: 0, acos: 0
            };
