@@ -14,7 +14,7 @@ interface StrategicAnalysis {
   insights: Array<{ type: 'warning' | 'opportunity' | 'success'; title: string; description: string }>;
   categorized_items: { protagonists: string[]; stagnant: string[]; zombies: string[] };
   strategic_plan: string;
-  recommended_actions: Array<{ action: string; item_id: string; reason: string; impact: 'alto' | 'medio' | 'bajo' }>;
+  recommended_actions: Array<{ intent?: string; action: string; item_id: string; value?: string | number; reason: string; impact: 'alto' | 'medio' | 'bajo' }>;
   ads_sales?: number;
   organic_sales?: number;
   clicks?: number;
