@@ -361,7 +361,7 @@ export default async function handler(req, res) {
             4. ESTILO: Socio estratégico asertivo y extremadamente conciso.
           `,
           generationConfig: {
-            maxOutputTokens: 350,
+            maxOutputTokens: 1000,
             temperature: 0.7
           }
         });
