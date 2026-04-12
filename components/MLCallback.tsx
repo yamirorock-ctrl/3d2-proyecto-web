@@ -1,12 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
 // Minimal placeholder: captures `code` from query and shows status.
 // Later, we will exchange `code` for tokens via backend.
 export default function MLCallback() {
   const location = useLocation();
-  const navigate = useNavigate();
-  const [status, setStatus] = useState<'idle'|'processing'|'done'|'error'>('idle');
+   const navigate = useNavigate();
+   const { session } = useAuth();
+   const [status, setStatus] = useState<'idle'|'processing'|'done'|'error'>('idle');
   const [message, setMessage] = useState<string>('');
   const processedRef = React.useRef(false);
 
