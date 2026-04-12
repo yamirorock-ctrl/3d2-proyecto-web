@@ -93,6 +93,165 @@ export default async function handler(req, res) {
         return res.status(200).json(state);
       }
 
+      case 'auto-link': {
+        const mlUserId = dbToken.user_id;
+        const searchRes = await fetch(`https://api.mercadolibre.com/users/${mlUserId}/items/search?status=active`, {
+            headers: { Authorization: `Bearer ${accessToken}` }
+        });
+        const searchData = await searchRes.json();
+        const mlIds = searchData.results || [];
+        if (mlIds.length === 0) return res.status(200).json({ message: 'No hay publicaciones activas', linked: 0 });
+
+        const detailsRes = await fetch(`https://api.mercadolibre.com/items?ids=${mlIds.join(',')}`, {
+            headers: { Authorization: `Bearer ${accessToken}` }
+        });
+        const detailsData = await detailsRes.json();
+        const mlItems = detailsData.map(d => d.body).filter(Boolean);
+        const { data: localProducts } = await supabase.from('products').select('id, name, ml_item_id');
+
+        let linkedCount = 0;
+        let logs = [];
+        for (const item of mlItems) {
+            const mlTitle = item.title.toLowerCase();
+            const match = localProducts.find(p => {
+                if (p.ml_item_id === item.id) return false;
+                if (mlTitle === p.name.toLowerCase()) return true;
+                if (mlTitle.includes(p.name.toLowerCase())) return true;
+                const localWords = p.name.toLowerCase().split(' ').filter(w => w.length > 3).slice(0, 3);
+                if (localWords.length > 0 && localWords.every(w => mlTitle.includes(w))) return true;
+                return false;
+            });
+            if (match) {
+                await supabase.from('products').update({ ml_item_id: item.id, ml_permalink: item.permalink, ml_status: item.status }).eq('id', match.id);
+                linkedCount++;
+                logs.push(`Vinculado [${item.id}] -> "${match.name}"`);
+            }
+        }
+        return res.status(200).json({ message: 'Búsqueda completada', linked: linkedCount, logs });
+      }
+
+      case 'get-promotions': {
+        const mlUserId = dbToken.user_id;
+        const promosRes = await fetch(`https://api.mercadolibre.com/seller-promotions/principals?seller_id=${mlUserId}`, {
+            headers: { Authorization: `Bearer ${accessToken}` }
+        });
+        const promosData = await promosRes.json();
+        return res.status(200).json(promosData);
+      }
+
+      case 'bulk-sync-stock': {
+        const { productIds } = req.body;
+        let query = supabase.from('products').select('id, name, stock, ml_item_id');
+        if (productIds && productIds.length > 0) query = query.in('id', productIds);
+        else query = query.not('ml_item_id', 'is', null);
+
+        const { data: products } = await query;
+        const results = [];
+        for (const prod of products) {
+            if (!prod.ml_item_id) continue;
+            try {
+                const mlResp = await fetch(`https://api.mercadolibre.com/items/${prod.ml_item_id}`, {
+                    method: 'PUT',
+                    headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ available_quantity: Math.max(0, prod.stock || 0) })
+                });
+                if (mlResp.ok) results.push({ id: prod.id, status: 'success' });
+                else throw new Error(mlResp.statusText);
+            } catch (err) {
+                results.push({ id: prod.id, status: 'error', error: err.message });
+            }
+        }
+        return res.status(200).json({ results });
+      }
+
+      case 'sync-product': {
+        const { productId, productData, markupPercentage } = req.body;
+        const { data: product } = await supabase.from('products').select('*').eq('id', productId).single();
+        if (productData) Object.assign(product, productData);
+
+        const markup = markupPercentage !== undefined ? markupPercentage : 25;
+        const price = Math.floor(Number(product.price) * (1 + markup / 100));
+        const pictures = (product.images || []).map(img => ({ source: typeof img === 'string' ? img : img.url })).filter(img => img.source?.startsWith('http'));
+        if (pictures.length === 0 && product.image) pictures.push({ source: product.image });
+        if (pictures.length === 0) pictures.push({ source: "https://raw.githubusercontent.com/lucide-icons/lucide/main/icons/box.svg" });
+        
+        const itemBody = {
+            title: (product.ml_title || product.name).slice(0, 60),
+            category_id: product.ml_category_id || "MLA3530",
+            price,
+            currency_id: "ARS",
+            available_quantity: product.stock || 0,
+            buying_mode: "buy_it_now",
+            condition: "new",
+            listing_type_id: "gold_special",
+            pictures,
+            attributes: [
+                { id: "BRAND", value_name: product.brand || "3D2Store" },
+                { id: "MODEL", value_name: product.model || "Personalizado" },
+                { id: "ITEM_CONDITION", value_id: "2230284" }
+            ]
+        };
+
+        if (product.weight) itemBody.attributes.push({ id: "PACKAGE_WEIGHT", value_name: `${product.weight} g` });
+        if (product.dimensions?.length) itemBody.attributes.push({ id: "PACKAGE_LENGTH", value_name: `${product.dimensions.length} cm` });
+        if (product.dimensions?.width) itemBody.attributes.push({ id: "PACKAGE_WIDTH", value_name: `${product.dimensions.width} cm` });
+        if (product.dimensions?.height) itemBody.attributes.push({ id: "PACKAGE_HEIGHT", value_name: `${product.dimensions.height} cm` });
+
+        if (product.ml_item_id) {
+            await fetch(`https://api.mercadolibre.com/items/${product.ml_item_id}`, {
+                method: 'PUT',
+                headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ price, available_quantity: product.stock, pictures })
+            });
+            return res.status(200).json({ success: true, ml_id: product.ml_item_id });
+        } else {
+            const template = product.ml_attributes?.TEMPLATE || '';
+            const manualCategory = product.category?.toLowerCase() || '';
+            if (!product.ml_category_id) {
+                if (template === 'Bebés' || manualCategory.includes('bebé')) itemBody.category_id = "MLA417942";
+                else if (template === 'Mates' || manualCategory.includes('mate')) itemBody.category_id = "MLA190013";
+                else if (template === 'Llaveros' || manualCategory.includes('llavero')) itemBody.category_id = "MLA438318";
+                else if (template === 'Vasos' || manualCategory.includes('vaso')) itemBody.category_id = "MLA438030";
+                else if (template === 'Soportes' || manualCategory.includes('soporte')) itemBody.category_id = "MLA3530";
+                else {
+                    const queryText = product.name + (product.category ? ' ' + product.category : '');
+                    const predResp = await fetch(`https://api.mercadolibre.com/sites/MLA/domain_discovery/search?q=${encodeURIComponent(queryText)}`);
+                    const predData = await predResp.json();
+                    if (predData?.[0]) itemBody.category_id = predData[0].category_id;
+                }
+            }
+            try {
+                const attrsResp = await fetch(`https://api.mercadolibre.com/categories/${itemBody.category_id}/attributes`);
+                if (attrsResp.ok) {
+                    const categoryAttrs = await attrsResp.json();
+                    let currentAttrs = [...itemBody.attributes];
+                    categoryAttrs.forEach(attrDef => {
+                        if (attrDef.tags && attrDef.tags.required && !currentAttrs.find(a => a.id === attrDef.id)) {
+                            let val = "Genérico";
+                            if (attrDef.value_type === "number") val = "1";
+                            if (attrDef.value_type === "number_unit") val = "1 cm";
+                            currentAttrs.push({ id: attrDef.id, value_name: val });
+                        }
+                    });
+                    itemBody.attributes = currentAttrs;
+                }
+            } catch(e) {}
+
+            let createResp = await fetch(`https://api.mercadolibre.com/items`, {
+                method: 'POST',
+                headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify(itemBody)
+            });
+            let createData = await createResp.json();
+            if (createResp.ok) {
+                await supabase.from('products').update({ ml_item_id: createData.id, ml_status: createData.status, ml_permalink: createData.permalink }).eq('id', productId);
+                return res.status(200).json({ success: true, ml_id: createData.id });
+            } else {
+                return res.status(400).json({ error: createData.message || 'Error al crear en ML', details: createData.cause });
+            }
+        }
+      }
+
       case 'get-metrics': {
         const mlUserId = dbToken.user_id;
         const searchRes = await fetch(`https://api.mercadolibre.com/users/${mlUserId}/items/search?status=active`, {
