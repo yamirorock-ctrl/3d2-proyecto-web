@@ -35,16 +35,24 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
   const [unreadCount, setUnreadCount] = useState(0);
 
   // Attachment state for Vision AI
-  const [attachment, setAttachment] = useState<{ url: string, type: string } | null>(null);
+  const [attachments, setAttachments] = useState<{ url: string, type: string }[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file && file.type.startsWith('image/')) {
-      const reader = new FileReader();
-      reader.onload = () => setAttachment({ url: reader.result as string, type: file.type });
-      reader.readAsDataURL(file);
-    }
+    const files = Array.from(e.target.files || []);
+    files.forEach(file => {
+      if (file.type.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onload = () => {
+          setAttachments(prev => [...prev, { url: reader.result as string, type: file.type }]);
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+  };
+   
+  const removeAttachment = (index: number) => {
+    setAttachments(prev => prev.filter((_, i) => i !== index));
   };
 
   // Dragging state and logic
@@ -194,15 +202,19 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
 
   const sendMessage = async (presetText?: string) => {
     const text = presetText || userInput;
-    const currentAttachment = attachment;
-    if (!text.trim() && !currentAttachment) return;
+    const currentAttachments = attachments;
+    if (!text.trim() && currentAttachments.length === 0) return;
     
     if (presetText && !isChatOpen) setIsChatOpen(true);
     
-    const newMsg = { role: 'user', content: text, attachment: currentAttachment?.url };
+    const newMsg = { 
+      role: 'user', 
+      content: text, 
+      attachments: currentAttachments.map(a => a.url) 
+    };
     setMessages(prev => [...prev, newMsg]);
     setUserInput('');
-    setAttachment(null);
+    setAttachments([]);
     setChatLoading(true);
     try {
       const resp = await fetch('/api/ml-manager', {
@@ -213,7 +225,7 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
           isChat: true,
           history: messages,
           message: text,
-          attachment: currentAttachment?.url,
+          attachments: currentAttachments.map(a => a.url),
           metrics: currentMetrics,
           current_inventory: currentInventory,
           userId 
@@ -518,12 +530,16 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
              onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
              onDrop={(e) => {
                e.preventDefault(); e.stopPropagation();
-               const file = e.dataTransfer.files?.[0];
-               if (file && file.type.startsWith('image/')) {
-                 const reader = new FileReader();
-                 reader.onload = () => setAttachment({ url: reader.result as string, type: file.type });
-                 reader.readAsDataURL(file);
-               }
+               const files = Array.from(e.dataTransfer.files || []);
+               files.forEach(file => {
+                 if (file.type.startsWith('image/')) {
+                   const reader = new FileReader();
+                   reader.onload = () => {
+                     setAttachments(prev => [...prev, { url: reader.result as string, type: file.type }]);
+                   };
+                   reader.readAsDataURL(file);
+                 }
+               });
              }}
           >
             <div className="bg-[#131826] p-4 flex justify-between items-center border-b border-white/5">
@@ -571,7 +587,14 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
                        ? 'bg-violet-600 text-white rounded-br-sm' 
                        : 'bg-[#1e293b] text-slate-200 rounded-bl-sm border border-white/5'
                      }`}>
-                        {msg.attachment && (
+                        {msg.attachments && msg.attachments.length > 0 && (
+                           <div className="grid grid-cols-2 gap-2 mb-2">
+                             {msg.attachments.map((url: string, idx: number) => (
+                               <img key={idx} src={url} alt={`Adjunto ${idx}`} className="w-full rounded-lg h-32 object-cover border border-white/10" />
+                             ))}
+                           </div>
+                        )}
+                        {msg.attachment && !msg.attachments && (
                            <img src={msg.attachment} alt="Adjunto" className="w-full rounded-lg mb-2 max-h-40 object-cover border border-white/10" />
                         )}
                         <p className="whitespace-pre-wrap">{displayContent}</p>
@@ -612,16 +635,20 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
 
             {/* Input Area */}
             <div className="p-4 bg-[#131826] border-t border-white/5">
-               {attachment && (
-                 <div className="mb-3 relative inline-block">
-                    <img src={attachment.url} alt="Preview" className="h-16 rounded-md border border-white/10 object-cover" />
-                     <button title="Remover imagen adjunta" aria-label="Remover imagen adjunta" onClick={() => setAttachment(null)} className="absolute -top-2 -right-2 bg-slate-800 text-slate-300 rounded-full p-1 border border-white/10 hover:text-white transition-colors">
-                       <X size={12}/>
-                     </button>
+               {attachments.length > 0 && (
+                 <div className="mb-3 flex gap-2 overflow-x-auto pb-2 custom-scrollbar">
+                    {attachments.map((att, idx) => (
+                      <div key={idx} className="relative flex-shrink-0">
+                         <img src={att.url} alt={`Preview ${idx}`} className="h-16 w-16 rounded-md border border-white/10 object-cover" />
+                         <button title="Remover imagen adjunta" aria-label="Remover imagen adjunta" onClick={() => setAttachments(prev => prev.filter((_, i) => i !== idx))} className="absolute -top-2 -right-2 bg-slate-800 text-slate-300 rounded-full p-1 border border-white/10 hover:text-white transition-colors">
+                           <X size={10}/>
+                         </button>
+                      </div>
+                    ))}
                  </div>
                )}
                <div className="relative flex items-center">
-                  <input title="Subir imagen" aria-label="Subir imagen" type="file" accept="image/*" className="hidden" ref={fileInputRef} onChange={handleFileChange} />
+                  <input title="Subir imagen" aria-label="Subir imagen" type="file" accept="image/*" multiple className="hidden" ref={fileInputRef} onChange={handleFileChange} />
                   <button title="Adjuntar imagen" onClick={() => fileInputRef.current?.click()} className="absolute left-2 p-2 text-slate-400 hover:text-white transition-colors z-10 focus:outline-none">
                      <Paperclip className="w-5 h-5 pointer-events-none" />
                   </button>
@@ -635,15 +662,19 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
                       }
                     }}
                     onPaste={(e) => {
-                      const item = e.clipboardData.items[0];
-                      if (item?.type.includes('image')) {
-                        const file = item.getAsFile();
-                        if (file) {
-                          const reader = new FileReader();
-                          reader.onload = (e) => setAttachment({ url: e.target?.result as string, type: 'image' });
-                          reader.readAsDataURL(file);
+                      const items = Array.from(e.clipboardData.items);
+                      items.forEach(item => {
+                        if (item?.type.includes('image')) {
+                          const file = item.getAsFile();
+                          if (file) {
+                            const reader = new FileReader();
+                            reader.onload = (e) => {
+                              setAttachments(prev => [...prev, { url: e.target?.result as string, type: 'image' }]);
+                            };
+                            reader.readAsDataURL(file);
+                          }
                         }
-                      }
+                      });
                     }}
                     placeholder="Escribe o arrastra fotos aquí..."
                     rows={1}

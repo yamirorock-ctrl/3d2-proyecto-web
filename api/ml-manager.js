@@ -346,7 +346,7 @@ export default async function handler(req, res) {
       }
 
       case 'strategic-analysis': {
-        const { metrics, goals, current_inventory, isChat, history, message, attachment } = req.body;
+        const { metrics, goals, current_inventory, isChat, history, message, attachment, attachments } = req.body;
         const apiKey = process.env.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
         const genAI = new GoogleGenerativeAI(apiKey);
         
@@ -404,7 +404,15 @@ export default async function handler(req, res) {
           
           chatParts.push({ text: longTermContext + contextPrompt });
           
-          if (attachment) {
+          if (attachments && Array.isArray(attachments)) {
+            attachments.forEach(att => {
+              try {
+                const base64Data = att.split(',')[1];
+                const mimeType = att.split(';')[0].split(':')[1];
+                chatParts.push({ inlineData: { data: base64Data, mimeType } });
+              } catch (err) { console.error("Error attachment", err); }
+            });
+          } else if (attachment) {
             try {
               const base64Data = attachment.split(',')[1];
               const mimeType = attachment.split(';')[0].split(':')[1];
@@ -415,7 +423,8 @@ export default async function handler(req, res) {
           const result = await chat.sendMessage(chatParts);
           const reply = result.response.text();
           try {
-            const userContent = attachment ? `🖼️ [Imagen adjunta enviada] ${message}` : message;
+            const hasAttachments = (attachments && attachments.length > 0) || attachment;
+            const userContent = hasAttachments ? `🖼️ [Imágenes adjuntas enviadas] ${message}` : message;
             
             let persistentHistory = [];
             if (supabase) {
