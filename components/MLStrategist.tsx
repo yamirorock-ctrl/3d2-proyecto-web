@@ -117,8 +117,8 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
   useEffect(() => {
     const loadGoals = async () => {
       try {
-        const { data, error } = await supabase
-          .from('vanguard_memory')
+        const { data, error } = await (supabase
+          .from('vanguard_memory') as any)
           .select('content')
           .eq('user_id', String(userId))
           .eq('event_type', 'vanguard_goals')
@@ -142,7 +142,7 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
     setIsGoalsSaved(true);
     toast.info("Guardando objetivos en la Nube...", { id: 'goals_save' });
     try {
-      await supabase.from('vanguard_memory').upsert({
+      await (supabase.from('vanguard_memory') as any).upsert({
         user_id: String(userId),
         event_type: 'vanguard_goals',
         content: { text: goals },
