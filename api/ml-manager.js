@@ -340,7 +340,8 @@ export default async function handler(req, res) {
             manufacturing_days: detData.sale_terms?.find((t) => t.id === 'MANUFACTURING_TIME')?.value_name || '0',
             status: detData.status,
             health: detData.health,
-            professionalism: Math.round((detData.health || 0) * 100)
+            professionalism: Math.round((detData.health || 0) * 100),
+            category_id: detData.category_id
           };
         }));
 
@@ -348,11 +349,14 @@ export default async function handler(req, res) {
         let competition = [];
         try {
           if (itemsMetrics.length > 0) {
-            // Buscamos productos que compitan, pero usamos palabras más genéricas (primeras 3)
-            const topProductTitle = itemsMetrics[0].title.split(' ').slice(0, 3).join(' ');
+            // Buscamos productos en la misma categoría usando solo las 2 primeras palabras clave para red amplia
+            const topItem = itemsMetrics[0];
+            const topProductKeyword = encodeURIComponent(topItem.title.split(' ').slice(0, 2).join(' '));
             
-            // Endpoint público puro, sin Token para evitar bloqueos 403 de la capa de Auth de ML
-            const competitorRes = await fetch(`https://api.mercadolibre.com/sites/MLA/search?q=${encodeURIComponent(topProductTitle)}&limit=15`);
+            // Endpoint público DEBE llevar Token porque sino ML tira 403 Forbidden a servidores
+            const competitorRes = await fetch(`https://api.mercadolibre.com/sites/MLA/search?q=${topProductKeyword}&category=${topItem.category_id}&limit=15`, {
+              headers: { 'Authorization': `Bearer ${accessToken}` }
+            });
             const competitorData = await competitorRes.json();
             
             if (competitorData.results) {
