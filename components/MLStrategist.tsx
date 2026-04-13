@@ -277,6 +277,7 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
           attachments: currentAttachments.map(a => a.url),
           metrics: currentMetrics,
           current_inventory: currentInventory,
+          goals,
           userId 
         })
       });
@@ -490,7 +491,13 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
                  className="flex-1 bg-[#0b0f19] border border-white/5 rounded-2xl p-4 text-sm text-slate-300 font-medium focus:outline-none focus:border-violet-500/50 resize-none transition-all placeholder:text-slate-600 custom-scrollbar mb-3 h-24"
                  placeholder="Ej: Aumentar mis ventas a 5 cuadros por día sin subir el presupuesto de Ads..."
               />
-              <div className="flex justify-end">
+              <div className="flex justify-between items-center">
+                 <button 
+                    onClick={() => { if(confirm("¿Seguro quieres borrar tus objetivos actuales?")) { setGoals(""); setIsGoalsSaved(false); } }}
+                    className="text-[10px] text-slate-500 hover:text-rose-400 transition-colors uppercase font-bold"
+                 >
+                    [ Reemplazar / Limpiar ]
+                 </button>
                  <button 
                     onClick={handleSaveGoals}
                     disabled={isGoalsSaved}
@@ -710,7 +717,7 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
                {attachments.length > 0 && (
                  <div className="mb-3 flex gap-2 overflow-x-auto pb-2 custom-scrollbar">
                     {attachments.map((att, idx) => (
-                      <div key={idx} className="relative flex-shrink-0">
+                      <div key={idx} className="relative shrink-0">
                          <img src={att.url} alt={`Preview ${idx}`} className="h-16 w-16 rounded-md border border-white/10 object-cover" />
                          <button title="Remover imagen adjunta" aria-label="Remover imagen adjunta" onClick={() => setAttachments(prev => prev.filter((_, i) => i !== idx))} className="absolute -top-2 -right-2 bg-slate-800 text-slate-300 rounded-full p-1 border border-white/10 hover:text-white transition-colors">
                            <X size={10}/>
