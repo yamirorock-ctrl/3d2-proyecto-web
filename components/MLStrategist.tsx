@@ -113,28 +113,51 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
   const [goals, setGoals] = useState("");
   const [isGoalsSaved, setIsGoalsSaved] = useState(true);
 
-  // Load saved goals on mount
+  // Load saved goals on mount (from Production Supabase)
   useEffect(() => {
-    const saved = localStorage.getItem(`vanguard_goals_master`);
-    if (saved) {
-      setGoals(saved);
-      setIsGoalsSaved(true);
-    } else {
-      setGoals("Ej: Conseguir un promedio de 2 ventas por dia. Llegar a MercadoLíder Gold antes de fin de mes.");
+    const loadGoals = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('vanguard_memory')
+          .select('content')
+          .eq('user_id', String(userId))
+          .eq('event_type', 'vanguard_goals')
+          .maybeSingle();
+
+        if (data?.content?.text) {
+          setGoals(data.content.text);
+          setIsGoalsSaved(true);
+        } else {
+          setGoals("Ej: Conseguir un promedio de 2 ventas por dia. Llegar a MercadoLíder Gold antes de fin de mes.");
+          setIsGoalsSaved(false);
+        }
+      } catch (e) {
+        console.error("Error cargando objetivos", e);
+      }
+    };
+    if (userId) loadGoals();
+  }, [userId]);
+
+  const handleSaveGoals = async () => {
+    setIsGoalsSaved(true);
+    toast.info("Guardando objetivos en la Nube...", { id: 'goals_save' });
+    try {
+      await supabase.from('vanguard_memory').upsert({
+        user_id: String(userId),
+        event_type: 'vanguard_goals',
+        content: { text: goals },
+        updated_at: new Date().toISOString()
+      }, { onConflict: 'user_id,event_type' });
+      toast.success("Objetivos anclados en Producción 🚀", { id: 'goals_save' });
+    } catch (e) {
+      toast.error("Error al guardar objetivos", { id: 'goals_save' });
       setIsGoalsSaved(false);
     }
-  }, []);
-
-  const handleSaveGoals = () => {
-    localStorage.setItem(`vanguard_goals_master`, goals);
-    setIsGoalsSaved(true);
-    toast.success("Objetivos guardados exitosamente.");
   };
 
   const handleGoalsChange = (val: string) => {
      setGoals(val);
      setIsGoalsSaved(false);
-     localStorage.setItem(`vanguard_goals_master`, val); // Auto-save agresivo
   };
 
   const scrollToBottom = () => {
