@@ -241,6 +241,35 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
     }
   };
 
+  // CLIENT-SIDE RADAR: Esquivar Firewall ML Akamai (Error 403 Vercel)
+  useEffect(() => {
+     if (currentMetrics?.top_items?.length > 0 && (!currentMetrics.competition || currentMetrics.competition.length === 0)) {
+         const topTitle = currentMetrics.top_items[0].title;
+         const categoryId = currentMetrics.top_items[0].category_id;
+         const keyword = encodeURIComponent(topTitle.split(' ').slice(0, 2).join(' '));
+         
+         fetch(`https://api.mercadolibre.com/sites/MLA/search?q=${keyword}&category=${categoryId}&limit=15`)
+           .then(res => res.json())
+           .then(data => {
+              if (data.results) {
+                 const comp = data.results
+                   .filter((r: any) => String(r.seller?.id) !== String(currentMetrics.account_id))
+                   .slice(0, 5)
+                   .map((r: any) => ({
+                      title: r.title,
+                      price: r.price,
+                      free_shipping: r.shipping?.free_shipping,
+                      listing_type: r.listing_type_id,
+                      sold_quantity: r.sold_quantity || 0,
+                      permalink: r.permalink
+                   }));
+                 setCurrentMetrics((prev: any) => ({ ...prev, competition: comp, debug_info: { ...prev?.debug_info, radar_raw: 'Exito via Browser' } }));
+              }
+           })
+           .catch(err => console.error("Client Radar Fail", err));
+     }
+  }, [currentMetrics?.top_items]);
+
   useEffect(() => {
     const restoreState = async () => {
       try {
