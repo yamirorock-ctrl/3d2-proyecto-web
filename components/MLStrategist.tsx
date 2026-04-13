@@ -105,11 +105,7 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
   };
 
   const chatEndRef = useRef<HTMLDivElement>(null);
-  const [goals, setGoals] = useState({
-    dailySales: 2,
-    monthlyTarget: 50,
-    maxAdSpend: 5000
-  });
+  const [goals, setGoals] = useState("Ej: Conseguir un promedio de 2 ventas por dia. Llegar a MercadoLíder Gold antes de fin de mes.");
 
   const scrollToBottom = () => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -428,13 +424,19 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
 
       {/* STRATEGY & ACTIONS */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 relative z-10 mb-20 lg:mb-0">
-          <div className="bg-[#131826] p-8 rounded-3xl border border-white/5">
+          <div className="bg-[#131826] p-8 rounded-3xl border border-white/5 flex flex-col">
               <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest flex items-center gap-2 mb-6">
-                 <ShieldCheck className="w-5 h-5 text-violet-500" /> Plan Estratégico
+                 <Target className="w-5 h-5 text-violet-500" /> Mis Objetivos (Configuración AI)
               </h3>
-              <p className="text-[15px] font-medium leading-relaxed text-slate-300">
-                  {analysis?.strategic_plan || "Conecta Vanguard AI para generar una hoja de ruta táctica, potente y en tiempo real, adaptada a tus verdaderas métricas de MercadoLibre."}
+              <p className="text-xs text-slate-500 mb-4">
+                  Define aquí tus metas personales. Vanguard IA usará esta información como pilar base para trazar tu Plan Estratégico en el Chat de Comando.
               </p>
+              <textarea 
+                 value={goals}
+                 onChange={(e) => setGoals(e.target.value)}
+                 className="flex-1 bg-[#0b0f19] border border-white/5 rounded-2xl p-4 text-sm text-slate-300 font-medium focus:outline-none focus:border-violet-500/50 resize-none transition-all placeholder:text-slate-600 custom-scrollbar"
+                 placeholder="Ej: Aumentar mis ventas a 5 cuadros por día sin subir el presupuesto de Ads..."
+              />
           </div>
 
           <div className="bg-[#131826] p-8 rounded-3xl border border-white/5 h-64 overflow-y-auto custom-scrollbar">

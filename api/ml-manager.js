@@ -545,6 +545,10 @@ export default async function handler(req, res) {
           },
           "ads_sales": 0, "organic_sales": 0, "clicks": 0, "total_revenue": 0, "acos": 0
         }
+        
+        OBJETIVO PRINCIPAL DEL VENDEDOR (Debes ayudarlo a alcanzar esto en tu plan estratégico):
+        "${reqBody.goals || 'Optimizar rentabilidad global y crecimiento sostenido.'}"
+        
         DATOS REALES Y PUBLICIDAD (Campañas, Presupuesto, ROAS): ${JSON.stringify(metrics).substring(0, 30000)}`;
         
         const result = await analysisModel.generateContent(prompt);
