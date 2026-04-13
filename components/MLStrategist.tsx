@@ -113,19 +113,15 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
   const [goals, setGoals] = useState("");
   const [isGoalsSaved, setIsGoalsSaved] = useState(true);
 
-  // Load saved goals on mount (from Production Supabase)
+  // Load saved goals on mount (Safe via Backend API)
   useEffect(() => {
     const loadGoals = async () => {
       try {
-        const { data, error } = await (supabase
-          .from('vanguard_memory') as any)
-          .select('content')
-          .eq('user_id', String(userId))
-          .eq('event_type', 'vanguard_goals')
-          .maybeSingle();
+        const resp = await fetch(`/api/ml-manager?action=get-goals&userId=${userId}`);
+        const data = await resp.json();
 
-        if (data?.content?.text) {
-          setGoals(data.content.text);
+        if (data?.text) {
+          setGoals(data.text);
           setIsGoalsSaved(true);
         } else {
           setGoals("Ej: Conseguir un promedio de 2 ventas por dia. Llegar a MercadoLíder Gold antes de fin de mes.");
@@ -142,15 +138,17 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
     setIsGoalsSaved(true);
     toast.info("Guardando objetivos en la Nube...", { id: 'goals_save' });
     try {
-      await (supabase.from('vanguard_memory') as any).upsert({
-        user_id: String(userId),
-        event_type: 'vanguard_goals',
-        content: { text: goals },
-        updated_at: new Date().toISOString()
-      }, { onConflict: 'user_id,event_type' });
+      const resp = await fetch('/api/ml-manager', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'save-goals', userId, goals })
+      });
+      const data = await resp.json();
+      if (!resp.ok) throw new Error(data.error);
+      
       toast.success("Objetivos anclados en Producción 🚀", { id: 'goals_save' });
-    } catch (e) {
-      toast.error("Error al guardar objetivos", { id: 'goals_save' });
+    } catch (e: any) {
+      toast.error("Error al guardar objetivos: " + e.message, { id: 'goals_save' });
       setIsGoalsSaved(false);
     }
   };

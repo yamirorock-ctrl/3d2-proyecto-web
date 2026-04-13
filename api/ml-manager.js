@@ -593,6 +593,37 @@ export default async function handler(req, res) {
         return res.status(200).json(finalObj);
       }
 
+      case 'save-goals': {
+        const { goals } = req.body;
+        try {
+          const { error } = await supabase.from('vanguard_memory').upsert({
+            user_id: String(userId),
+            event_type: 'vanguard_goals',
+            content: { text: goals },
+            updated_at: new Date().toISOString()
+          }, { onConflict: 'user_id,event_type' });
+          if (error) throw error;
+          return res.status(200).json({ success: true, message: 'Objetivos anclados en la Nube' });
+        } catch (e) {
+          return res.status(500).json({ error: e.message });
+        }
+      }
+
+      case 'get-goals': {
+        try {
+          const { data, error } = await supabase
+            .from('vanguard_memory')
+            .select('content')
+            .eq('user_id', String(userId))
+            .eq('event_type', 'vanguard_goals')
+            .maybeSingle();
+          if (error) throw error;
+          return res.status(200).json(data?.content || { text: "" });
+        } catch (e) {
+          return res.status(500).json({ error: e.message });
+        }
+      }
+
       case 'execute-hitl': {
         const { intent, item_id, value } = req.body;
         if (!accessToken) return res.status(401).json({ error: "No hay token de MercadoLibre para ejecutar la acción." });
