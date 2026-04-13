@@ -506,15 +506,20 @@ export default async function handler(req, res) {
 
         const prompt = `Analiza estos datos de MercadoLibre y genera un JSON con este esquema exacto:
         {
-          "summary": "Resumen ejecutivo corto",
+          "summary": "Resumen ejecutivo corto sobre rentabilidad",
           "performance_score": 0-100,
           "insights": [{"type": "warning|opportunity|success", "title": "...", "description": "..."}],
           "categorized_items": { "protagonists": [], "stagnant": [], "zombies": [] },
           "strategic_plan": "Plan detallado para esta semana",
-          "recommended_actions": [{"intent": "update_price|pause_item", "action": "...", "item_id": "MLA...", "value": 0, "reason": "...", "impact": "alto"}],
+          "recommended_actions": [{"intent": "update_price|pause_item|activate_item", "action": "...", "item_id": "MLA...", "value": 0, "reason": "...", "impact": "alto"}],
+          "ads_manager": {
+             "total_budget_active": 0,
+             "roas_global": 0,
+             "active_campaigns": [{"name": "...", "budget": 0, "roas_target": 0, "status": "..."}]
+          },
           "ads_sales": 0, "organic_sales": 0, "clicks": 0, "total_revenue": 0, "acos": 0
         }
-        DATOS: ${JSON.stringify(metrics).substring(0, 25000)}`;
+        DATOS REALES Y PUBLICIDAD (Campañas, Presupuesto, ROAS): ${JSON.stringify(metrics).substring(0, 30000)}`;
         
         const result = await analysisModel.generateContent(prompt);
         const responseText = result.response.text();
@@ -537,6 +542,7 @@ export default async function handler(req, res) {
              categorized_items: { protagonists: [], stagnant: [], zombies: [] },
              strategic_plan: "Analizando señales de mercado...",
              recommended_actions: [],
+             ads_manager: { total_budget_active: 0, roas_global: 0, active_campaigns: [] },
              ads_sales: 0, organic_sales: 0, clicks: 0, total_revenue: 0, acos: 0
            };
         }
