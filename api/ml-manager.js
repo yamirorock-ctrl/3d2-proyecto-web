@@ -362,8 +362,9 @@ export default async function handler(req, res) {
             });
             radarStatus = competitorRes.status;
             
-            const competitorData = await competitorRes.json();
-            radarRaw = JSON.stringify(competitorData).substring(0, 300);
+            const rawText = await competitorRes.text();
+            radarRaw = rawText.substring(0, 300);
+            const competitorData = JSON.parse(rawText);
             
             if (competitorData.results) {
                // Filtramos la basura y ASEGURAMOS excluir nuestros propios productos
@@ -380,7 +381,10 @@ export default async function handler(req, res) {
                  }));
             }
           }
-        } catch (e) { console.error("Radar fail", e); }
+        } catch (e) { 
+            console.error("Radar fail", e); 
+            radarRaw = "CRASH: " + e.message;
+        }
 
         const finalAds = adsData.results || (Array.isArray(adsData) ? adsData : (adsData.campaigns || []));
 
