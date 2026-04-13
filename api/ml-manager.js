@@ -348,17 +348,25 @@ export default async function handler(req, res) {
         let competition = [];
         try {
           if (itemsMetrics.length > 0) {
+            // Buscamos productos que compitan con el más visitado/importante
             const topProductTitle = itemsMetrics[0].title.split(' ').slice(0, 4).join(' ');
-            const competitorRes = await fetch(`https://api.mercadolibre.com/sites/MLA/search?q=${encodeURIComponent(topProductTitle)}&limit=5`);
+            const competitorRes = await fetch(`https://api.mercadolibre.com/sites/MLA/search?q=${encodeURIComponent(topProductTitle)}&limit=15`, {
+               headers: { 'Authorization': `Bearer ${accessToken}` }
+            });
             const competitorData = await competitorRes.json();
-            competition = (competitorData.results || []).map(r => ({
-              title: r.title,
-              price: r.price,
-              free_shipping: r.shipping?.free_shipping,
-              listing_type: r.listing_type_id,
-              sold_quantity: r.sold_quantity || 0,
-              permalink: r.permalink
-            }));
+            
+            // Filtramos la basura y ASEGURAMOS excluir nuestros propios productos
+            competition = (competitorData.results || [])
+              .filter(r => String(r.seller?.id) !== String(mlUserId))
+              .slice(0, 5)
+              .map(r => ({
+                title: r.title,
+                price: r.price,
+                free_shipping: r.shipping?.free_shipping,
+                listing_type: r.listing_type_id,
+                sold_quantity: r.sold_quantity || 0,
+                permalink: r.permalink
+              }));
           }
         } catch (e) { console.error("Radar fail", e); }
 
