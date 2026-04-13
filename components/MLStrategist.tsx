@@ -487,7 +487,14 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
                       </div>
                   ))}
                   {(!currentMetrics?.competition || currentMetrics.competition.length === 0) && (
-                      <p className="text-xs text-slate-500 italic">No hay datos de competencia disponibles.</p>
+                      <div className="text-xs text-slate-500 italic">
+                          <p>No hay datos de competencia disponibles.</p>
+                          {currentMetrics?.debug_info?.radar_raw && (
+                             <div className="mt-3 p-3 bg-red-500/10 border border-red-500/20 text-red-400 font-mono text-[10px] break-all rounded-lg">
+                                 <strong>DEBUG API:</strong> {currentMetrics.debug_info.radar_raw}
+                             </div>
+                          )}
+                      </div>
                   )}
               </div>
           </div>
