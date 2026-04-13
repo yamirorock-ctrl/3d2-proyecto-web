@@ -347,6 +347,9 @@ export default async function handler(req, res) {
 
         // 3. Radar de Competencia Dinámico (Usa el producto activo más importante)
         let competition = [];
+        let radarStatus = "Skipped";
+        let radarRaw = "No data";
+        
         try {
           if (itemsMetrics.length > 0) {
             // Buscamos productos en la misma categoría usando solo las 2 primeras palabras clave para red amplia
@@ -357,7 +360,10 @@ export default async function handler(req, res) {
             const competitorRes = await fetch(`https://api.mercadolibre.com/sites/MLA/search?q=${topProductKeyword}&category=${topItem.category_id}&limit=15`, {
               headers: { 'Authorization': `Bearer ${accessToken}` }
             });
+            radarStatus = competitorRes.status;
+            
             const competitorData = await competitorRes.json();
+            radarRaw = JSON.stringify(competitorData).substring(0, 300);
             
             if (competitorData.results) {
                // Filtramos la basura y ASEGURAMOS excluir nuestros propios productos
@@ -392,9 +398,11 @@ export default async function handler(req, res) {
            debug_info: {
              ads_status: adsStatus,
              search_status: searchRes.status,
+             radar_status: radarStatus,
+             radar_raw: radarRaw,
              competition_count: competition.length,
              items_metrics_count: itemsMetrics.length,
-             ads_raw: JSON.stringify(adsData).substring(0, 500) // Telemetría para debug
+             ads_raw: JSON.stringify(adsData).substring(0, 300)
            }
         });
       }
