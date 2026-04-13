@@ -468,33 +468,29 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
 
       {/* MARKET RADAR & ORGANIC FUNNEL */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 relative z-10 mt-6 mb-20 lg:mb-8">
-          {/* Market Radar (Competition) */}
+          {/* Ads Campaigns Monitor (Replaces Obsolete Radar) */}
           <div className="bg-[#131826] p-6 rounded-3xl border border-white/5">
               <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest flex items-center gap-2 mb-6">
-                 <ShieldCheck className="w-5 h-5 text-emerald-500" /> Radar de Mercado (Competencia)
+                 <ShieldCheck className="w-5 h-5 text-emerald-500" /> Monitor Mercado Ads
               </h3>
               <div className="space-y-3">
-                  {(currentMetrics?.competition || []).map((comp: any, i: number) => (
-                      <div key={i} className="flex items-center justify-between p-3 rounded-2xl bg-[#0b0f19] border border-white/5">
-                          <div className="flex flex-col">
-                              <span className="text-xs font-bold text-white truncate w-48 sm:w-64">{comp.title}</span>
-                              <span className="text-[10px] text-slate-500">{comp.listing_type === 'gold_pro' ? 'Premium' : 'Clásica'}</span>
+                  {(analysis?.ads_manager?.active_campaigns || []).map((camp: any, i: number) => (
+                      <div key={i} className="flex items-center justify-between p-3 rounded-2xl bg-[#0b0f19] border border-emerald-500/10">
+                          <div className="flex flex-col w-48 sm:w-64">
+                              <span className="text-xs font-bold text-white truncate">{camp.name}</span>
+                              <span className="text-[10px] text-slate-500">
+                                Estado: <span className="text-emerald-400 capitalize">{camp.status}</span> | Objetivo ROAS: {camp.roas_target}
+                              </span>
                           </div>
-                          <div className="text-right">
-                              <div className="text-sm font-black text-emerald-400">${comp.price.toLocaleString()}</div>
-                              {comp.free_shipping && <div className="text-[10px] text-cyan-400 font-bold">Envío Gratis</div>}
+                          <div className="text-right flex-shrink-0">
+                              <div className="text-sm font-black text-emerald-400">${camp.budget.toLocaleString()} ARS</div>
+                              <div className="text-[10px] text-slate-500 uppercase tracking-wider font-bold">Presupuesto / Día</div>
                           </div>
                       </div>
                   ))}
-                  {(!currentMetrics?.competition || currentMetrics.competition.length === 0) && (
-                      <div className="text-xs text-slate-500 italic">
-                          <p>No hay datos de competencia disponibles.</p>
-                          {currentMetrics?.debug_info?.radar_raw && (
-                             <div className="mt-3 p-3 bg-red-500/10 border border-red-500/20 text-red-400 font-mono text-[10px] break-all rounded-lg">
-                                 <strong>DEBUG API:</strong> {currentMetrics.debug_info.radar_raw}
-                             </div>
-                          )}
-                      </div>
+                  
+                  {(!analysis?.ads_manager || !analysis.ads_manager.active_campaigns || analysis.ads_manager.active_campaigns.length === 0) && (
+                      <p className="text-xs text-slate-500 italic">No hay campañas de publicidad activas.</p>
                   )}
               </div>
           </div>
