@@ -20,6 +20,11 @@ interface StrategicAnalysis {
   clicks?: number;
   total_revenue?: number;
   acos?: string | number;
+  ads_manager?: {
+    total_budget_active: number;
+    roas_global: number;
+    active_campaigns: Array<{ name: string; budget: number; roas_target: number; status: string; }>;
+  };
 }
 
 const MLStrategist: React.FC<Props> = ({ userId }) => {
@@ -518,7 +523,7 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
                                 Estado: <span className="text-emerald-400 capitalize">{camp.status}</span> | Objetivo ROAS: {camp.roas_target}
                               </span>
                           </div>
-                          <div className="text-right flex-shrink-0">
+                          <div className="text-right shrink-0">
                               <div className="text-sm font-black text-emerald-400">${camp.budget.toLocaleString()} ARS</div>
                               <div className="text-[10px] text-slate-500 uppercase tracking-wider font-bold">Presupuesto / Día</div>
                           </div>
