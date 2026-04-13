@@ -115,21 +115,26 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
 
   // Load saved goals on mount
   useEffect(() => {
-    if (userId) {
-      const saved = localStorage.getItem(`vanguard_goals_${userId}`);
-      if (saved) {
-        setGoals(saved);
-      } else {
-        setGoals("Ej: Conseguir un promedio de 2 ventas por dia. Llegar a MercadoLíder Gold antes de fin de mes.");
-        setIsGoalsSaved(false);
-      }
+    const saved = localStorage.getItem(`vanguard_goals_master`);
+    if (saved) {
+      setGoals(saved);
+      setIsGoalsSaved(true);
+    } else {
+      setGoals("Ej: Conseguir un promedio de 2 ventas por dia. Llegar a MercadoLíder Gold antes de fin de mes.");
+      setIsGoalsSaved(false);
     }
-  }, [userId]);
+  }, []);
 
   const handleSaveGoals = () => {
-    localStorage.setItem(`vanguard_goals_${userId}`, goals);
+    localStorage.setItem(`vanguard_goals_master`, goals);
     setIsGoalsSaved(true);
     toast.success("Objetivos guardados exitosamente.");
+  };
+
+  const handleGoalsChange = (val: string) => {
+     setGoals(val);
+     setIsGoalsSaved(false);
+     localStorage.setItem(`vanguard_goals_master`, val); // Auto-save agresivo
   };
 
   const scrollToBottom = () => {
@@ -458,7 +463,7 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
               </p>
               <textarea 
                  value={goals}
-                 onChange={(e) => { setGoals(e.target.value); setIsGoalsSaved(false); }}
+                 onChange={(e) => handleGoalsChange(e.target.value)}
                  className="flex-1 bg-[#0b0f19] border border-white/5 rounded-2xl p-4 text-sm text-slate-300 font-medium focus:outline-none focus:border-violet-500/50 resize-none transition-all placeholder:text-slate-600 custom-scrollbar mb-3 h-24"
                  placeholder="Ej: Aumentar mis ventas a 5 cuadros por día sin subir el presupuesto de Ads..."
               />
