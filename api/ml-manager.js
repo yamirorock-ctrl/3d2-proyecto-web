@@ -231,7 +231,7 @@ export default async function handler(req, res) {
                 else if (template === 'Soportes' || manualCategory.includes('soporte')) itemBody.category_id = "MLA3530";
                 else {
                     const queryText = product.name + (product.category ? ' ' + product.category : '');
-                    const predResp = await fetch(`https://api.mercadolibre.com/sites/MLA/domain_discovery/search?q=${encodeURIComponent(queryText)}`);
+                    const predResp = await fetch(`https://api.mercadolibre.com/sites/MLA/domain_discovery/search?q=${encodeURIComponent(queryText)}&limit=3`);
                     const predData = await predResp.json();
                     if (predData?.[0]) itemBody.category_id = predData[0].category_id;
                 }
@@ -252,6 +252,22 @@ export default async function handler(req, res) {
                     itemBody.attributes = currentAttrs;
                 }
             } catch(e) {}
+
+            // NUEVO: Protocolo de Seguridad Vanguard - Validación Pre-Publicación
+            const validateResp = await fetch(`https://api.mercadolibre.com/items/validate`, {
+                method: 'POST',
+                headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify(itemBody)
+            });
+
+            if (validateResp.status !== 204) {
+               const validateData = await validateResp.json();
+               return res.status(400).json({ 
+                 error: 'Error de validación en MercadoLibre. Corrige los siguientes puntos antes de publicar:',
+                 details: validateData.error || validateData.message,
+                 cause: validateData.cause
+               });
+            }
 
             let createResp = await fetch(`https://api.mercadolibre.com/items`, {
                 method: 'POST',
