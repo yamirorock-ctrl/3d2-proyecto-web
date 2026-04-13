@@ -467,7 +467,10 @@ export default async function handler(req, res) {
             - STOCK INTERNO (DB): ${JSON.stringify((current_inventory || []).map(i => ({ id: i.id, stock: i.stock, cost: i.cost_usd || i.production_cost })))}
             - CATÁLOGO ML: ${JSON.stringify((metrics?.top_items || []).map(i => ({ id: i.id, title: i.title, status: i.status, visits: i.visits_30d })))}
             ---
-            REGLA DE VANGUARD: Responde directamente a la SOLICITUD ACTUAL. Usa los DATOS ESTRATÉGICOS solo para validar tu respuesta o si el usuario te lo pide. No imprimas reportes completos por defecto.
+            OBJETIVOS DEL VENDEDOR:
+            ${goals || 'Crecer la rentabilidad de forma equilibrada'}
+            ---
+            REGLA DE VANGUARD: Responde directamente a la SOLICITUD ACTUAL. Usa los DATOS ESTRATÉGICOS y los OBJETIVOS solo para validar tu respuesta o si el usuario te lo pide explícitamente. No imprimas reportes completos por defecto. Sé conversacional, fluido y al punto.
           `;
           
           chatParts.push({ text: longTermContext + contextPrompt });
