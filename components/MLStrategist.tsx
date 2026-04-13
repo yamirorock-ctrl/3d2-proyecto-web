@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Zap, Target, DollarSign, Rocket, RefreshCw, BarChart, ShieldCheck, TrendingUp, AlertTriangle, CheckCircle, ChevronRight, Send, User, Maximize2, MessageSquare, X, Activity, Paperclip } from 'lucide-react';
+import { Zap, Target, DollarSign, Rocket, RefreshCw, BarChart, ShieldCheck, TrendingUp, AlertTriangle, CheckCircle, ChevronRight, Send, User, Maximize2, MessageSquare, X, Activity, Paperclip, Save } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '../services/supabaseService';
 import { ComposedChart, Line, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, Area } from 'recharts';
@@ -105,7 +105,27 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
   };
 
   const chatEndRef = useRef<HTMLDivElement>(null);
-  const [goals, setGoals] = useState("Ej: Conseguir un promedio de 2 ventas por dia. Llegar a MercadoLíder Gold antes de fin de mes.");
+  const [goals, setGoals] = useState("");
+  const [isGoalsSaved, setIsGoalsSaved] = useState(true);
+
+  // Load saved goals on mount
+  useEffect(() => {
+    if (userId) {
+      const saved = localStorage.getItem(`vanguard_goals_${userId}`);
+      if (saved) {
+        setGoals(saved);
+      } else {
+        setGoals("Ej: Conseguir un promedio de 2 ventas por dia. Llegar a MercadoLíder Gold antes de fin de mes.");
+        setIsGoalsSaved(false);
+      }
+    }
+  }, [userId]);
+
+  const handleSaveGoals = () => {
+    localStorage.setItem(`vanguard_goals_${userId}`, goals);
+    setIsGoalsSaved(true);
+    toast.success("Objetivos guardados exitosamente.");
+  };
 
   const scrollToBottom = () => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -433,10 +453,24 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
               </p>
               <textarea 
                  value={goals}
-                 onChange={(e) => setGoals(e.target.value)}
-                 className="flex-1 bg-[#0b0f19] border border-white/5 rounded-2xl p-4 text-sm text-slate-300 font-medium focus:outline-none focus:border-violet-500/50 resize-none transition-all placeholder:text-slate-600 custom-scrollbar"
+                 onChange={(e) => { setGoals(e.target.value); setIsGoalsSaved(false); }}
+                 className="flex-1 bg-[#0b0f19] border border-white/5 rounded-2xl p-4 text-sm text-slate-300 font-medium focus:outline-none focus:border-violet-500/50 resize-none transition-all placeholder:text-slate-600 custom-scrollbar mb-3 h-24"
                  placeholder="Ej: Aumentar mis ventas a 5 cuadros por día sin subir el presupuesto de Ads..."
               />
+              <div className="flex justify-end">
+                 <button 
+                    onClick={handleSaveGoals}
+                    disabled={isGoalsSaved}
+                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+                       isGoalsSaved 
+                       ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 cursor-default'
+                       : 'bg-violet-600 hover:bg-violet-500 text-white shadow-lg cursor-pointer'
+                    }`}
+                 >
+                    {isGoalsSaved ? <ShieldCheck className="w-4 h-4" /> : <Save className="w-4 h-4" />}
+                    {isGoalsSaved ? 'Objetivos Guardados' : 'Guardar y Aplicar'}
+                 </button>
+              </div>
           </div>
 
           <div className="bg-[#131826] p-8 rounded-3xl border border-white/5 h-64 overflow-y-auto custom-scrollbar">
