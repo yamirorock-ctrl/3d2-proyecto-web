@@ -293,8 +293,8 @@ export default async function handler(req, res) {
         dateFrom.setDate(dateFrom.getDate() - 30);
 
         const [searchRes, ordersRes, userRes, questionsRes, adsAuthRes] = await Promise.all([
-          fetch(`https://api.mercadolibre.com/users/${mlUserId}/items/search?status=active`, { headers }),
-          fetch(`https://api.mercadolibre.com/orders/search?seller=${mlUserId}&order.date_created.from=${dateFrom.toISOString()}`, { headers }),
+          fetch(`https://api.mercadolibre.com/users/${mlUserId}/items/search?status=active&limit=50`, { headers }),
+          fetch(`https://api.mercadolibre.com/orders/search?seller=${mlUserId}&order.date_created.from=${dateFrom.toISOString()}&sort=date_desc&limit=50`, { headers }),
           fetch(`https://api.mercadolibre.com/users/${mlUserId}`, { headers }),
           fetch(`https://api.mercadolibre.com/questions/search?seller_id=${mlUserId}&status=unanswered`, { headers }),
           // Paso 1 de Ads V2: Obtener el ID de Anunciante
