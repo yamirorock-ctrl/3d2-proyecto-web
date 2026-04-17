@@ -127,98 +127,12 @@ const Checkout: React.FC<CheckoutProps> = ({ cart, onClearCart }) => {
   }, []);
 
   useEffect(() => {
-    const quoteMlShipping = async () => {
-      if (shippingMethod !== 'correo' || !customerPostalCode || customerPostalCode.length < 4) {
-        setMlShippingCost(null);
-        setMlEstimatedDelivery(null);
-        return;
-      }
-
-      setMlShippingLoading(true);
-      try {
-        // Calcular dimensiones del paquete basado en los productos del carrito
-        let totalWidth = 0;
-        let totalHeight = 0;
-        let totalLength = 0;
-        let totalWeight = 0;
-
-        cart.forEach(item => {
-          const dim = item.dimensions ? item.dimensions : PRODUCT_DIMENSIONS[item.technology || 'default'];
-          // Para múltiples unidades, solo aumentamos peso y largo (apilados)
-          const itemWeight = item.weight && item.weight > 0 ? item.weight : estimateProductWeight(item);
-          totalWeight += itemWeight * item.quantity;
-          totalLength += dim.length * 0.3 * item.quantity; // Factor de compresión al apilar
-          // Ancho y alto se toman del producto más grande
-          totalWidth = Math.max(totalWidth, dim.width);
-          totalHeight = Math.max(totalHeight, dim.height * Math.min(item.quantity, 3)); // Max 3 apilados en altura
-        });
-
-        // Redondear y aplicar límites de paquete postal
-        const dimensions = {
-          width: Math.min(40, Math.ceil(totalWidth + 5)),   // +5cm de packaging
-          height: Math.min(30, Math.ceil(totalHeight + 3)),  // +3cm de packaging
-          length: Math.min(50, Math.ceil(totalLength + 10)), // +10cm de packaging
-          weight: Math.max(300, Math.ceil(totalWeight + 100)) // +100g de packaging
-        };
-        
-        console.log('[ML Quote] Cart items:', cart.map(i => ({ name: i.name, tech: i.technology, qty: i.quantity })));
-        console.log('[ML Quote] Calculated dimensions:', dimensions);
-
-        // Llama al router simplificado y ahorrador de Vercel Functions
-        const response = await fetch('/api/ml-shipping?action=quote', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            zipCodeTo: customerPostalCode,
-            dimensions,
-          })
-        });
-
-        if (!response.ok) {
-          setError('No se pudo cotizar el envío por MercadoEnvíos. Contactate con el vendedor para elegir otro método de entrega, este no cumple los requisitos para este medio.');
-          setMlShippingCost(null);
-          setMlEstimatedDelivery(null);
-          return;
-        }
-
-        const data = await response.json();
-        console.log('[ML Quote] API Response:', data);
-        console.log('[ML Quote] Options count:', data.options?.length || 0);
-        console.log('[ML Quote] Default cost:', data.defaultCost);
-
-        // Refuerzo: bloquear si options está vacío
-        // Refuerzo: Si options está vacío pero tenemos defaultCost, asumimos que es válido (tal vez fallback del server o costo único)
-        // Eliminado bloqueo estricto que causaba falso positivo.
-        if (data.success && data.defaultCost && Array.isArray(data.options) && data.options.length === 0) {
-           console.warn('[ML Quote] Options empty but cost provided. Proceeding.');
-           // No seteamos error aquí si ya hay un costo operativo.
-        }
-        if (data.success && data.defaultCost) {
-          console.log('[ML Quote] Using cost:', data.defaultCost);
-          setMlShippingCost(data.defaultCost);
-          // Extraer fecha de entrega si está disponible
-          if (data.selectedOption?.estimatedDelivery) {
-            console.log('[ML Quote] Estimated delivery:', data.selectedOption.estimatedDelivery);
-            setMlEstimatedDelivery(data.selectedOption.estimatedDelivery);
-          } else {
-            console.log('[ML Quote] No estimated delivery available');
-            setMlEstimatedDelivery(null);
-          }
-        } else {
-          console.warn('[ML Quote] No valid response or cost, using fallback 8000');
-          setMlShippingCost(8000);
-          setMlEstimatedDelivery(null);
-        }
-      } catch (error) {
-        console.error('[ML Quote] Exception:', error);
-        setMlShippingCost(8000); // Fallback
-        setMlEstimatedDelivery(null);
-      } finally {
-        setMlShippingLoading(false);
-      }
-    };
-
-    quoteMlShipping();
+    // Para envío a convenir / pago en destino, el costo en el carrito es 0
+    if (shippingMethod === 'correo') {
+      setMlShippingCost(0);
+      setMlEstimatedDelivery(null);
+      setMlShippingLoading(false);
+    }
   }, [shippingMethod, customerPostalCode]);
 
   // Permitir envíos a todo el país (MercadoEnvíos cotiza interior)
@@ -521,33 +435,23 @@ const Checkout: React.FC<CheckoutProps> = ({ cart, onClearCart }) => {
                   </p>
                 </div>
 
-                {/* Método de Envío: MercadoEnvíos (Único) */}
+                {/* Método de Envío: Correo Argentino (Pago en Destino) */}
                 <div className="border-2 border-indigo-500 bg-indigo-50/30 rounded-lg p-4 relative">
                     <div className="flex items-center gap-3">
                        <div className="bg-indigo-100 p-2 rounded-full text-indigo-600">
                           <Package size={24} />
                        </div>
                        <div className="flex-1">
-                          <h3 className="font-semibold text-slate-900">MercadoEnvíos</h3>
+                          <h3 className="font-semibold text-slate-900">Envío por Correo Argentino</h3>
                           <p className="text-sm text-slate-600">
-                            {customerPostalCode && customerPostalCode.length >= 4 
-                              ? mlEstimatedDelivery 
-                                ? `Llega aprox. el ${new Date(mlEstimatedDelivery).toLocaleDateString('es-AR', { day: 'numeric', month: 'long' })}`
-                                : 'Calculando tiempo...'
-                              : 'Ingresá tu CP arriba para cotizar'}
+                            Despachamos tu pedido por correo.<br/>
+                            <strong>Abonas el costo de envío al cartero cuando recibes el paquete.</strong>
                           </p>
                        </div>
-                       <div className="text-right">
-                          {subtotal >= 40000 ? (
-                            <div className="flex flex-col items-end">
-                              <span className="text-green-600 font-bold text-lg">GRATIS</span>
-                              <span className="text-xs text-green-700 bg-green-100 px-2 py-0.5 rounded-full">Superaste los $40.000</span>
-                            </div>
-                          ) : (
-                             <span className="font-bold text-lg text-slate-900">
-                                {mlShippingLoading ? '...' : mlShippingCost !== null ? `$${mlShippingCost.toLocaleString()}` : '-'}
-                             </span>
-                          )}
+                       <div className="text-right flex items-center justify-end">
+                          <span className="font-bold text-lg text-slate-900 leading-tight">
+                            Pago en<br/>destino
+                          </span>
                        </div>
                     </div>
                 </div>
