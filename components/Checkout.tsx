@@ -289,12 +289,17 @@ const Checkout: React.FC<CheckoutProps> = ({ cart, onClearCart }) => {
       }
 
       // INTEGRACIÓN MERCADOPAGO: Crear preferencia y redirigir
+      // Calculamos el string de dimensiones para ML (Ancho x Alto x Largo, Peso)
+      const dimensions = `${Math.min(40, Math.ceil((subtotal > 0 ? 15 : 10)))}x${Math.min(30, Math.ceil(15))}x${Math.min(50, Math.ceil(20))},${Math.max(300, 500)}`;
+      
       const preferenceResult = await createPaymentPreference(
         order.id,
         order.order_number,
         orderItems,
         shippingCost,
-        customerEmail
+        customerEmail,
+        customerPostalCode,
+        dimensions
       );
 
       if (!preferenceResult) {

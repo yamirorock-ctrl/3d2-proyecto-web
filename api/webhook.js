@@ -554,8 +554,13 @@ export default async function handler(req, res) {
             );
 
             // Llamar al endpoint de crear envío (asíncrono, no bloqueante)
+            const protocol = process.env.VERCEL_URL?.includes('localhost') ? 'http://' : 'https://';
+            const baseUrl = process.env.VERCEL_URL 
+              ? `${protocol}${process.env.VERCEL_URL}` 
+              : "https://3d2-webhook.vercel.app";
+
             fetch(
-              `${process.env.VERCEL_URL || "https://3d2-bewhook.vercel.app"}/api/ml-shipping?action=create`,
+              `${baseUrl}/api/ml-shipping?action=create`,
               {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },

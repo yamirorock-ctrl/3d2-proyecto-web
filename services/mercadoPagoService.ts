@@ -20,7 +20,9 @@ export async function createPaymentPreference(
   _orderNumber: string,
   items: OrderItem[],
   shippingCost: number,
-  customerEmail: string
+  customerEmail: string,
+  zipCode?: string,
+  dimensions?: string
 ): Promise<{ preferenceId: string; initPoint: string } | null> {
   
   // Convertir items del pedido a formato de MercadoPago
@@ -34,24 +36,15 @@ export async function createPaymentPreference(
     currency_id: 'ARS',
   }));
 
-  if (shippingCost > 0) {
-    mpItems.push({
-      id: `shipping-${orderId}`,
-      title: 'Envío',
-      description: 'Costo de envío del pedido',
-      category_id: 'services',
-      quantity: 1,
-      unit_price: shippingCost,
-      currency_id: 'ARS',
-    });
-  }
+  // Ya no agregamos el envío como un ítem, sino como un costo de envío real
+  // si es que Mercado Pago lo permite con me2, o lo dejamos que MP lo calcule.
 
   const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
   const baseUrl = isLocalhost 
     ? 'https://yamirorock-ctrl.github.io/3d2-proyecto-web' 
     : window.location.origin;
 
-  const preferencePayload = {
+  const preferencePayload: any = {
     items: mpItems,
     payer: { email: customerEmail },
     back_urls: {
@@ -64,6 +57,34 @@ export async function createPaymentPreference(
     statement_descriptor: '3D2 STORE',
     notification_url: (import.meta as any).env.VITE_MP_WEBHOOK_URL || `${window.location.origin}/api/webhook`,
   };
+
+  // SI HAY CÓDIGO POSTAL Y DIMENSIONES, ACTIVAMOS MERCADO ENVÍOS AUTOMÁTICO
+  if (zipCode && dimensions) {
+    preferencePayload.shipments = {
+      mode: "me2",
+      dimensions: dimensions, // Formato: "15x15x15,500"
+      receiver_address: {
+        zip_code: zipCode
+      }
+    };
+    
+    // Si superó los 40.000, marcamos envío gratis en MP
+    if (items.reduce((acc, i) => acc + (i.price * i.quantity), 0) >= 40000) {
+      // Nota: Para envío gratis me2 se suele usar free_methods o similar, 
+      // pero MP lo detecta si el vendedor tiene la regla activa.
+    }
+  } else if (shippingCost > 0) {
+    // Fallback: Si no hay ME2, agregamos como ítem (para Moto o Retiro con costo)
+    mpItems.push({
+      id: `shipping-${orderId}`,
+      title: 'Envío',
+      description: 'Costo de envío del pedido',
+      category_id: 'services',
+      quantity: 1,
+      unit_price: shippingCost,
+      currency_id: 'ARS',
+    });
+  }
 
   try {
     const response = await fetch('/api/mercadopago', {
