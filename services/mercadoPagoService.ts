@@ -100,15 +100,42 @@ export async function createPaymentPreference(
       }),
     });
 
+    const data = await response.json();
+
+    // FALLBACK INTELIGENTE: Si falla por falta de me2 activo en la cuenta
+    if (!response.ok && (data.message?.includes('me2') || data.error?.includes('me2'))) {
+      console.warn('[MP Service] ME2 no activo en cuenta. Reintentando sin logística automática...');
+      
+      // Quitamos shipments y agregamos el costo como item (si no estaba ya)
+      const fallbackPayload = { ...orderPayload };
+      delete fallbackPayload.shipments;
+      
+      if (shippingCost > 0 && !mpItems.find(i => i.id?.includes('shipping'))) {
+        mpItems.push({
+          id: `shipping-${orderId}`,
+          title: 'Costo de Envío (Manual)',
+          quantity: 1,
+          unit_price: shippingCost
+        } as any);
+      }
+
+      const retryResponse = await fetch('/api/mercadopago', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'create_order', payload: fallbackPayload, deviceId }),
+      });
+      
+      const retryData = await retryResponse.json();
+      if (retryResponse.ok) {
+        return { preferenceId: retryData.id, initPoint: retryData.init_point };
+      }
+    }
+
     if (!response.ok) {
-      const error = await response.json();
-      console.error('Error al crear orden vía proxy:', error);
+      console.error('Error al crear orden vía proxy:', data);
       return null;
     }
 
-    const data = await response.json();
-    
-    // La API de Orders retorna id e init_point de forma similar a Preferences
     return {
       preferenceId: data.id,
       initPoint: data.init_point,
