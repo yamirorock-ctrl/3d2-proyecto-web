@@ -46,9 +46,13 @@ const Home: React.FC = () => {
   return (
     <>
       <Helmet>
-        <title>Inicio | 3D2 - Impresiones 3D y Corte Láser</title>
-        <meta name="description" content="Descubre nuestra colección de impresiones 3D y productos de corte láser. Desde juguetes hasta decoración personalizada." />
-        <link rel="canonical" href="https://www.creart3d2.com/" />
+        <title>{urlProduct ? `${urlProduct.name} | 3D²` : 'Inicio | 3D² - Impresiones 3D y Corte Láser'}</title>
+        <meta name="description" content={urlProduct ? urlProduct.description : "Descubre nuestra colección de impresiones 3D y productos de corte láser. Desde juguetes hasta decoración personalizada."} />
+        {urlProduct && <meta property="og:title" content={urlProduct.name} />}
+        {urlProduct && <meta property="og:description" content={urlProduct.description} />}
+        {urlProduct && <meta property="og:image" content={urlProduct.image} />}
+        {urlProduct && <meta property="og:url" content={`${window.location.origin}/product/${urlProduct.id}`} />}
+        <link rel="canonical" href={urlProduct ? `${window.location.origin}/product/${urlProduct.id}` : "https://www.creart3d2.com/"} />
       </Helmet>
       {/* Hero Section */}
         <div className="relative bg-slate-900 text-white py-24 px-4 sm:px-6 lg:px-8 rounded-3xl mb-12 overflow-hidden shadow-2xl mx-4 lg:mx-8 mt-6">

@@ -15,109 +15,52 @@
 
 ---
 
-## 🏆 LOGROS COMPLETADOS (SESIÓN HOY)
+## 🏆 LOGROS COMPLETADOS (SESIÓN HOY - 17/04/2026)
 
-### 1. 🛍️ Google Merchant Center (Google Shopping)
+### 1. 🔑 Unificación de Arquitectura (Mercado Libre & Pago)
+- **Estado:** ✅ FINALIZADO.
+- **Cambio:** Se eliminó la duplicidad de aplicaciones. Ahora todo el sistema (Vanguard, Pagos y Envíos) utiliza la **Aplicación Certificada 6189006159413944**.
+- **Beneficio:** Estabilidad total, sin errores de "unauthorized scope" y con una sola "llave maestra" para todo.
 
-- **Estado:** ✅ Configurado y Conectado.
-- **Feed:** Automatizado via `api/feed.js`. Google lee los productos cada noche.
-- **Estatus:** 38 Productos enviados. Actualmente en **"En revisión"** (tarda 24-48hs).
-- **Verificación:** Sitio Web verificado con etiqueta HTML.
+### 2. 🚚 Mercado Envíos 2 (Automatización de Etiquetas)
+- **Estado:** ✅ ACTIVADO.
+- **Logro:** La web ya genera automáticamente los datos necesarios para las etiquetas de envío de Mercado Libre al momento del pago.
+- **Prueba:** Sincronización exitosa con el "ML Callback" (Estado: Done).
 
-### 2. 🤖 Automatización Make.com (Instagram -> Web -> Pinterest/Google)
-
+### 3. 🔗 Enlaces Directos & Compartir Producto
 - **Estado:** ✅ FUNCIONANDO.
-- **Flujo:**
-  1.  **Trigger:** Detecta nueva foto en Instagram.
-  2.  **Cerebro:** Llama a `api/find-link?q=palabra_clave` en la web.
-  3.  **Acción 1 (Pinterest):** Publica el Pin con la foto y el **enlace directo de compra**.
-  4.  **Acción 2 (Google Business):** Publica una "Novedad" con botón "Comprar" (Pendiente de verificación).
-- **Prueba:** Exitosa. Se publicó un post de prueba y generó el enlace correcto.
+- **Nuevas Funciones:** 
+  - Botón de **"Compartir Link"** en cada producto (copia al portapapeles).
+  - **SEO Dinámico:** Al compartir por WhatsApp, se muestra la foto y el nombre del producto automáticamente.
+  - **Rutas Inteligentes:** Los links `/product/ID` abren el modal de compra al instante.
 
-### 3. 🧠 Mejora de Inteligencia Web
-
-- **Búsqueda Inteligente (`api/find-link.js`):**
-  - Antes: Buscaba coincidencia exacta (fallaba mucho).
-  - Ahora: Sistema de **Puntaje por Palabras Clave**. Si buscas "Flexi", encuentra "Monito Flexi Articulado".
-- **Ruteo Web (`Routes.tsx` + `Home.tsx`):**
-  - Antes: Los links directos a productos (`/product/123`) daban error o página en blanco.
-  - Ahora: Detectan el ID en la URL y **abren automáticamente el Modal del Producto** sobre la Home.
-
-### 4. 📌 Pinterest & Legal
-
-- **Pinterest:** Cuenta verificada (Meta tag instalada). Tablero conectado.
-- **Legal:** Creada página de `Politica de Devolución` (`/politica-devolucion`) para cumplir con Google.
-
-### 1. 🤖 IA & UX (Printy & Chat) - ✅ FINALIZADO
-
-- **Avatar "Printy":** Implementado personaje de marca con diseño de alto contraste (fondo blanco, borde índigo) y animaciones.
-- **Personalidad:** El Chatbot Web y el Webhook de MercadoLibre ahora comparten la personalidad "Printy" (Alegre, emojis, servicial).
-
-### 2. ⚡ MercadoLibre Webhook (Respuestas Automáticas) - ✅ FINALIZADO
-
-- **Reparación:** Habilitado el scope `questions` (que estaba oculto en la UI) y validado flujo completo.
-- **Motor IA:** Actualizado a **Gemini 3.0 Flash Preview** (Modelo 2026, más rápido y capaz).
-- **Rendimiento:** Implementada carga paralela (`Promise.all`) de Item + Stock para evitar timeouts en Vercel.
-- **Resiliencia:** El bot responde instantáneamente.
-
-### 3. 🛡️ Infraestructura & Mantenimiento - ✅ FINALIZADO
-
-- **Refresh Token Automático:** Creado script `api/cron-refresh-ml.js` y configurado **Cron Job** en `vercel.json` (Ejecución horaria).
-  - _Resultado:_ El token de MercadoLibre se renueva solo, evitando que el bot deje de responder cada 6hs.
-
-### 4. 🛍️ Google Merchant Center
-
-- **Estado:** ✅ Feed configurado y productos en revisión.
+### 4. 📊 Expansión de Base de Datos (Supabase)
+- **Documentación:** Se agregó al `SQL_info1.0.md` la definición de la tabla `orders` para rastrear ventas, pagos y estados de envío (shipment_id).
 
 ---
 
-## 🛠️ ARQUITECTURA TÉCNICA (CAMBIOS RECIENTES)
+## 🛠️ ARQUITECTURA TÉCNICA (ESTADO ACTUAL)
 
 ### Archivos Clave Modificados:
-
-- **`components/ChatAssistant.tsx`:** Lógica de avatar, estilos y manejo de errores.
-- **`api/ml-webhook.js`:** Lógica central de respuestas ML (Optimización paralela + Prompt Printy).
-- **`api/cron-refresh-ml.js`:** Nuevo endpoint para mantenimiento de tokens.
-- **`vercel.json`:** Configuración de Cron Jobs.
+- **`.env.local`:** Configurado con la App ID `6189...` y Secret `kRWC...`.
+- **`components/ProductCard.tsx` & `ProductDetailModal.tsx`:** Actualizados con lógica de compartir y SEO dinámico.
+- **`services/mercadoPagoService.ts`:** Optimizado para integración nativa de Mercado Envíos 2.
 
 ---
 
 ## ⚠️ TAREAS PENDIENTES (PRÓXIMA SESIÓN)
 
-### 1. 🤖 Automatización Make.com (Instagram -> Pinterest)
+### 1. 🏦 Inicialización de tabla `orders` en Supabase
+- **Tarea:** Ejecutar el SQL proporcionado para crear la tabla de pedidos y empezar a guardar el historial de ventas web.
 
-Hemos detectado errores de configuración que deben corregirse mañana:
+### 2. 🧪 Prueba de Compra Real
+- **Tarea:** Realizar un pedido de prueba para confirmar que la etiqueta de envío aparece correctamente en el panel de Mercado Libre.
 
-- **Loop Infinito:** El módulo de Instagram lee posts antiguos. _Solución:_ Configurar "Choose where to start: From now on / Manual".
-- **Fotos Duplicadas:** Al subir carruseles, se sube 7 veces la misma foto. _Solución:_ Corregir mapeo del **Iterador** (usar variable de iterador, no del array padre).
-- **Error de Largo:** Descripciones >800 caracteres rompen Pinterest. _Solución:_ Usar fórmula `substring(text;0;500)`.
-
-### 2. 📹 Verificación Google Business
-
-(Pendiente externa: esperar a que Google valide el video).
-
-### 3. ✅ Revisión de Productos:
-
-- Esperar 24-48hs a que Google Merchant apruebe los 38 productos (pasar de azul a verde).
-
-### 4. 🔍 Monitorización:
-
-- Revisar que Make no de errores en el módulo de Google (se le puso "Ignore Error" temporalmente).
+### 3. 📈 Google Merchant Center
+- **Monitorización:** Revisar si los productos ya pasaron de "En revisión" a "Aprobados".
 
 ---
 
-### 5. ⚖️ Discusión de Arquitectura (Flujo Híbrido)
-
-- **Tema:** Definir si la "Fuente de Verdad" es la Web o Instagram.
-- **Propuesta:** Tener ambos (Botón en Web + Automático en IG).
-- **Prevención de Duplicados:** Usar un "Hashtag Llave" (ej: `#shop`) en Instagram para que Make SOLO replique esos posts, evitando spam si ya se subió desde la web.
-- **Estado:** _En evaluación por el usuario._
-
----
-
-## 💡 INSTRUCCIONES PARA LA PRÓXIMA SESIÓN
-
-1.  Preguntar al usuario: _"¿Ya grabaste el video para Google?"_
-2.  Si ya lo grabó: Revisar estado en `google.com/business`.
-3.  Si NO lo grabó: Recordarle que es bloqueante para el SEO Local.
-4.  Chequear Google Merchant Center para ver si hay productos rechazados y corregirlos.
+### 💡 INSTRUCCIONES PARA LA PRÓXIMA SESIÓN
+1.  Verificar en Supabase si la tabla `orders` ya tiene datos.
+2.  Chequear el dashboard de Mercado Libre para ver si el "shipment_id" de las ventas web está entrando correctamente.

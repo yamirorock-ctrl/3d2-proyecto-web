@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Plus, Star } from 'lucide-react';
+import { Plus, Star, Share2, Check } from 'lucide-react';
 import { Product, ProductImage } from '../types';
 import SmartImage from './SmartImage';
 import { useProductCalculations } from '../hooks/useProductCalculations';
@@ -89,6 +89,16 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart }) => {
   }, [product.images, product.image]);
   const [active, setActive] = useState(0);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const copyLink = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const link = `${window.location.origin}/product/${product.id}`;
+    navigator.clipboard.writeText(link);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   const {
     unitsPerPack,
@@ -218,7 +228,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart }) => {
         <div className={`p-5 flex flex-col grow ${images.length > 1 ? 'pt-3' : ''}`}>
           <div className="flex justify-between items-start mb-2">
             <h3 
-              className="text-lg font-bold text-slate-900 overflow-hidden line-clamp-2 hover:text-indigo-600 cursor-pointer transition-colors"
+              className="text-lg font-bold text-slate-900 overflow-hidden line-clamp-2 hover:text-indigo-600 cursor-pointer transition-colors flex-1"
               onClick={() => setIsModalOpen(true)}
               title={product.name}
               tabIndex={0}
@@ -226,6 +236,13 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart }) => {
             >
               {product.name}
             </h3>
+            <button 
+              onClick={copyLink}
+              title="Copiar link del producto"
+              className={`ml-2 p-2 rounded-full transition-all ${copied ? 'bg-green-100 text-green-600' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}
+            >
+              {copied ? <Check size={16} /> : <Share2 size={16} />}
+            </button>
             <span 
               className="text-lg font-bold text-cyan-600 ml-2 shrink-0 glow-cyan transition-all"
               aria-label={`Precio: $${selectedSaleType === 'unidad' ? product.price : selectedSaleType === 'pack' ? packPrice : wholesalePrice}`}

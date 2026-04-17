@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { X, Plus, Star } from 'lucide-react';
+import { X, Plus, Star, Share2, Check } from 'lucide-react';
 import { Helmet } from 'react-helmet-async';
 import { Product, ProductImage } from '../types';
 import SmartImage from './SmartImage';
@@ -34,6 +34,16 @@ const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product, isOpen
   const [selectedSaleType, setSelectedSaleType] = useState<'unidad' | 'pack' | 'mayorista'>('unidad');
   const [selectedModel, setSelectedModel] = useState<string>('');
   const [selectedColor, setSelectedColor] = useState<string>('');
+  const [copied, setCopied] = useState(false);
+
+  const copyLink = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const link = `${window.location.origin}/product/${product.id}`;
+    navigator.clipboard.writeText(link);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   // Auto-select first option if available
   useEffect(() => {
@@ -108,7 +118,7 @@ const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product, isOpen
           <meta property="og:title" content={product.name} />
           <meta property="og:description" content={product.description?.slice(0, 200)} />
           <meta property="og:image" content={product.image} />
-          <meta property="og:url" content={`${window.location.origin}/?product_id=${product.id}`} />
+          <meta property="og:url" content={`${window.location.origin}/product/${product.id}`} />
           <meta property="product:price:amount" content={String(product.price)} />
           <meta property="product:price:currency" content="ARS" />
           <meta property="product:availability" content={product.stock && product.stock > 0 ? "instock" : "oos"} />
@@ -134,7 +144,7 @@ const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product, isOpen
               },
               "offers": {
                 "@type": "Offer",
-                "url": `${window.location.origin}/?product_id=${product.id}`,
+                "url": `${window.location.origin}/product/${product.id}`,
                 "priceCurrency": "ARS",
                 "price": product.price,
                 "availability": product.stock && product.stock > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
@@ -143,9 +153,10 @@ const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product, isOpen
             })}
           </script>
         </Helmet>
-        
-        <button 
+                <button 
             onClick={onClose}
+            title="Cerrar detalle de producto"
+            aria-label="Cerrar"
             className="absolute top-4 right-4 z-10 p-2 bg-white/80 hover:bg-white rounded-full shadow-md text-slate-500 hover:text-red-500 transition-colors"
         >
             <X size={24} />
@@ -168,19 +179,21 @@ const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product, isOpen
                 className="w-full h-full object-contain drop-shadow-xl"
              />
            </div>
-           {images.length > 1 && (
-             <div className="flex gap-2 mt-4 px-2 pb-2 overflow-x-auto w-full justify-center shrink-0">
-               {images.map((img, idx) => (
-                 <button 
-                   key={idx} 
-                   onClick={() => setActive(idx)}
-                   className={`h-14 w-14 border-2 rounded-lg overflow-hidden shrink-0 transition-all ${idx === active ? 'border-indigo-600 ring-2 ring-indigo-200' : 'border-gray-200 opacity-60 hover:opacity-100'}`}
-                 >
-                   <SmartImage src={img.url} storageKey={img.storageKey} wrapperClassName="!flex w-full h-full" className="w-full h-full object-cover" />
-                 </button>
-               ))}
-             </div>
-           )}
+            {images.length > 1 && (
+              <div className="flex gap-2 mt-4 px-2 pb-2 overflow-x-auto w-full justify-center shrink-0">
+                {images.map((img, idx) => (
+                  <button 
+                    key={idx} 
+                    onClick={() => setActive(idx)}
+                    title={`Ver imagen ${idx + 1}`}
+                    aria-label={`Ver imagen ${idx + 1}`}
+                    className={`h-14 w-14 border-2 rounded-lg overflow-hidden shrink-0 transition-all ${idx === active ? 'border-indigo-600 ring-2 ring-indigo-200' : 'border-gray-200 opacity-60 hover:opacity-100'}`}
+                  >
+                    <SmartImage src={img.url} storageKey={img.storageKey} wrapperClassName="!flex w-full h-full" className="w-full h-full object-cover" />
+                  </button>
+                ))}
+              </div>
+            )}
         </div>
 
         {/* Info */}
@@ -188,7 +201,16 @@ const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product, isOpen
            {/* Desktop Header (Hidden on mobile) */}
            <div className="mb-4 hidden md:block">
              <span className="text-indigo-600 font-bold tracking-wider text-xs uppercase mb-1 block">{product.category}</span>
-             <h2 className="text-3xl font-bold text-slate-900 leading-tight">{product.name}</h2>
+             <div className="flex items-center justify-between gap-4">
+               <h2 className="text-3xl font-bold text-slate-900 leading-tight flex-1">{product.name}</h2>
+               <button 
+                 onClick={copyLink}
+                 title="Copiar link del producto"
+                 className={`p-2.5 rounded-full transition-all shrink-0 ${copied ? 'bg-green-100 text-green-600' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}
+               >
+                 {copied ? <Check size={20} /> : <Share2 size={20} />}
+               </button>
+             </div>
            </div>
 
            <div className="grow overflow-y-auto pr-2 mb-6 max-h-60 custom-scrollbar">
