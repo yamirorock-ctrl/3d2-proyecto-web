@@ -66,8 +66,8 @@ const Checkout: React.FC<CheckoutProps> = ({ cart, onClearCart }) => {
   const [mlShippingLoading, setMlShippingLoading] = useState(false);
   const [mlEstimatedDelivery, setMlEstimatedDelivery] = useState<string | null>(null);
   
-  // Estado de facturación (Nuevo)
-  const [billingType, setBillingType] = useState<'Consumidor Final' | 'Factura A' | 'Factura B'>('Consumidor Final');
+  // Estado de facturación
+  const [billingType, setBillingType] = useState<'Consumidor Final' | 'Responsable Inscripto' | 'Monotributo'>('Consumidor Final');
   const [billingDni, setBillingDni] = useState('');
 
   // Estado de procesamiento
@@ -378,14 +378,14 @@ const Checkout: React.FC<CheckoutProps> = ({ cart, onClearCart }) => {
                   </label>
                   <select
                     id="billingType"
-                    title="Selecciona el tipo de comprobante"
+                    title="Selecciona tu condición frente al IVA"
                     value={billingType}
-                    onChange={(e) => setBillingType(e.target.value as 'Consumidor Final' | 'Factura A' | 'Factura B')}
+                    onChange={(e) => setBillingType(e.target.value as 'Consumidor Final' | 'Responsable Inscripto' | 'Monotributo')}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 bg-white"
                   >
-                    <option value="Consumidor Final">Consumidor Final (Ticket/Factura B)</option>
-                    <option value="Factura A">Factura A (Responsable Inscripto)</option>
-                    <option value="Factura B">Factura B (Exento/Monotributo)</option>
+                    <option value="Consumidor Final">Consumidor Final (Factura C)</option>
+                    <option value="Responsable Inscripto">Responsable Inscripto (Factura C con CUIT)</option>
+                    <option value="Monotributo">Monotributo / Exento (Factura C con CUIT)</option>
                   </select>
                 </div>
 
