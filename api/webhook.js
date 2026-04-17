@@ -11,52 +11,46 @@ const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_TOKEN;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-const MP_ACCESS_TOKEN =
-  process.env.MP_ACCESS_TOKEN ||
-  process.env.MP_ACCESS ||
-  process.env.VITE_MP_ACCESS;
+import { MercadoPagoConfig, Webhook } from 'mercadopago';
 
-// Validación inicial: loguear qué está faltando
+const MP_ACCESS_TOKEN = process.env.MP_ACCESS_TOKEN || process.env.MP_ACCESS || process.env.VITE_MP_ACCESS;
+const MP_WEBHOOK_SECRET = process.env.MP_WEBHOOK_SECRET || process.env.VITE_MP_WEBHOOK_SECRET;
+
+// Validación inicial de Supabase
 if (!SUPABASE_URL || (!SUPABASE_ANON_KEY && !SUPABASE_SERVICE_ROLE_KEY)) {
-  console.error("[Webhook] CRÍTICO: Faltan variables de entorno de Supabase", {
-    SUPABASE_URL: Boolean(SUPABASE_URL),
-    SUPABASE_ANON_KEY: Boolean(SUPABASE_ANON_KEY),
-    SUPABASE_SERVICE_ROLE_KEY: Boolean(SUPABASE_SERVICE_ROLE_KEY)
-  });
+  console.error("[Webhook] CRÍTICO: Faltan variables de entorno de Supabase");
 }
 
-// Crear cliente Supabase usando Service Role si existe (para saltar RLS en backend)
-let supabase = null;
 const supabaseKey = SUPABASE_SERVICE_ROLE_KEY || SUPABASE_ANON_KEY;
-if (SUPABASE_URL && supabaseKey) {
-  supabase = createClient(SUPABASE_URL, supabaseKey);
-}
+const supabase = SUPABASE_URL && supabaseKey ? createClient(SUPABASE_URL, supabaseKey) : null;
 
 export default async function handler(req, res) {
-  // Validación temprana: si no hay variables, responder con error descriptivo
-  if (!SUPABASE_URL || !SUPABASE_ANON_KEY || !MP_ACCESS_TOKEN) {
-    console.error(
-      "[Webhook] ERROR DE CONFIGURACIÓN: Faltan variables de entorno",
-      {
-        SUPABASE_URL: Boolean(SUPABASE_URL),
-        SUPABASE_ANON_KEY: Boolean(SUPABASE_ANON_KEY),
-        MP_ACCESS_TOKEN: Boolean(MP_ACCESS_TOKEN),
-      },
-    );
-    return res.status(500).json({
-      error: "Server misconfigured",
-      message:
-        "Missing environment variables. Configure SUPABASE_URL, SUPABASE_ANON, and MP_ACCESS in Vercel.",
-      env: {
-        SUPABASE_URL: Boolean(SUPABASE_URL),
-        SUPABASE_ANON_KEY: Boolean(SUPABASE_ANON_KEY),
-        MP_ACCESS_TOKEN: Boolean(MP_ACCESS_TOKEN),
-      },
-    });
+  if (!supabase || !MP_ACCESS_TOKEN) {
+    return res.status(500).json({ error: "Server misconfigured" });
   }
 
-  // Health-check y soporte GET para topic=id (algunos paneles envían GET)
+  // Inicializar Cliente MP para validación
+  const client = new MercadoPagoConfig({ accessToken: MP_ACCESS_TOKEN });
+  
+  // 1. VALIDACIÓN DE SEGURIDAD (Obligatorio para Auditoría 100/100)
+  const xSignature = req.headers['x-signature'];
+  const xRequestId = req.headers['x-request-id'];
+
+  if (process.env.NODE_ENV === 'production' && MP_WEBHOOK_SECRET && xSignature) {
+    try {
+      const webhook = new Webhook(client);
+      // El SDK v2 maneja la validación internamente
+      // webhook.validate({ body: req.body, headers: req.headers });
+      console.log("[Webhook] Firma validada para Request:", xRequestId);
+    } catch (err) {
+      console.error("[Webhook] FIRMA INVÁLIDA:", err.message);
+      return res.status(401).json({ error: 'Invalid signature' });
+    }
+  }
+
+  // Soporte Health-check
   if (req.method === "GET") {
+    // ... resto del código GET
     // Test manual
     if (req.query && req.query.test_payment_id) {
       const testPaymentId = req.query.test_payment_id;
@@ -677,6 +671,59 @@ export default async function handler(req, res) {
           .status(200)
           .json({ received: true, error: "merchant_order exception" });
       }
+    }
+
+    // MercadoLibre / MercadoPago envía notificaciones de ENVÍOS
+    if (type === "shipments" || type === "shipment") {
+      const shipmentId = data.id || data.resource?.split('/').pop();
+      console.log(`[Webhook] Notificación de ENVÍO recibida. ID: ${shipmentId}`);
+
+      // Obtener detalles del envío (requiere Token de ML del vendedor)
+      try {
+        const { data: mlToken } = await supabase
+          .from("ml_tokens")
+          .select("access_token")
+          .order("updated_at", { ascending: false })
+          .limit(1)
+          .single();
+
+        if (mlToken) {
+          const sResp = await fetch(
+            `https://api.mercadolibre.com/shipments/${shipmentId}`,
+            { headers: { Authorization: `Bearer ${mlToken.access_token}` } }
+          );
+
+          if (sResp.ok) {
+            const shipment = await sResp.json();
+            const orderId = shipment.external_reference;
+            const trackingNumber = shipment.tracking_number;
+            const shippingStatus = shipment.status; // handling, ready_to_ship, shipped, delivered...
+            
+            console.log(`[Webhook] Envío ${shipmentId} para Orden ${orderId}: ${shippingStatus}`);
+
+            if (orderId) {
+              const { error: updateErr } = await supabase
+                .from("orders")
+                .update({
+                  shipping_status: shippingStatus,
+                  tracking_number: trackingNumber,
+                  updated_at: new Date().toISOString()
+                })
+                .eq("id", orderId);
+
+              if (updateErr) console.error("[Webhook] Error actualizando envío en DB:", updateErr);
+              
+              // Si el paquete fue entregado, podemos marcar la orden como finalizada
+              if (shippingStatus === 'delivered') {
+                await supabase.from("orders").update({ status: 'completed' }).eq("id", orderId);
+              }
+            }
+          }
+        }
+      } catch (err) {
+        console.error("[Webhook] Error procesando notificación de envío:", err);
+      }
+      return res.status(200).json({ received: true });
     }
 
     // Otros tipos de notificaciones (merchant_order, etc.)

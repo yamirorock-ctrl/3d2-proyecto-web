@@ -106,9 +106,11 @@ export default async function handler(req, res) {
     );
 
     // 3. Filter Topics & Validate
-    if (!["orders_v2", "orders", "questions"].includes(topic)) {
+    if (!["orders_v2", "orders", "questions", "payment", "shipment"].includes(topic)) {
       return res.status(200).json({ ignored: true, topic });
     }
+
+    // ... (resto del código de obtención de token)
 
     // 4. Get Active Token
     const { data: tokenData, error: tokenError } = await supabase
@@ -175,6 +177,10 @@ export default async function handler(req, res) {
     // 5. Route Logic
     if (topic === "questions") {
       return await handleQuestion(resource, accessToken, res, botEnabled);
+    } else if (topic === "payment") {
+      return await handlePayment(resource, accessToken, res);
+    } else if (topic === "shipment") {
+      return await handleShipment(resource, accessToken, res);
     } else {
       return await handleOrder(resource, accessToken, res);
     }
@@ -788,5 +794,85 @@ async function deductRawMaterialsML(items, supabaseClient) {
       }
     });
     await Promise.all(promises);
+  }
+}
+
+async function handlePayment(resource, accessToken, res) {
+  try {
+    const paymentId = resource.split('/').pop();
+    const pRes = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    if (!pRes.ok) throw new Error("Payment API Failed");
+    const payment = await pRes.json();
+
+    const orderId = payment.external_reference;
+    if (!orderId) return res.status(200).json({ status: "no_order_id" });
+
+    const status = payment.status === 'approved' ? 'paid' : 'payment_pending';
+
+    await supabase
+      .from("orders")
+      .update({
+        payment_id: payment.id.toString(),
+        payment_status: payment.status,
+        status: status,
+        updated_at: new Date().toISOString()
+      })
+      .eq("id", orderId);
+
+    return res.status(200).json({ success: true, payment_id: payment.id });
+  } catch (e) {
+    console.error("Payment Error:", e);
+    return res.status(200).json({ error: e.message });
+  }
+}
+
+async function handleShipment(resource, accessToken, res) {
+  try {
+    const shipmentId = resource.split('/').pop();
+    const sRes = await fetch(`https://api.mercadolibre.com/shipments/${shipmentId}`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    if (!sRes.ok) throw new Error("Shipment API Failed");
+    const shipment = await sRes.json();
+
+    const orderId = shipment.external_reference;
+    let targetOrderId = orderId;
+    
+    if (!targetOrderId) {
+      const { data: orderData } = await supabase
+        .from("orders")
+        .select("id")
+        .eq("ml_shipment_id", shipment.id.toString())
+        .maybeSingle();
+      
+      if (orderData) targetOrderId = orderData.id;
+    }
+
+    if (!targetOrderId) return res.status(200).json({ status: "no_order_found" });
+
+    const mapStatus = {
+      handling: "preparing", 
+      ready_to_ship: "preparing",
+      shipped: "shipped", 
+      delivered: "delivered", 
+      cancelled: "cancelled",
+    };
+
+    await supabase
+      .from("orders")
+      .update({
+        shipping_status: shipment.status,
+        tracking_number: shipment.tracking_number,
+        status: mapStatus[shipment.status] || "processing",
+        updated_at: new Date().toISOString()
+      })
+      .eq("id", targetOrderId);
+
+    return res.status(200).json({ success: true, shipment_id: shipment.id });
+  } catch (e) {
+    console.error("Shipment Error:", e);
+    return res.status(200).json({ error: e.message });
   }
 }

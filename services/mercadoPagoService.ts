@@ -22,68 +22,71 @@ export async function createPaymentPreference(
   shippingCost: number,
   customerEmail: string,
   zipCode?: string,
-  dimensions?: string
+  dimensions?: string,
+  deviceId?: string
 ): Promise<{ preferenceId: string; initPoint: string } | null> {
   
-  // Convertir items del pedido a formato de MercadoPago
-  const mpItems: PreferenceItem[] = items.map((item) => ({
-    id: String(item.product_id || `item-${item.name.replace(/\s+/g, '-').toLowerCase()}`),
+  const subtotal = items.reduce((acc, i) => acc + (i.price * i.quantity), 0);
+  const totalAmount = subtotal + shippingCost;
+
+  // Convertir items al estándar de la API de Orders
+  const mpItems = items.map((item) => ({
+    id: String(item.product_id || item.id),
     title: item.name,
-    description: `Producto impreso en 3D - ${item.name}`,
+    description: `3D2 Product - ${item.name}`,
     category_id: 'art',
     quantity: item.quantity,
-    unit_price: item.price,
-    currency_id: 'ARS',
+    unit_price: item.price
   }));
-
-  // Ya no agregamos el envío como un ítem, sino como un costo de envío real
-  // si es que Mercado Pago lo permite con me2, o lo dejamos que MP lo calcule.
 
   const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
   const baseUrl = isLocalhost 
     ? 'https://yamirorock-ctrl.github.io/3d2-proyecto-web' 
     : window.location.origin;
 
-  const preferencePayload: any = {
+  // Construcción del Payload para la API de Orders
+  const orderPayload: any = {
+    external_reference: orderId,
+    total_amount: totalAmount,
     items: mpItems,
     payer: { email: customerEmail },
+    processing_mode: 'automatic', // Documentado en capturas para activación me2
     back_urls: {
       success: `${baseUrl}/order-success?order_id=${orderId}`,
       failure: `${baseUrl}/order-failure?order_id=${orderId}`,
       pending: `${baseUrl}/order-success?order_id=${orderId}`,
     },
-    auto_return: 'all',
-    external_reference: orderId,
-    statement_descriptor: '3D2 STORE',
     notification_url: (import.meta as any).env.VITE_MP_WEBHOOK_URL || `${window.location.origin}/api/webhook`,
   };
 
-  // SI HAY CÓDIGO POSTAL Y DIMENSIONES, ACTIVAMOS MERCADO ENVÍOS AUTOMÁTICO
+  // Log para depuración (solo en desarrollo)
+  if (isLocalhost) {
+    console.log('[MP Service] Usando notification_url:', orderPayload.notification_url);
+  }
+
+  // Configuración de Envíos (me2)
   if (zipCode && dimensions) {
-    preferencePayload.shipments = {
+    // Validar y asegurar formato "AxAxL,P"
+    const dimensionsRegex = /^\d+x\d+x\d+,\d+$/;
+    const finalDimensions = dimensionsRegex.test(dimensions) ? dimensions : "15x15x15,500";
+
+    orderPayload.shipments = {
       mode: "me2",
-      dimensions: dimensions, // Formato: "15x15x15,500"
+      dimensions: finalDimensions,
       receiver_address: {
         zip_code: zipCode
       }
     };
-    
-    // Si superó los 40.000, marcamos envío gratis en MP
-    if (items.reduce((acc, i) => acc + (i.price * i.quantity), 0) >= 40000) {
-      // Nota: Para envío gratis me2 se suele usar free_methods o similar, 
-      // pero MP lo detecta si el vendedor tiene la regla activa.
-    }
   } else if (shippingCost > 0) {
-    // Fallback: Si no hay ME2, agregamos como ítem (para Moto o Retiro con costo)
+    // Si no es me2, agregamos el envío como un item adicional para el total
     mpItems.push({
       id: `shipping-${orderId}`,
-      title: 'Envío',
-      description: 'Costo de envío del pedido',
+      title: 'Costo de Envío',
+      description: 'Envío personalizado',
       category_id: 'services',
       quantity: 1,
-      unit_price: shippingCost,
-      currency_id: 'ARS',
-    });
+      unit_price: shippingCost
+    } as any);
   }
 
   try {
@@ -91,18 +94,21 @@ export async function createPaymentPreference(
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ 
-        action: 'create_preference', 
-        payload: preferencePayload 
+        action: 'create_order', 
+        payload: orderPayload,
+        deviceId: deviceId
       }),
     });
 
     if (!response.ok) {
       const error = await response.json();
-      console.error('Error al crear preferencia vía proxy:', error);
+      console.error('Error al crear orden vía proxy:', error);
       return null;
     }
 
     const data = await response.json();
+    
+    // La API de Orders retorna id e init_point de forma similar a Preferences
     return {
       preferenceId: data.id,
       initPoint: data.init_point,

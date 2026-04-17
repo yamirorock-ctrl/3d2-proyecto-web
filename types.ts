@@ -131,6 +131,7 @@ export interface Order {
   payment_id?: string;
   payment_status?: string;
   tracking_number?: string;
+  shipping_status?: string;
   notes?: string;
   // Billing & Tax Info
   is_invoiced?: boolean;

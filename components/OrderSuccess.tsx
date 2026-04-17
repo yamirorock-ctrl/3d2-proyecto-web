@@ -134,8 +134,21 @@ const OrderSuccess: React.FC = () => {
                 </div>
               )}
 
-              <div className="bg-blue-50 border border-blue-200 rounded p-3 text-sm">
-                <p className="text-blue-800">
+              {/* Bloque para Mercado Envíos (me2) */}
+              {(order as any).shipping_method?.toLowerCase().includes('envio') && (
+                <div className="bg-blue-50 border-2 border-blue-300 rounded-lg p-4 mb-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <img src="https://http2.mlstatic.com/frontend-assets/ml-web-navigation/ui-navigation/5.21.22/mercadopago/logo-mercado-envios.svg" alt="Mercado Envíos" className="h-5" />
+                    <p className="text-blue-800 font-semibold">Envío por Mercado Envíos</p>
+                  </div>
+                  <p className="text-blue-700 text-sm">
+                    ¡Tu etiqueta de envío está siendo generada! En cuanto despachemos el paquete, te notificaremos por email con el número de seguimiento oficial de Mercado Libre.
+                  </p>
+                </div>
+              )}
+
+              <div className="bg-indigo-50 border border-indigo-200 rounded p-3 text-sm">
+                <p className="text-indigo-800">
                   📧 Te enviamos un email a <strong>{order.customer_email}</strong> con los detalles de tu pedido.
                 </p>
               </div>

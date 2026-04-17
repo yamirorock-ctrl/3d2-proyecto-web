@@ -243,13 +243,44 @@ const OrderTracking: React.FC = () => {
                 </div>
               </div>
 
-              {/* Tracking */}
+              {/* Tracking Mercado Envíos */}
               {order.tracking_number && (
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                  <h3 className="font-semibold text-blue-900 mb-1">Número de Seguimiento</h3>
-                  <p className="text-blue-800 font-mono text-lg">{order.tracking_number}</p>
-                  <p className="text-sm text-blue-700 mt-2">
-                    Podés rastrear tu envío en la página del correo con este número
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-5">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="bg-blue-600 p-2 rounded-full">
+                      <Truck size={20} className="text-white" />
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-blue-900">Seguimiento de Mercado Envíos</h3>
+                      <p className="text-sm text-blue-700">Tu envío está protegido y en camino</p>
+                    </div>
+                  </div>
+                  
+                  <div className="bg-white border border-blue-100 rounded-md p-3 mb-4 flex justify-between items-center">
+                    <div>
+                      <span className="text-xs text-gray-500 block uppercase tracking-wider font-bold">Número de Seguimiento</span>
+                      <p className="text-blue-800 font-mono text-lg font-bold">{order.tracking_number}</p>
+                    </div>
+                    <button 
+                      onClick={() => navigator.clipboard.writeText(order.tracking_number || '')}
+                      className="text-xs bg-blue-50 text-blue-600 px-2 py-1 rounded hover:bg-blue-100 transition-colors"
+                    >
+                      Copiar
+                    </button>
+                  </div>
+
+                  <a 
+                    href={`https://www.mercadolibre.com.ar/envios/seguimiento/${order.tracking_number}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full bg-blue-600 text-white py-3 rounded-lg font-bold flex items-center justify-center gap-2 hover:bg-blue-700 transition-all shadow-md"
+                  >
+                    Rastrear en Mercado Libre
+                    <Search size={18} />
+                  </a>
+                  
+                  <p className="text-[10px] text-blue-400 mt-3 text-center uppercase tracking-widest font-bold">
+                    Integración oficial 3D2 x Mercado Envíos 2
                   </p>
                 </div>
               )}
