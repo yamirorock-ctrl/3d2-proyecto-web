@@ -45,9 +45,9 @@ export default async function handler(req, res) {
           return res.status(200).json({ reply: text });
         } catch (err) {
           lastError = err;
-          const isQuotaError = err.status === 429 || err.message?.includes('429') || err.message?.includes('quota');
-          if (isQuotaError && modelName !== modelsToTry[modelsToTry.length - 1]) {
-            console.warn(`[Gemini Fallback] Quota exceeded for ${modelName}. Trying next...`);
+          const isRetryable = err.status === 429 || err.status === 503 || err.status === 500 || err.message?.includes('429') || err.message?.includes('503') || err.message?.includes('quota') || err.message?.includes('high demand');
+          if (isRetryable && modelName !== modelsToTry[modelsToTry.length - 1]) {
+            console.warn(`[Gemini Fallback] Error en ${modelName}, intentando con el siguiente...`);
             continue;
           }
           throw err;
@@ -91,9 +91,9 @@ Reglas CRÍTICAS:
           return res.status(200).json({ title: text.trim() });
         } catch (err) {
           lastError = err;
-          const isQuotaError = err.status === 429 || err.message?.includes('429') || err.message?.includes('quota');
-          if (isQuotaError && modelName !== modelsToTry[modelsToTry.length - 1]) {
-            console.warn(`[Gemini Fallback] Quota exceeded for ${modelName}. Trying next...`);
+          const isRetryable = err.status === 429 || err.status === 503 || err.status === 500 || err.message?.includes('429') || err.message?.includes('503') || err.message?.includes('quota') || err.message?.includes('high demand');
+          if (isRetryable && modelName !== modelsToTry[modelsToTry.length - 1]) {
+            console.warn(`[Gemini Fallback] Error en ${modelName}, intentando con el siguiente...`);
             continue;
           }
           throw err;

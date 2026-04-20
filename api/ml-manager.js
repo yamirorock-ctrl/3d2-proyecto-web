@@ -230,7 +230,11 @@ export default async function handler(req, res) {
               await supabase.from('app_settings').upsert({ key: 'vanguard_history', value: newHistory });
               return res.status(200).json({ reply, history: newHistory });
             } catch (err) {
-              if ((err.status === 429 || err.message?.includes('429')) && modelName !== modelsToTry[1]) continue;
+              const isRetryable = err.status === 429 || err.status === 503 || err.status === 500 || err.message?.includes('429') || err.message?.includes('503') || err.message?.includes('quota') || err.message?.includes('high demand');
+              if (isRetryable && modelName !== modelsToTry[1]) {
+                console.warn(`[Vanguard Fallback] Error en ${modelName}, saltando...`);
+                continue;
+              }
               throw err;
             }
           }

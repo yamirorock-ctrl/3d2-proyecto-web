@@ -332,9 +332,9 @@ async function handleQuestion(resource, accessToken, res, botEnabled) {
         answerText = result.response.text().trim();
         if (answerText) break;
       } catch (err) {
-        const isQuotaError = err.status === 429 || err.message?.includes('429') || err.message?.includes('quota');
-        if (isQuotaError && modelName !== modelsToTry[modelsToTry.length - 1]) {
-          console.warn(`[ML Bot Fallback] Quota exceeded for ${modelName}. Trying next...`);
+        const isRetryable = err.status === 429 || err.status === 503 || err.status === 500 || err.message?.includes('429') || err.message?.includes('503') || err.message?.includes('quota') || err.message?.includes('high demand');
+        if (isRetryable && modelName !== modelsToTry[modelsToTry.length - 1]) {
+          console.warn(`[ML Bot Fallback] Error en ${modelName}, saltando...`);
           continue;
         }
         throw err;
