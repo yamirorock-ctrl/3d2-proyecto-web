@@ -126,7 +126,7 @@ export default async function handler(req, res) {
                 })),
                 { role: "user", content: `REQ: ${message}\nDATA: ${JSON.stringify(compactMetrics)}\nOBJ: ${goals}` }
               ],
-              max_tokens: 150, // Límite de salida para ahorro
+              max_completion_tokens: 150, // Límite de salida para ahorro
               temperature: 0.7
             });
 
@@ -147,7 +147,7 @@ export default async function handler(req, res) {
                 { role: "user", content: `Analiza y devuelve JSON { summary, performance_score, strategic_plan }: ${JSON.stringify(compactMetrics)}` }
               ],
               response_format: { type: "json_object" },
-              max_tokens: 500
+              max_completion_tokens: 500
             });
 
             const finalObj = JSON.parse(response.choices[0].message.content);
