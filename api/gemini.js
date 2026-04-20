@@ -28,8 +28,15 @@ export default async function handler(req, res) {
             systemInstruction: (systemInstruction || "") + ". Sé extremadamente conciso y directo. Responde al punto sin rellenos."
           });
 
+          let activeHistory = (history || []).slice(-10);
+          while (activeHistory.length > 0 && activeHistory[0].role === 'model') {
+            activeHistory.shift();
+          }
           const chat = model.startChat({
-            history: history || [],
+            history: activeHistory.map(m => ({
+              role: m.role || 'user',
+              parts: [{ text: String(m.content || m.parts?.[0]?.text || "") }]
+            })),
             generationConfig: { temperature: 0.7 }
           });
 

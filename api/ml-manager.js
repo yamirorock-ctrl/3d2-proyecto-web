@@ -213,8 +213,17 @@ export default async function handler(req, res) {
           for (const modelName of modelsToTry) {
             try {
               const chatModel = genAI.getGenerativeModel({ model: modelName, systemInstruction: "Eres VANGUARD. Sé EXTREMADAMENTE CONCISO y DIRECTO. Responde al punto (max 3 oraciones). Solo explayate si se pide. Prioriza tokens." });
-              const activeHistory = (history || []).slice(-5);
-              const chat = chatModel.startChat({ history: activeHistory.map(m => ({ role: m.role === 'vanguard' ? 'model' : 'user', parts: [{ text: String(m.content) }] })) });
+              let activeHistory = (history || []).slice(-10);
+              // ELIMINAR MENSAJES INICIALES DE VANGUARD (Debe empezar con User)
+              while (activeHistory.length > 0 && activeHistory[0].role === 'vanguard') {
+                activeHistory.shift();
+              }
+              const chat = chatModel.startChat({ 
+                history: activeHistory.map(m => ({ 
+                  role: m.role === 'vanguard' ? 'model' : 'user', 
+                  parts: [{ text: String(m.content) }] 
+                })) 
+              });
               const result = await chat.sendMessage([{ text: `SOLICITUD: ${message}\nDATOS: ${JSON.stringify(metrics).substring(0, 5000)}` }]);
               const reply = result.response.text();
               const newHistory = [...activeHistory, { role: 'user', content: message, timestamp: new Date().toISOString() }, { role: 'vanguard', content: reply, timestamp: new Date().toISOString() }];
