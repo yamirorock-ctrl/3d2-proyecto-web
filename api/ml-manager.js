@@ -90,7 +90,7 @@ export default async function handler(req, res) {
             finances: metrics?.finance_summary || {}
         };
         if (isChat) {
-          const h = (history || []).slice(-8);
+          const h = (history || []).slice(-20);
           try {
             // Construir contenido del mensaje actual (Multimodal si hay adjuntos)
             let currentContent = [];
@@ -113,7 +113,7 @@ export default async function handler(req, res) {
             });
             const reply = r.choices[0].message.content;
             const newH = [...h, { role: 'user', content: message, timestamp: new Date().toISOString() }, { role: 'vanguard', content: reply, timestamp: new Date().toISOString() }];
-            await supabase.from('app_settings').upsert({ key: 'vanguard_history', value: newH }, { onConflict: 'key' });
+            await supabase.from('vanguard_memory').upsert({ user_id: String(userId), event_type: 'chat_history', content: newH }, { onConflict: 'user_id,event_type' });
             return res.status(200).json({ reply, history: newH });
           } catch (e) { return res.status(200).json({ reply: "Error IA: " + e.message, history: history || [] }); }
         } else {
