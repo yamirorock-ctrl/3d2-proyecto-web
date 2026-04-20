@@ -208,7 +208,7 @@ export default async function handler(req, res) {
         const { metrics, goals, isChat, history, message, attachments } = req.body;
         const apiKey = process.env.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
         const genAI = new GoogleGenerativeAI(apiKey);
-        const modelsToTry = ["gemini-3.1", "gemini-2.5-flash"];
+        const modelsToTry = ["gemini-3.1-pro-preview", "gemini-2.5-flash"];
         if (isChat) {
           for (const modelName of modelsToTry) {
             try {

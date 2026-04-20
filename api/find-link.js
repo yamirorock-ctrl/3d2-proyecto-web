@@ -219,7 +219,7 @@ async function findProductWithAI(
   optimizeFor,
 ) {
   // ⚡🚀 USAMOS GEMINI CON PLAN DE RESPALDO
-  const modelsToTry = ["gemini-3.1", "gemini-2.5-flash"];
+  const modelsToTry = ["gemini-3.1-pro-preview", "gemini-2.5-flash"];
   let lastError = null;
 
   for (const modelName of modelsToTry) {

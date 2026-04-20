@@ -319,7 +319,7 @@ async function handleQuestion(resource, accessToken, res, botEnabled) {
       .replace("{ATTRIBUTES}", attributesText);
 
     // 6. Generate AI Answer with Fallback Plan
-    const modelsToTry = ["gemini-3.1", "gemini-2.5-flash"];
+    const modelsToTry = ["gemini-3.1-pro-preview", "gemini-2.5-flash"];
     let answerText = "";
     
     for (const modelName of modelsToTry) {

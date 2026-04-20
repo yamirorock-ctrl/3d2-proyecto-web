@@ -18,7 +18,7 @@ export default async function handler(req, res) {
     if (action === 'chat') {
       const { systemInstruction, history, message } = payload;
       
-      const modelsToTry = ["gemini-3.1", "gemini-2.5-flash"];
+      const modelsToTry = ["gemini-3.1-pro-preview", "gemini-2.5-flash"];
       let lastError = null;
 
       for (const modelName of modelsToTry) {
@@ -59,7 +59,7 @@ export default async function handler(req, res) {
     if (action === 'suggest_title') {
       const { productName, description, imageUrlBase64 } = payload;
       
-      const modelsToTry = ["gemini-3.1", "gemini-2.5-flash"];
+      const modelsToTry = ["gemini-3.1-pro-preview", "gemini-2.5-flash"];
       let lastError = null;
 
       const prompt = `Actúa como un experto en SEO para MercadoLibre Argentina.
@@ -104,7 +104,7 @@ Reglas CRÍTICAS:
     // 3. Analyze Product
     if (action === 'analyze_product') {
       const { imageBase64 } = payload;
-      const modelsToTry = ["gemini-3.1", "gemini-2.5-flash"];
+      const modelsToTry = ["gemini-3.1-pro-preview", "gemini-2.5-flash"];
       
       const analysisPrompt = `Eres un experto comercial de productos 3D y corte láser en Argentina.
 Analiza este producto en base a esta imagen. 
