@@ -89,7 +89,7 @@ export default async function handler(req, res) {
           const h = (history || []).slice(-8);
           try {
             const r = await openai.chat.completions.create({
-              model: "gpt-4o-mini", // Corregido: gpt-5.4-mini no existe
+              model: "gpt-5.4-mini", 
               messages: [
                 { role: "system", content: "Eres VANGUARD 360°. Analista Senior 3D2. Sé estratégico y directo." },
                 ...h.map(m => ({ role: m.role === 'vanguard' ? 'assistant' : 'user', content: String(m.content) })),
@@ -107,7 +107,7 @@ export default async function handler(req, res) {
         } else {
           try {
             const r = await openai.chat.completions.create({
-              model: "gpt-4o-mini", // Corregido
+              model: "gpt-5.4-mini", 
               messages: [
                 { role: "system", content: "Consultor Senior 360°. JSON profundo." },
                 { role: "user", content: `Analiza y devuelve JSON: ${JSON.stringify(globalStats)}` }
