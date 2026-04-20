@@ -112,18 +112,16 @@ export default async function handler(req, res) {
 
         const globalStats = {
             reputation: metrics?.reputation || 'N/A',
-            stats: {
+            general: {
                 active_items: metrics?.items_count || 0,
                 orders_30d: metrics?.recent_orders || 0,
-                pending_questions: metrics?.unanswered_questions || 0
+                pending_q: metrics?.unanswered_questions || 0
             },
-            advertising: metrics?.ads_summary || { message: "No hay datos de publicidad disponibles." },
-            catalog_performance: (metrics?.top_items || []).map(i => ({
-                t: i.title,
-                p: i.price,
-                s: i.stock,
-                v: i.visits_30d,
-                st: i.status
+            advertising: metrics?.ads_summary || { message: "Sin datos de ads." },
+            finance: metrics?.finance_summary || { message: "Sin datos financieros." }, // 🚀 Nuevo
+            logistics: metrics?.logistics_summary || { message: "Sin datos logísticos." }, // 🚀 Nuevo
+            catalog: (metrics?.top_items || []).map(i => ({
+                t: i.title, p: i.price, s: i.stock, v: i.visits_30d, st: i.status
             }))
         };
 
@@ -133,14 +131,14 @@ export default async function handler(req, res) {
             const response = await openai.chat.completions.create({
               model: "gpt-5.4-mini",
               messages: [
-                { role: "system", content: "Eres VANGUARD. Analista Senior de E-commerce. Tu misión es optimizar 3D2 Store. Sé conciso pero con criterio profundo. Analiza publicidad (ROAS/ACOS) si está disponible." },
+                { role: "system", content: "Eres VANGUARD. Analista Senior 360°. Tienes datos de VENTAS, ADS, FINANZAS y LOGÍSTICA. Sé estratégico y directo. Max 150 palabras." },
                 ...activeHistory.map(m => ({ 
                   role: m.role === 'vanguard' ? 'assistant' : 'user', 
                   content: String(m.content) 
                 })),
-                { role: "user", content: `SOLICITUD: ${message}\nESTADO ACTUAL: ${JSON.stringify(globalStats)}\nOBJETIVOS: ${goals}` }
+                { role: "user", content: `SOLICITUD: ${message}\nESTADO 360: ${JSON.stringify(globalStats)}\nOBJETIVOS: ${goals}` }
               ],
-              max_completion_tokens: 300, 
+              max_completion_tokens: 350, 
               temperature: 0.7
             });
             const reply = response.choices[0].message.content;
@@ -155,20 +153,19 @@ export default async function handler(req, res) {
             const response = await openai.chat.completions.create({
               model: "gpt-5.4-mini",
               messages: [
-                { role: "system", content: "Eres el consultor estratégico de 3D2 Store. Genera un reporte JSON analizando ventas y publicidad." },
-                { role: "user", content: `Analiza y devuelve JSON { "summary": "...", "performance_score": 0-100, "strategic_plan": "...", "ads_analysis": "..." }: ${JSON.stringify(globalStats)}` }
+                { role: "system", content: "Consultor 360°. Genera reporte táctico JSON analizando ventas, publicidad, finanzas y logística." },
+                { role: "user", content: `Analiza y devuelve JSON { "summary": "...", "performance_score": 0-100, "strategic_plan": "...", "ads_analysis": "...", "financial_health": "..." }: ${JSON.stringify(globalStats)}` }
               ],
               response_format: { type: "json_object" },
               max_completion_tokens: 2000
             });
-
             const content = response.choices[0].message.content;
             try {
               const finalObj = JSON.parse(content);
               await supabase.from('vanguard_memory').upsert({ user_id: String(userId), event_type: 'latest_analysis', content: { analysis: finalObj, goals } }, { onConflict: 'user_id,event_type' });
               return res.status(200).json(finalObj);
             } catch (pErr) {
-              return res.status(200).json({ summary: "Reporte generado (Parseo manual)", performance_score: 70, strategic_plan: content.substring(0, 800) });
+              return res.status(200).json({ summary: "Reporte 360 (Manual)", performance_score: 80, strategic_plan: content.substring(0, 1000) });
             }
           } catch (err) {
             return res.status(500).json({ error: "Error estático: " + err.message });
@@ -184,60 +181,54 @@ export default async function handler(req, res) {
         const dateStr = dateFrom.toISOString().split('T')[0];
         const todayStr = new Date().toISOString().split('T')[0];
 
-        const [searchRes, ordersRes, userRes, questionsRes] = await Promise.all([
+        // 📡 LLAMADAS CORE
+        const [searchRes, ordersRes, userRes, questionsRes, merchantOrdersRes] = await Promise.all([
           fetch(`https://api.mercadolibre.com/users/${mlUserId}/items/search?status=active&limit=50`, { headers }),
           fetch(`https://api.mercadolibre.com/orders/search?seller=${mlUserId}&order.date_created.from=${dateFrom.toISOString()}&limit=50`, { headers }),
           fetch(`https://api.mercadolibre.com/users/${mlUserId}`, { headers }),
-          fetch(`https://api.mercadolibre.com/questions/search?seller_id=${mlUserId}&status=unanswered`, { headers })
+          fetch(`https://api.mercadolibre.com/questions/search?seller_id=${mlUserId}&status=unanswered`, { headers }),
+          fetch(`https://api.mercadolibre.com/merchant_orders/search?seller_id=${mlUserId}&date_created.from=${dateFrom.toISOString()}`, { headers })
         ]);
 
-        const [searchData, ordersData, userData, questionsData] = await Promise.all([
-          searchRes.json(), 
-          ordersRes.json(), 
-          userRes.json(), 
-          questionsRes.json()
+        const [searchData, ordersData, userData, questionsData, mOrdersData] = await Promise.all([
+          searchRes.json(), ordersData.json(), userRes.json(), questionsRes.json(), merchantOrdersRes.json()
         ]);
 
-        // 🚀 CORRECCIÓN DE ADS: Probando endpoint sin seller_id explícito (Type Mismatch fix)
+        // 🚀 PROCESAMIENTO ADS V2 (Mandatorio Biblia Meli)
         let ads_summary = null;
         try {
-            // ML a veces prefiere el endpoint v2 o simplemente /campaigns sin filtros de tipo
-            const adsResp = await fetch(`https://api.mercadolibre.com/advertising/product_ads/campaigns?date_from=${dateStr}&date_to=${todayStr}`, { headers });
-            const adsData = await adsResp.json();
-            
-            if (adsResp.ok && adsData.results && adsData.results.length > 0) {
-                const mainCampaign = adsData.results.find(c => c.status === 'active') || adsData.results[0];
-                // Las métricas suelen estar ya en la respuesta de la campaña si se pasan las fechas
-                ads_summary = {
-                    impressions: mainCampaign.metrics?.impressions || 0,
-                    clicks: mainCampaign.metrics?.clicks || 0,
-                    cost: mainCampaign.metrics?.cost || 0,
-                    sales_count: mainCampaign.metrics?.sales_count || 0,
-                    revenue: mainCampaign.metrics?.advertising_revenue || 0,
-                    acos: mainCampaign.metrics?.acos ? (mainCampaign.metrics.acos * 100).toFixed(2) + '%' : '0%',
-                    roas: mainCampaign.metrics?.roas || 0,
-                    ctr: mainCampaign.metrics?.ctr ? (mainCampaign.metrics.ctr * 100).toFixed(2) + '%' : '0%'
-                };
+            const advRes = await fetch(`https://api.mercadolibre.com/advertising/advertisers?product_id=PADS`, { headers: { ...headers, 'api-version': '1' } });
+            const advData = await advRes.json();
+            if (advRes.ok && advData.id) {
+                const campaignsRes = await fetch(`https://api.mercadolibre.com/advertising/MLA/advertisers/${advData.id}/product_ads/campaigns/search?date_from=${dateStr}&date_to=${todayStr}`, { headers: { ...headers, 'api-version': '2' } });
+                const campaignsData = await campaignsRes.json();
+                if (campaignsRes.ok && campaignsData.results?.length > 0) {
+                    const c = campaignsData.results.find(x => x.status === 'active') || campaignsData.results[0];
+                    ads_summary = { impressions: c.metrics?.impressions || 0, clicks: c.metrics?.clicks || 0, cost: c.metrics?.cost || 0, sales: c.metrics?.sales_count || 0, revenue: c.metrics?.advertising_revenue || 0, acos: c.metrics?.acos ? (c.metrics.acos * 100).toFixed(2) + '%' : '0%', roas: c.metrics?.roas || 0 };
+                }
             }
-        } catch (adsErr) {
-            console.error("[ML Ads] Error:", adsErr);
+        } catch (e) {}
+
+        // 💰 PROCESAMIENTO FINANZAS Y LOGÍSTICA (Merchant Orders)
+        let finance_summary = { total_gross: 0, accredited: 0, pending: 0 };
+        let logistics_summary = { handling: 0, ready_to_ship: 0, shipped: 0, delivered: 0 };
+        
+        if (mOrdersData.results) {
+            mOrdersData.results.forEach(order => {
+                finance_summary.total_gross += order.total_amount || 0;
+                if (order.status === 'paid' || order.status === 'closed') finance_summary.accredited += order.total_amount || 0;
+                else finance_summary.pending += order.total_amount || 0;
+
+                const shipStatus = order.shipments?.[0]?.status;
+                if (shipStatus && logistics_summary.hasOwnProperty(shipStatus)) logistics_summary[shipStatus]++;
+            });
         }
 
         const mlIds = searchData.results || [];
         const itemsMetrics = await Promise.all(mlIds.map(async (id) => {
-          const [vRes, detRes] = await Promise.all([
-            fetch(`https://api.mercadolibre.com/items/${id}/visits/time_window?last=30&unit=day`, { headers }), 
-            fetch(`https://api.mercadolibre.com/items/${id}`, { headers })
-          ]);
+          const [vRes, detRes] = await Promise.all([fetch(`https://api.mercadolibre.com/items/${id}/visits/time_window?last=30&unit=day`, { headers }), fetch(`https://api.mercadolibre.com/items/${id}`, { headers })]);
           const [vData, detData] = await Promise.all([vRes.json(), detRes.json()]);
-          return { 
-            id, 
-            title: detData.title, 
-            visits_30d: vData.total_visits || 0, 
-            price: detData.price, 
-            stock: detData.available_quantity, 
-            status: detData.status 
-          };
+          return { id, title: detData.title, visits_30d: vData.total_visits || 0, price: detData.price, stock: detData.available_quantity, status: detData.status };
         }));
 
         return res.status(200).json({
@@ -246,114 +237,10 @@ export default async function handler(req, res) {
           items_count: searchData.paging?.total || 0,
           recent_orders: ordersData.results?.length || 0,
           top_items: itemsMetrics,
-          ads_summary: ads_summary
+          ads_summary,
+          finance_summary,
+          logistics_summary
         });
-      }
-
-      case 'auto-link': {
-        const mlUserId = dbToken.user_id;
-        const searchRes = await fetch(`https://api.mercadolibre.com/users/${mlUserId}/items/search?status=active`, { headers: { Authorization: `Bearer ${accessToken}` } });
-        const searchData = await searchRes.json();
-        const mlIds = searchData.results || [];
-        if (mlIds.length === 0) return res.status(200).json({ message: 'No hay publicaciones activas', linked: 0 });
-        const detailsRes = await fetch(`https://api.mercadolibre.com/items?ids=${mlIds.join(',')}`, { headers: { Authorization: `Bearer ${accessToken}` } });
-        const detailsData = await detailsRes.json();
-        const mlItems = detailsData.map(d => d.body).filter(Boolean);
-        const { data: localProducts } = await supabase.from('products').select('id, name, ml_item_id');
-        let linkedCount = 0;
-        for (const item of mlItems) {
-          const mlTitle = item.title.toLowerCase();
-          const match = localProducts.find(p => {
-            if (p.ml_item_id === item.id) return false;
-            return mlTitle === p.name.toLowerCase() || mlTitle.includes(p.name.toLowerCase());
-          });
-          if (match) {
-            await supabase.from('products').update({ ml_item_id: item.id, ml_permalink: item.permalink, ml_status: item.status }).eq('id', match.id);
-            linkedCount++;
-          }
-        }
-        return res.status(200).json({ message: 'Búsqueda completada', linked: linkedCount });
-      }
-
-      case 'bulk-sync-stock': {
-        const { productIds } = req.body;
-        let query = supabase.from('products').select('id, name, stock, ml_item_id');
-        if (productIds && productIds.length > 0) query = query.in('id', productIds);
-        else query = query.not('ml_item_id', 'is', null);
-        const { data: products } = await query;
-        const results = [];
-        for (const prod of products) {
-          if (!prod.ml_item_id) continue;
-          try {
-            const mlResp = await fetch(`https://api.mercadolibre.com/items/${prod.ml_item_id}`, {
-              method: 'PUT',
-              headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
-              body: JSON.stringify({ available_quantity: Math.max(0, prod.stock || 0) })
-            });
-            results.push({ id: prod.id, status: mlResp.ok ? 'success' : 'error' });
-          } catch (err) { results.push({ id: prod.id, status: 'error' }); }
-        }
-        return res.status(200).json({ results });
-      }
-
-      case 'sync-product': {
-        const { productId, productData, markupPercentage } = req.body;
-        const { data: product } = await supabase.from('products').select('*').eq('id', productId).single();
-        const price = Math.floor(Number(productData?.price || product.price) * (1 + (markupPercentage || 25) / 100));
-        const itemBody = {
-          title: (product.ml_title || product.name).slice(0, 60),
-          category_id: product.ml_category_id || "MLA3530",
-          price,
-          currency_id: "ARS",
-          available_quantity: product.stock || 0,
-          buying_mode: "buy_it_now",
-          condition: "new",
-          listing_type_id: "gold_special",
-          pictures: (product.images || []).map(img => ({ source: typeof img === 'string' ? img : img.url })),
-          attributes: [{ id: "BRAND", value_name: "3D2Store" }, { id: "MODEL", value_name: "Personalizado" }]
-        };
-        if (product.ml_item_id) {
-          await fetch(`https://api.mercadolibre.com/items/${product.ml_item_id}`, {
-            method: 'PUT',
-            headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
-            body: JSON.stringify({ price, available_quantity: product.stock })
-          });
-          return res.status(200).json({ success: true, ml_id: product.ml_item_id });
-        } else {
-          const createResp = await fetch(`https://api.mercadolibre.com/items`, { method: 'POST', headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' }, body: JSON.stringify(itemBody) });
-          const createData = await createResp.json();
-          if (createResp.ok) {
-            await supabase.from('products').update({ ml_item_id: createData.id, ml_status: createData.status }).eq('id', productId);
-            return res.status(200).json({ success: true, ml_id: createData.id });
-          }
-          return res.status(400).json({ error: createData.message });
-        }
-      }
-
-      case 'save-goals': {
-        await supabase.from('vanguard_memory').upsert({ user_id: String(userId), event_type: 'vanguard_goals', content: { text: req.body.goals }, updated_at: new Date().toISOString() }, { onConflict: 'user_id,event_type' });
-        return res.status(200).json({ success: true });
-      }
-
-      case 'get-goals': {
-        const { data } = await supabase.from('vanguard_memory').select('content').eq('user_id', String(userId)).eq('event_type', 'vanguard_goals').maybeSingle();
-        return res.status(200).json(data?.content || { text: "" });
-      }
-
-      case 'execute-hitl': {
-        const { intent, item_id, value } = req.body;
-        const body = intent === 'update_price' ? { price: Number(value) } : { status: intent === 'paused' ? 'paused' : 'active' };
-        const mlResponse = await fetch(`https://api.mercadolibre.com/items/${item_id}`, { method: 'PUT', headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-        return res.status(200).json({ success: mlResponse.ok });
-      }
-
-      case 'oauth': {
-        const { code, userId: supabaseUserId } = req.body;
-        const r = await fetch('https://api.mercadolibre.com/oauth/token', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ grant_type: 'authorization_code', client_id: process.env.VITE_ML_APP_ID || process.env.ML_APP_ID, client_secret: process.env.VITE_ML_APP_SECRET || process.env.VITE_ML_APP_SECRET, code, redirect_uri: process.env.VITE_ML_REDIRECT_URI || process.env.ML_REDIRECT_URI }) });
-        const data = await r.json();
-        if (!r.ok) return res.status(r.status).json(data);
-        await supabase.from('ml_tokens').upsert({ user_id: supabaseUserId || String(data.user_id), ml_user_id: String(data.user_id), access_token: data.access_token, refresh_token: data.refresh_token, expires_in: data.expires_in, updated_at: new Date().toISOString() }, { onConflict: 'user_id' });
-        return res.status(200).json({ ok: true });
       }
 
       default: return res.status(400).json({ error: 'Unsupported action' });
