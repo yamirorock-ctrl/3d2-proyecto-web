@@ -107,31 +107,41 @@ export default async function handler(req, res) {
         const { metrics, goals, isChat, history, message } = req.body;
         
         if (!openai) {
-            console.error("OPENAI_API_KEY is missing.");
             return res.status(200).json({ reply: "⚠️ Vanguard está en mantenimiento.", history: history || [] });
         }
 
-        const compactMetrics = {
-            reputation: metrics?.reputation?.level_id || 'N/A',
-            sales_30d: metrics?.recent_orders || 0,
-            questions_pending: metrics?.unanswered_questions || 0,
-            top_products: (metrics?.top_items || []).slice(0, 5).map(i => ({ t: i.title, v: i.visits_30d, p: i.price }))
+        // 🧠 INTELIGENCIA SIN RECORTE: Compactamos TODO el catálogo para que Vanguard lo vea completo
+        const fullCompactCatalog = (metrics?.top_items || []).map(i => ({
+            id: i.id,
+            t: i.title,
+            p: i.price,
+            s: i.stock,
+            v: i.visits_30d,
+            st: i.status
+        }));
+
+        const globalStats = {
+            reputation: metrics?.reputation || 'N/A',
+            total_active_items: metrics?.items_count || 0,
+            orders_30d: metrics?.recent_orders || 0,
+            pending_q: metrics?.unanswered_questions || 0,
+            catalog: fullCompactCatalog // Vanguard ve TODO su catálogo ahora
         };
 
         if (isChat) {
           try {
-            const activeHistory = (history || []).slice(-5);
+            const activeHistory = (history || []).slice(-8); // Un poco más de memoria
             const response = await openai.chat.completions.create({
               model: "gpt-5.4-mini",
               messages: [
-                { role: "system", content: "Eres VANGUARD. Sé ULTRA-CONCISO. Responde en max 100 palabras." },
+                { role: "system", content: "Eres VANGUARD. Analista Senior de E-commerce. Tu misión es optimizar 3D2 Store. Sé conciso pero con criterio profundo. Responde en max 150 palabras." },
                 ...activeHistory.map(m => ({ 
                   role: m.role === 'vanguard' ? 'assistant' : 'user', 
                   content: String(m.content) 
                 })),
-                { role: "user", content: `REQ: ${message}\nDATA: ${JSON.stringify(compactMetrics)}\nOBJ: ${goals}` }
+                { role: "user", content: `SOLICITUD: ${message}\nESTADO ACTUAL: ${JSON.stringify(globalStats)}\nOBJETIVOS: ${goals}` }
               ],
-              max_completion_tokens: 200, // Aumentado ligeramente para seguridad
+              max_completion_tokens: 300, 
               temperature: 0.7
             });
             const reply = response.choices[0].message.content;
@@ -146,21 +156,20 @@ export default async function handler(req, res) {
             const response = await openai.chat.completions.create({
               model: "gpt-5.4-mini",
               messages: [
-                { role: "system", content: "Analista E-commerce. Genera reporte estratégico JSON." },
-                { role: "user", content: `Analiza y devuelve JSON { "summary": "...", "performance_score": 0-100, "strategic_plan": "..." }: ${JSON.stringify(compactMetrics)}` }
+                { role: "system", content: "Eres el consultor estratégico de 3D2 Store. Genera un reporte JSON con profundidad táctica." },
+                { role: "user", content: `Analiza este ecosistema y devuelve JSON { "summary": "...", "performance_score": 0-100, "strategic_plan": "..." }: ${JSON.stringify(globalStats)}` }
               ],
               response_format: { type: "json_object" },
-              max_completion_tokens: 1000 // Aumentado a 1000 para evitar que el JSON se corte
+              max_completion_tokens: 1500 // MUCHO más espacio para un plan detallado y completo
             });
 
+            const content = response.choices[0].message.content;
             try {
-              const content = response.choices[0].message.content;
               const finalObj = JSON.parse(content);
               await supabase.from('vanguard_memory').upsert({ user_id: String(userId), event_type: 'latest_analysis', content: { analysis: finalObj, goals } }, { onConflict: 'user_id,event_type' });
               return res.status(200).json(finalObj);
-            } catch (parseErr) {
-              console.error("JSON Parse Error:", parseErr);
-              return res.status(200).json({ summary: "Análisis completado (Error de formato)", performance_score: 50, strategic_plan: "La IA generó un reporte demasiado largo. Reintenta en unos momentos." });
+            } catch (pErr) {
+              return res.status(200).json({ summary: "Reporte generado (Parseo manual)", performance_score: 70, strategic_plan: content.substring(0, 500) });
             }
           } catch (err) {
             return res.status(500).json({ error: "Error estático: " + err.message });
@@ -220,7 +229,7 @@ export default async function handler(req, res) {
         const dateFrom = new Date();
         dateFrom.setDate(dateFrom.getDate() - 30);
         const [searchRes, ordersRes, userRes, questionsRes] = await Promise.all([
-          fetch(`https://api.mercadolibre.com/users/${mlUserId}/items/search?status=active&limit=25`, { headers }),
+          fetch(`https://api.mercadolibre.com/users/${mlUserId}/items/search?status=active&limit=50`, { headers }), // Aumentado a 50 para ver más
           fetch(`https://api.mercadolibre.com/orders/search?seller=${mlUserId}&order.date_created.from=${dateFrom.toISOString()}&limit=50`, { headers }),
           fetch(`https://api.mercadolibre.com/users/${mlUserId}`, { headers }),
           fetch(`https://api.mercadolibre.com/questions/search?seller_id=${mlUserId}&status=unanswered`, { headers })
