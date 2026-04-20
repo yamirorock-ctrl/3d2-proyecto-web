@@ -11,7 +11,15 @@ if (SUPABASE_URL && SUPABASE_SERVICE_KEY) {
   supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 }
 
-const openai = OPENAI_API_KEY ? new OpenAI({ apiKey: OPENAI_API_KEY }) : null;
+// Inicialización segura de OpenAI
+let openai = null;
+try {
+  if (OPENAI_API_KEY) {
+    openai = new OpenAI({ apiKey: OPENAI_API_KEY });
+  }
+} catch (e) {
+  console.error("Error al inicializar OpenAI:", e);
+}
 
 export default async function handler(req, res) {
   const origin = req.headers.origin || "*";
@@ -100,10 +108,10 @@ export default async function handler(req, res) {
         const { metrics, goals, isChat, history, message } = req.body;
         
         if (!openai) {
-            return res.status(500).json({ error: "OpenAI no configurado. Verifica tu OPENAI_API_KEY." });
+            console.error("OPENAI_API_KEY is missing in environment variables.");
+            return res.status(200).json({ reply: "⚠️ Vanguard está en modo mantenimiento (Falta API Key). Verifica las variables en Vercel y haz un redeploy.", history: history || [] });
         }
 
-        // 💡 OPTIMIZACIÓN DE DATOS PARA AHORRO DE TOKENS
         const compactMetrics = {
             reputation: metrics?.reputation?.level_id || 'N/A',
             sales_30d: metrics?.recent_orders || 0,
@@ -113,7 +121,6 @@ export default async function handler(req, res) {
 
         if (isChat) {
           try {
-            // Regla de ahorro: solo últimos 5 mensajes
             const activeHistory = (history || []).slice(-5);
             
             const response = await openai.chat.completions.create({
@@ -126,7 +133,7 @@ export default async function handler(req, res) {
                 })),
                 { role: "user", content: `REQ: ${message}\nDATA: ${JSON.stringify(compactMetrics)}\nOBJ: ${goals}` }
               ],
-              max_completion_tokens: 150, // Límite de salida para ahorro
+              max_completion_tokens: 150,
               temperature: 0.7
             });
 
@@ -135,8 +142,8 @@ export default async function handler(req, res) {
             await supabase.from('app_settings').upsert({ key: 'vanguard_history', value: newHistory });
             return res.status(200).json({ reply, history: newHistory });
           } catch (err) {
-            console.error("OpenAI Error:", err);
-            return res.status(500).json({ error: "Error en el cerebro de Vanguard" });
+            console.error("OpenAI Execution Error:", err);
+            return res.status(500).json({ error: "Error en el cerebro de Vanguard: " + err.message });
           }
         } else {
           try {
@@ -155,7 +162,7 @@ export default async function handler(req, res) {
             return res.status(200).json(finalObj);
           } catch (err) {
             console.error("OpenAI Static Error:", err);
-            return res.status(500).json({ error: "Error en el análisis estático" });
+            return res.status(500).json({ error: "Error en el análisis estático: " + err.message });
           }
         }
       }
@@ -252,7 +259,7 @@ export default async function handler(req, res) {
 
       case 'oauth': {
         const { code, userId: supabaseUserId } = req.body;
-        const r = await fetch('https://api.mercadolibre.com/oauth/token', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ grant_type: 'authorization_code', client_id: process.env.VITE_ML_APP_ID || process.env.ML_APP_ID, client_secret: process.env.VITE_ML_APP_SECRET || process.env.ML_APP_SECRET, code, redirect_uri: process.env.VITE_ML_REDIRECT_URI || process.env.ML_REDIRECT_URI }) });
+        const r = await fetch('https://api.mercadolibre.com/oauth/token', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ grant_type: 'authorization_code', client_id: process.env.VITE_ML_APP_ID || process.env.ML_APP_ID, client_secret: process.env.VITE_ML_APP_SECRET || process.env.VITE_ML_APP_SECRET, code, redirect_uri: process.env.VITE_ML_REDIRECT_URI || process.env.ML_REDIRECT_URI }) });
         const data = await r.json();
         if (!r.ok) return res.status(r.status).json(data);
         await supabase.from('ml_tokens').upsert({ user_id: supabaseUserId || String(data.user_id), ml_user_id: String(data.user_id), access_token: data.access_token, refresh_token: data.refresh_token, expires_in: data.expires_in, updated_at: new Date().toISOString() }, { onConflict: 'user_id' });
@@ -262,7 +269,7 @@ export default async function handler(req, res) {
       default: return res.status(400).json({ error: 'Unsupported action' });
     }
   } catch (error) {
-    console.error(`[ML Manager] Error:`, error);
-    return res.status(500).json({ error: error.message });
+    console.error(`[ML Manager] GLOBAL ERROR:`, error);
+    return res.status(500).json({ error: "Error crítico: " + error.message });
   }
 }
