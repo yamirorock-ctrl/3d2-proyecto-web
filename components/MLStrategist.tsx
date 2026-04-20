@@ -579,7 +579,7 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
                       <div key={i} className="flex items-center justify-between p-3 rounded-2xl bg-[#0b0f19] border border-white/5">
                           <div className="flex flex-col">
                               <span className="text-xs font-bold text-white truncate w-48 sm:w-64">{item.title}</span>
-                              <span className="text-[10px] text-slate-500">Salud: {Math.round(item.health || 0 * 100)}%</span>
+                              <span className="text-[10px] text-slate-500">Salud: {Math.round((item.health || 0) * 100)}%</span>
                           </div>
                           <div className="text-right">
                               <div className="text-sm font-black text-white">{item.visits_30d}</div>
