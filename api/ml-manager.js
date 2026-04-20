@@ -107,7 +107,7 @@ export default async function handler(req, res) {
                 ...h.map(m => ({ role: m.role === 'vanguard' ? 'assistant' : 'user', content: String(m.content) })),
                 { role: "user", content: `SOLICITUD: ${message}\nDATOS: ${JSON.stringify(globalStats)}\nOBJETIVOS: ${goals}` }
               ],
-              max_completion_tokens: 1500
+              max_completion_tokens: 2500 // Aumentado para respuestas más completas
             });
             const reply = r.choices[0].message.content;
             const newH = [...h, { role: 'user', content: message, timestamp: new Date().toISOString() }, { role: 'vanguard', content: reply, timestamp: new Date().toISOString() }];
@@ -121,11 +121,11 @@ export default async function handler(req, res) {
             const r = await openai.chat.completions.create({
               model: "gpt-5.4-mini", 
               messages: [
-                { role: "system", content: "Consultor Senior 360°. JSON profundo." },
-                { role: "user", content: `Analiza y devuelve JSON: ${JSON.stringify(globalStats)}` }
+                { role: "system", content: "Consultor Senior 360°. Genera un JSON profundo y estratégico." },
+                { role: "user", content: `Analiza integralmente y devuelve JSON: ${JSON.stringify(globalStats)}` }
               ],
               response_format: { type: "json_object" },
-              max_completion_tokens: 2000
+              max_completion_tokens: 4000 // Aumentado para evitar JSON truncado
             });
             const obj = JSON.parse(r.choices[0].message.content);
             await supabase.from('vanguard_memory').upsert({ user_id: String(userId), event_type: 'latest_analysis', content: { analysis: obj, goals } }, { onConflict: 'user_id,event_type' });
