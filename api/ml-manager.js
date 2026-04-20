@@ -20,13 +20,12 @@ export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
   if (req.method === "OPTIONS") return res.status(200).end();
   
-  // Limpieza agresiva de parámetros
   const actionRaw = req.query.action || req.body?.action;
   const action = actionRaw ? String(actionRaw).trim() : null;
   const userId = req.query.userId || req.body?.userId;
 
   if (!action || !userId) {
-    return res.status(400).json({ error: 'Missing action/userId', received: { action, userId } });
+    return res.status(400).json({ error: 'Missing action/userId' });
   }
 
   try {
@@ -83,37 +82,45 @@ export default async function handler(req, res) {
             advertising_summary: metrics?.ads_summary || { message: "Sin datos ads." },
             finance_summary: metrics?.finance_summary || { message: "Sin datos financieros." },
             logistics_summary: metrics?.logistics_summary || { message: "Sin datos logísticos." },
-            catalog_detail: (metrics?.top_items || []).slice(0, 50).map(i => ({ id: i.id, title: i.title, price: i.price, available_quantity: i.stock, visits_30d: i.visits_30d, status: i.status }))
+            catalog_detail: (metrics?.top_items || []).slice(0, 50).map(i => ({ id: i.id, title: i.title, price: i.price, available_quantity: i.stock, visits_30d: i.visits_30d, sold_quantity: i.sold_quantity, status: i.status }))
         };
 
         if (isChat) {
           const h = (history || []).slice(-8);
-          const r = await openai.chat.completions.create({
-            model: "gpt-5.4-mini",
-            messages: [
-              { role: "system", content: "VANGUARD 360°. Analista Senior 3D2. Sé estratégico y directo." },
-              ...h.map(m => ({ role: m.role === 'vanguard' ? 'assistant' : 'user', content: String(m.content) })),
-              { role: "user", content: `SOLICITUD: ${message}\nDATOS: ${JSON.stringify(globalStats)}\nOBJETIVOS: ${goals}` }
-            ],
-            max_completion_tokens: 1500
-          });
-          const reply = r.choices[0].message.content;
-          const newH = [...h, { role: 'user', content: message, timestamp: new Date().toISOString() }, { role: 'vanguard', content: reply, timestamp: new Date().toISOString() }];
-          await supabase.from('app_settings').upsert({ key: 'vanguard_history', value: newH });
-          return res.status(200).json({ reply, history: newH });
+          try {
+            const r = await openai.chat.completions.create({
+              model: "gpt-4o-mini", // Corregido: gpt-5.4-mini no existe
+              messages: [
+                { role: "system", content: "Eres VANGUARD 360°. Analista Senior 3D2. Sé estratégico y directo." },
+                ...h.map(m => ({ role: m.role === 'vanguard' ? 'assistant' : 'user', content: String(m.content) })),
+                { role: "user", content: `SOLICITUD: ${message}\nDATOS: ${JSON.stringify(globalStats)}\nOBJETIVOS: ${goals}` }
+              ],
+              max_completion_tokens: 1500
+            });
+            const reply = r.choices[0].message.content;
+            const newH = [...h, { role: 'user', content: message, timestamp: new Date().toISOString() }, { role: 'vanguard', content: reply, timestamp: new Date().toISOString() }];
+            await supabase.from('app_settings').upsert({ key: 'vanguard_history', value: newH }, { onConflict: 'key' });
+            return res.status(200).json({ reply, history: newH });
+          } catch (e) {
+            return res.status(500).json({ error: "OpenAI Error: " + e.message });
+          }
         } else {
-          const r = await openai.chat.completions.create({
-            model: "gpt-5.4-mini",
-            messages: [
-              { role: "system", content: "Consultor Senior 360°. JSON profundo." },
-              { role: "user", content: `Analiza y devuelve JSON: ${JSON.stringify(globalStats)}` }
-            ],
-            response_format: { type: "json_object" },
-            max_completion_tokens: 2000
-          });
-          const obj = JSON.parse(r.choices[0].message.content);
-          await supabase.from('vanguard_memory').upsert({ user_id: String(userId), event_type: 'latest_analysis', content: { analysis: obj, goals } }, { onConflict: 'user_id,event_type' });
-          return res.status(200).json(obj);
+          try {
+            const r = await openai.chat.completions.create({
+              model: "gpt-4o-mini", // Corregido
+              messages: [
+                { role: "system", content: "Consultor Senior 360°. JSON profundo." },
+                { role: "user", content: `Analiza y devuelve JSON: ${JSON.stringify(globalStats)}` }
+              ],
+              response_format: { type: "json_object" },
+              max_completion_tokens: 2000
+            });
+            const obj = JSON.parse(r.choices[0].message.content);
+            await supabase.from('vanguard_memory').upsert({ user_id: String(userId), event_type: 'latest_analysis', content: { analysis: obj, goals } }, { onConflict: 'user_id,event_type' });
+            return res.status(200).json(obj);
+          } catch (e) {
+            return res.status(500).json({ error: "OpenAI Static Error: " + e.message });
+          }
         }
       }
 
@@ -124,15 +131,14 @@ export default async function handler(req, res) {
         const dS = dF.toISOString().split('T')[0];
         const tS = new Date().toISOString().split('T')[0];
 
-        const [sRes, oRes, uRes, qRes, mRes] = await Promise.all([
+        const [sRes, oRes, uRes, qRes] = await Promise.all([
           fetch(`https://api.mercadolibre.com/users/${mlUserId}/items/search?status=active&limit=50`, { headers }),
           fetch(`https://api.mercadolibre.com/orders/search?seller=${mlUserId}&order.date_created.from=${dF.toISOString()}&limit=50`, { headers }),
           fetch(`https://api.mercadolibre.com/users/${mlUserId}`, { headers }),
-          fetch(`https://api.mercadolibre.com/questions/search?seller_id=${mlUserId}&status=unanswered`, { headers }),
-          fetch(`https://api.mercadolibre.com/merchant_orders/search?seller_id=${mlUserId}&date_created.from=${dF.toISOString()}`, { headers })
+          fetch(`https://api.mercadolibre.com/questions/search?seller_id=${mlUserId}&status=unanswered`, { headers })
         ]);
 
-        const [sD, oD, uD, qD, mD] = await Promise.all([sRes.json(), oRes.json(), uRes.json(), qRes.json(), mRes.json()]);
+        const [sD, oD, uD, qD] = await Promise.all([sRes.json(), oRes.json(), uRes.json(), qRes.json()]);
 
         let ads = null;
         try {
@@ -152,38 +158,24 @@ export default async function handler(req, res) {
         let fin = { total_gross_amount: 0, accredited_amount: 0, pending_amount: 0 };
         let log = { handling: 0, ready_to_ship: 0, shipped: 0, delivered: 0, cancelled: 0 };
         
-        // Usamos las Órdenes (oD) que sabemos que devuelven data correcta
-        if (oD.results) {
+        if (oD.results && Array.isArray(oD.results)) {
             oD.results.forEach(order => {
                 const amount = order.total_amount || 0;
                 fin.total_gross_amount += amount;
-                
-                if (order.status === 'paid' || order.status === 'closed') {
-                    fin.accredited_amount += amount;
-                } else if (order.status !== 'cancelled') {
-                    fin.pending_amount += amount;
-                }
-                
+                if (order.status === 'paid' || order.status === 'closed') fin.accredited_amount += amount;
+                else if (order.status !== 'cancelled') fin.pending_amount += amount;
                 const shipStatus = order.shipping?.status;
-                if (shipStatus && log.hasOwnProperty(shipStatus)) {
-                    log[shipStatus]++;
-                }
+                if (shipStatus && log.hasOwnProperty(shipStatus)) log[shipStatus]++;
             });
         }
 
         const ids = sD.results || [];
         const itemsM = await Promise.all(ids.map(async (id) => {
-          const [vR, dR] = await Promise.all([fetch(`https://api.mercadolibre.com/items/${id}/visits/time_window?last=30&unit=day`, { headers }), fetch(`https://api.mercadolibre.com/items/${id}`, { headers })]);
-          const [vD, dD] = await Promise.all([vR.json(), dR.json()]);
-          return { 
-              id, 
-              title: dD.title, 
-              sold_quantity: dD.sold_quantity || 0, // Clave para tasa de conversión 
-              visits_30d: vD.total_visits || 0, 
-              price: dD.price, 
-              stock: dD.available_quantity, 
-              status: dD.status 
-          };
+          try {
+            const [vR, dR] = await Promise.all([fetch(`https://api.mercadolibre.com/items/${id}/visits/time_window?last=30&unit=day`, { headers }), fetch(`https://api.mercadolibre.com/items/${id}`, { headers })]);
+            const [vD, dD] = await Promise.all([vR.json(), dR.json()]);
+            return { id, title: dD.title, sold_quantity: dD.sold_quantity || 0, visits_30d: vD.total_visits || 0, price: dD.price, stock: dD.available_quantity, status: dD.status };
+          } catch(e) { return { id, title: "Error", visits_30d: 0 }; }
         }));
 
         return res.status(200).json({ reputation: uD.seller_reputation, unanswered_questions: qD.total || 0, items_count: sD.paging?.total || 0, recent_orders: oD.results?.length || 0, top_items: itemsM, ads_summary: ads, finance_summary: fin, logistics_summary: log });
