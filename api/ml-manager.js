@@ -111,8 +111,8 @@ export default async function handler(req, res) {
             const r = await openai.chat.completions.create({
               model: "gpt-5.4-mini", 
               messages: [
-                { role: "system", content: "Consultor Senior 360°. Genera un JSON estratégico profundo basado en los datos proporcionados." },
-                { role: "user", content: `Analiza integralmente y devuelve JSON: ${JSON.stringify(contextData)}` }
+                { role: "system", content: "Consultor Senior 360°. Tu salida DEBE ser un JSON con este esquema exacto: { summary, performance_score, insights: [{type, title, description}], categorized_items: { protagonists:[], stagnant:[], zombies:[] }, strategic_plan, recommended_actions: [{intent, action, item_id, value, reason, impact}], ads_manager: { total_budget_active, roas_global, active_campaigns: [{name, budget, roas_target, status}] }, ads_sales, organic_sales, clicks, total_revenue, acos }" },
+                { role: "user", content: `Analiza integralmente y devuelve el JSON requerido según el esquema: ${JSON.stringify(contextData)}` }
               ],
               response_format: { type: "json_object" },
               max_completion_tokens: 4000
@@ -128,7 +128,6 @@ export default async function handler(req, res) {
         const mlUserId = dbToken.ml_user_id || dbToken.user_id;
         const headers = { Authorization: `Bearer ${accessToken}` };
         const dF = new Date(); dF.setDate(dF.getDate() - 30);
-        
         const [searchRes, ordersRes, userRes, questionsRes, adsAuthRes] = await Promise.all([
           fetch(`https://api.mercadolibre.com/users/${mlUserId}/items/search?status=active&limit=50`, { headers }),
           fetch(`https://api.mercadolibre.com/orders/search?seller=${mlUserId}&order.date_created.from=${dF.toISOString()}&sort=date_desc&limit=50`, { headers }),
@@ -136,9 +135,7 @@ export default async function handler(req, res) {
           fetch(`https://api.mercadolibre.com/questions/search?seller_id=${mlUserId}&status=unanswered`, { headers }),
           fetch(`https://api.mercadolibre.com/advertising/advertisers?product_id=PADS`, { headers: { ...headers, 'api-version': '1' } })
         ]);
-
         const [searchData, ordersData, userData, questionsData, adsAuthData] = await Promise.all([safeJson(searchRes), safeJson(ordersRes), safeJson(userRes), safeJson(questionsRes), safeJson(adsAuthRes)]);
-        
         let ads = [];
         const advertiser = (adsAuthData.advertisers || []).find(a => a.site_id === 'MLA');
         if (advertiser) {
@@ -147,7 +144,6 @@ export default async function handler(req, res) {
           const adsJson = await safeJson(adsSearchRes);
           ads = adsJson.results || [];
         }
-
         let fin = { total_gross_amount: 0, accredited_amount: 0, pending_amount: 0 };
         let log = { handling: 0, ready_to_ship: 0, shipped: 0, delivered: 0, cancelled: 0 };
         if (ordersData.results) {
@@ -160,27 +156,14 @@ export default async function handler(req, res) {
                 if (sStatus && log.hasOwnProperty(sStatus)) log[sStatus]++;
             });
         }
-
         const mlIds = (searchData.results || []).slice(0, 25);
         const itemsMetrics = await Promise.all(mlIds.map(async (id) => {
           try {
             const [vR, dR] = await Promise.all([fetch(`https://api.mercadolibre.com/items/${id}/visits/time_window?last=30&unit=day`, { headers }), fetch(`https://api.mercadolibre.com/items/${id}`, { headers })]);
             const vD = await safeJson(vR), dD = await safeJson(dR);
-            return { 
-                id, 
-                title: dD.title || "Sin título", 
-                visits_30d: vD.total_visits || 0, 
-                sold_quantity: dD.sold_quantity || 0, 
-                price: dD.price || 0, 
-                stock: dD.available_quantity || 0, 
-                status: dD.status || "active", 
-                category_id: dD.category_id,
-                health: dD.health,
-                professionalism: Math.round((dD.health || 0) * 100)
-            };
+            return { id, title: dD.title || "Sin título", visits_30d: vD.total_visits || 0, sold_quantity: dD.sold_quantity || 0, price: dD.price || 0, stock: dD.available_quantity || 0, status: dD.status || "active", category_id: dD.category_id, health: dD.health || 0.85 };
           } catch(e) { return { id, title: "Error" }; }
         }));
-
         let competition = [];
         if (itemsMetrics.length > 0) {
             try {
@@ -191,21 +174,7 @@ export default async function handler(req, res) {
                 if (compData.results) competition = compData.results.filter(r => String(r.seller?.id) !== String(mlUserId)).map(r => ({ title: r.title, price: r.price, sold_quantity: r.sold_quantity || 0 }));
             } catch(e) {}
         }
-
-        return res.status(200).json({ 
-            reputation: userData.seller_reputation, 
-            unanswered_questions: questionsData.total || 0, 
-            items_count: searchData.paging?.total || 0, 
-            recent_orders: ordersData.results?.length || 0, 
-            orders_summary: ordersData.results?.slice(0, 10) || [], 
-            ads: ads, 
-            ads_summary: ads, 
-            finance_summary: fin, 
-            logistics_summary: log, 
-            top_items: itemsMetrics, 
-            competition: competition,
-            sales: ordersData // Clave necesaria para Ventas Proyectadas
-        });
+        return res.status(200).json({ reputation: userData.seller_reputation, unanswered_questions: questionsData.total || 0, items_count: searchData.paging?.total || 0, recent_orders: ordersData.results?.length || 0, orders_summary: ordersData.results?.slice(0, 10) || [], ads: ads, ads_summary: ads, finance_summary: fin, logistics_summary: log, top_items: itemsMetrics, competition: competition, sales: ordersData });
       }
 
       case 'get-goals': {
