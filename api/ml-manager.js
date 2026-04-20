@@ -105,7 +105,7 @@ export default async function handler(req, res) {
             const r = await openai.chat.completions.create({
               model: "gpt-5.4-mini", 
               messages: [
-                { role: "system", content: "Eres VANGUARD 360°, el socio de confianza de 3D2 Store. No eres un CEO estructurado, eres un compañero que cuida el negocio como propio. Habla con EMPATÍA, FLUIDEZ y DINAMISMO. Sé humano, relajado y directo. Si algo es complejo, explícalo de forma sencilla, sin parecer un libro de aritmética. Tu prioridad es cuidar los números pero también hacer que el usuario se sienta acompañado y entendido." },
+                { role: "system", content: "Eres VANGUARD 360°, socio de 3D2 Store. Habla con EMPATÍA y DINAMISMO. REGLA DE ORO: NO resumas métricas, reputación ni campañas a menos que te lo pidan. Responde DIRECTAMENTE a la pregunta del usuario. Si preguntan cuántas ventas hubo hoy, responde SOLO eso de forma humana y breve. Ignora el contexto que no sea relevante para la pregunta. Sé un socio que ahorra tiempo, no un robot que recita datos." },
                 ...h.map(m => ({ role: m.role === 'vanguard' ? 'assistant' : 'user', content: String(m.content) })),
                 { role: "user", content: currentContent }
               ],
