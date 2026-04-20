@@ -1,13 +1,17 @@
 import { createClient } from '@supabase/supabase-js';
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import OpenAI from "openai";
 
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_TOKEN;
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
 let supabase = null;
 if (SUPABASE_URL && SUPABASE_SERVICE_KEY) {
   supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 }
+
+const openai = OPENAI_API_KEY ? new OpenAI({ apiKey: OPENAI_API_KEY }) : null;
 
 export default async function handler(req, res) {
   const origin = req.headers.origin || "*";
@@ -92,6 +96,70 @@ export default async function handler(req, res) {
         });
       }
 
+      case 'strategic-analysis': {
+        const { metrics, goals, isChat, history, message } = req.body;
+        
+        if (!openai) {
+            return res.status(500).json({ error: "OpenAI no configurado. Verifica tu OPENAI_API_KEY." });
+        }
+
+        // 💡 OPTIMIZACIÓN DE DATOS PARA AHORRO DE TOKENS
+        const compactMetrics = {
+            reputation: metrics?.reputation?.level_id || 'N/A',
+            sales_30d: metrics?.recent_orders || 0,
+            questions_pending: metrics?.unanswered_questions || 0,
+            top_products: (metrics?.top_items || []).slice(0, 5).map(i => ({ t: i.title, v: i.visits_30d, p: i.price }))
+        };
+
+        if (isChat) {
+          try {
+            // Regla de ahorro: solo últimos 5 mensajes
+            const activeHistory = (history || []).slice(-5);
+            
+            const response = await openai.chat.completions.create({
+              model: "gpt-5.4-mini",
+              messages: [
+                { role: "system", content: "Eres VANGUARD, analista senior de 3D2 Store. Sé ULTRA-CONCISO. Responde en max 100 palabras. No rellenos. Sé directo y estratégico." },
+                ...activeHistory.map(m => ({ 
+                  role: m.role === 'vanguard' ? 'assistant' : 'user', 
+                  content: String(m.content) 
+                })),
+                { role: "user", content: `REQ: ${message}\nDATA: ${JSON.stringify(compactMetrics)}\nOBJ: ${goals}` }
+              ],
+              max_tokens: 150, // Límite de salida para ahorro
+              temperature: 0.7
+            });
+
+            const reply = response.choices[0].message.content;
+            const newHistory = [...activeHistory, { role: 'user', content: message, timestamp: new Date().toISOString() }, { role: 'vanguard', content: reply, timestamp: new Date().toISOString() }];
+            await supabase.from('app_settings').upsert({ key: 'vanguard_history', value: newHistory });
+            return res.status(200).json({ reply, history: newHistory });
+          } catch (err) {
+            console.error("OpenAI Error:", err);
+            return res.status(500).json({ error: "Error en el cerebro de Vanguard" });
+          }
+        } else {
+          try {
+            const response = await openai.chat.completions.create({
+              model: "gpt-5.4-mini",
+              messages: [
+                { role: "system", content: "Analista E-commerce. Genera reporte estratégico JSON." },
+                { role: "user", content: `Analiza y devuelve JSON { summary, performance_score, strategic_plan }: ${JSON.stringify(compactMetrics)}` }
+              ],
+              response_format: { type: "json_object" },
+              max_tokens: 500
+            });
+
+            const finalObj = JSON.parse(response.choices[0].message.content);
+            await supabase.from('vanguard_memory').upsert({ user_id: String(userId), event_type: 'latest_analysis', content: { analysis: finalObj, goals } }, { onConflict: 'user_id,event_type' });
+            return res.status(200).json(finalObj);
+          } catch (err) {
+            console.error("OpenAI Static Error:", err);
+            return res.status(500).json({ error: "Error en el análisis estático" });
+          }
+        }
+      }
+
       case 'auto-link': {
         const mlUserId = dbToken.user_id;
         const searchRes = await fetch(`https://api.mercadolibre.com/users/${mlUserId}/items/search?status=active`, { headers: { Authorization: `Bearer ${accessToken}` } });
@@ -117,11 +185,6 @@ export default async function handler(req, res) {
         return res.status(200).json({ message: 'Búsqueda completada', linked: linkedCount });
       }
 
-      case 'get-promotions': {
-        const promosRes = await fetch(`https://api.mercadolibre.com/seller-promotions/principals?seller_id=${dbToken.user_id}`, { headers: { Authorization: `Bearer ${accessToken}` } });
-        return res.status(200).json(await promosRes.json());
-      }
-
       case 'bulk-sync-stock': {
         const { productIds } = req.body;
         let query = supabase.from('products').select('id, name, stock, ml_item_id');
@@ -141,40 +204,6 @@ export default async function handler(req, res) {
           } catch (err) { results.push({ id: prod.id, status: 'error' }); }
         }
         return res.status(200).json({ results });
-      }
-
-      case 'sync-product': {
-        const { productId, productData, markupPercentage } = req.body;
-        const { data: product } = await supabase.from('products').select('*').eq('id', productId).single();
-        const price = Math.floor(Number(productData?.price || product.price) * (1 + (markupPercentage || 25) / 100));
-        const itemBody = {
-          title: (product.ml_title || product.name).slice(0, 60),
-          category_id: product.ml_category_id || "MLA3530",
-          price,
-          currency_id: "ARS",
-          available_quantity: product.stock || 0,
-          buying_mode: "buy_it_now",
-          condition: "new",
-          listing_type_id: "gold_special",
-          pictures: (product.images || []).map(img => ({ source: typeof img === 'string' ? img : img.url })),
-          attributes: [{ id: "BRAND", value_name: "3D2Store" }, { id: "MODEL", value_name: "Personalizado" }]
-        };
-        if (product.ml_item_id) {
-          await fetch(`https://api.mercadolibre.com/items/${product.ml_item_id}`, {
-            method: 'PUT',
-            headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
-            body: JSON.stringify({ price, available_quantity: product.stock })
-          });
-          return res.status(200).json({ success: true, ml_id: product.ml_item_id });
-        } else {
-          const createResp = await fetch(`https://api.mercadolibre.com/items`, { method: 'POST', headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' }, body: JSON.stringify(itemBody) });
-          const createData = await createResp.json();
-          if (createResp.ok) {
-            await supabase.from('products').update({ ml_item_id: createData.id, ml_status: createData.status }).eq('id', productId);
-            return res.status(200).json({ success: true, ml_id: createData.id });
-          }
-          return res.status(400).json({ error: createData.message });
-        }
       }
 
       case 'get-metrics': {
@@ -202,58 +231,6 @@ export default async function handler(req, res) {
           recent_orders: ordersData.results?.length || 0,
           top_items: itemsMetrics
         });
-      }
-
-      case 'strategic-analysis': {
-        const { metrics, goals, isChat, history, message, attachments } = req.body;
-        const apiKey = process.env.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
-        const genAI = new GoogleGenerativeAI(apiKey);
-        const modelsToTry = ["gemini-3.1-pro-preview", "gemini-2.5-flash"];
-        if (isChat) {
-          for (const modelName of modelsToTry) {
-            try {
-              const chatModel = genAI.getGenerativeModel({ model: modelName, systemInstruction: "Eres VANGUARD. Sé EXTREMADAMENTE CONCISO y DIRECTO. Responde al punto (max 3 oraciones). Solo explayate si se pide. Prioriza tokens." });
-              let activeHistory = (history || []).slice(-10);
-              // ELIMINAR MENSAJES INICIALES DE VANGUARD (Debe empezar con User)
-              while (activeHistory.length > 0 && activeHistory[0].role === 'vanguard') {
-                activeHistory.shift();
-              }
-              const chat = chatModel.startChat({ 
-                history: activeHistory.map(m => ({ 
-                  role: m.role === 'vanguard' ? 'model' : 'user', 
-                  parts: [{ text: String(m.content) }] 
-                })) 
-              });
-              const result = await chat.sendMessage([{ text: `SOLICITUD: ${message}\nDATOS: ${JSON.stringify(metrics).substring(0, 5000)}` }]);
-              const reply = result.response.text();
-              const newHistory = [...activeHistory, { role: 'user', content: message, timestamp: new Date().toISOString() }, { role: 'vanguard', content: reply, timestamp: new Date().toISOString() }];
-              await supabase.from('app_settings').upsert({ key: 'vanguard_history', value: newHistory });
-              return res.status(200).json({ reply, history: newHistory });
-            } catch (err) {
-              const isRetryable = err.status === 429 || err.status === 503 || err.status === 500 || err.message?.includes('429') || err.message?.includes('503') || err.message?.includes('quota') || err.message?.includes('high demand');
-              if (isRetryable && modelName !== modelsToTry[1]) {
-                console.warn(`[Vanguard Fallback] Error en ${modelName}, saltando...`);
-                continue;
-              }
-              throw err;
-            }
-          }
-        } else {
-          let finalObj = null;
-          for (const modelName of modelsToTry) {
-            try {
-              const model = genAI.getGenerativeModel({ model: modelName });
-              const result = await model.generateContent(`Analiza JSON y devuelve esquema { summary, performance_score }: ${JSON.stringify(metrics).substring(0, 8000)}`);
-              const jsonMatch = result.response.text().match(/\{[\s\S]*\}/);
-              if (jsonMatch) finalObj = JSON.parse(jsonMatch[0].trim());
-              if (finalObj) break;
-            } catch (err) { if ((err.status === 429 || err.message?.includes('429')) && modelName !== modelsToTry[1]) continue; }
-          }
-          finalObj = finalObj || { summary: "IA Ocupada", performance_score: 50 };
-          await supabase.from('vanguard_memory').upsert({ user_id: String(userId), event_type: 'latest_analysis', content: { analysis: finalObj, goals } }, { onConflict: 'user_id,event_type' });
-          return res.status(200).json(finalObj);
-        }
-        break;
       }
 
       case 'save-goals': {
