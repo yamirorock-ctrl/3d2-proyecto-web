@@ -318,13 +318,28 @@ async function handleQuestion(resource, accessToken, res, botEnabled) {
       .replace("{DESCRIPTION}", descriptionText.slice(0, 1000))
       .replace("{ATTRIBUTES}", attributesText);
 
-    // 6. Generate AI Answer
-    const model = genAI.getGenerativeModel({
-      model: "gemini-2.5-flash",
-      systemInstruction: finalPrompt,
-    }); 
-    const result = await model.generateContent(`Pregunta: "${questionText}"`);
-    const answerText = result.response.text().trim();
+    // 6. Generate AI Answer with Fallback Plan
+    const modelsToTry = ["gemini-3.1", "gemini-2.5-flash"];
+    let answerText = "";
+    
+    for (const modelName of modelsToTry) {
+      try {
+        const model = genAI.getGenerativeModel({
+          model: modelName,
+          systemInstruction: finalPrompt + ". IMPORTANTE: Responde de forma ultra-concisa y directa. Máximo 2 o 3 oraciones. No uses saludos repetitivos ni rellenos.",
+        }); 
+        const result = await model.generateContent(`Pregunta: "${questionText}"`);
+        answerText = result.response.text().trim();
+        if (answerText) break;
+      } catch (err) {
+        const isQuotaError = err.status === 429 || err.message?.includes('429') || err.message?.includes('quota');
+        if (isQuotaError && modelName !== modelsToTry[modelsToTry.length - 1]) {
+          console.warn(`[ML Bot Fallback] Quota exceeded for ${modelName}. Trying next...`);
+          continue;
+        }
+        throw err;
+      }
+    }
 
     if (!answerText) throw new Error("Empty AI Response");
 

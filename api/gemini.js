@@ -18,28 +18,43 @@ export default async function handler(req, res) {
     if (action === 'chat') {
       const { systemInstruction, history, message } = payload;
       
-      const model = genAI.getGenerativeModel({ 
-        model: "gemini-2.5-flash",
-        systemInstruction: systemInstruction 
-      });
+      const modelsToTry = ["gemini-3.1", "gemini-2.5-flash"];
+      let lastError = null;
 
-      // To maintain stateless HTTP securely, we initialize a new chat session with the provided history
-      // Note: @google/generative-ai history expects { role: "user" | "model", parts: [{text: ""}] }
-      const chat = model.startChat({
-        history: history || [],
-        generationConfig: { temperature: 0.7 }
-      });
+      for (const modelName of modelsToTry) {
+        try {
+          const model = genAI.getGenerativeModel({ 
+            model: modelName,
+            systemInstruction: (systemInstruction || "") + ". Sé extremadamente conciso y directo. Responde al punto sin rellenos."
+          });
 
-      const result = await chat.sendMessage(message);
-      const text = await result.response.text();
-      return res.status(200).json({ reply: text });
+          const chat = model.startChat({
+            history: history || [],
+            generationConfig: { temperature: 0.7 }
+          });
+
+          const result = await chat.sendMessage(message);
+          const text = await result.response.text();
+          return res.status(200).json({ reply: text });
+        } catch (err) {
+          lastError = err;
+          const isQuotaError = err.status === 429 || err.message?.includes('429') || err.message?.includes('quota');
+          if (isQuotaError && modelName !== modelsToTry[modelsToTry.length - 1]) {
+            console.warn(`[Gemini Fallback] Quota exceeded for ${modelName}. Trying next...`);
+            continue;
+          }
+          throw err;
+        }
+      }
     }
 
     // 2. Suggest Title
     if (action === 'suggest_title') {
       const { productName, description, imageUrlBase64 } = payload;
-      const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" });
       
+      const modelsToTry = ["gemini-3.1", "gemini-2.5-flash"];
+      let lastError = null;
+
       const prompt = `Actúa como un experto en SEO para MercadoLibre Argentina.
 Genera un TÍTULO DE VENTA competitivo para el siguiente producto.
 
@@ -60,15 +75,30 @@ Reglas CRÍTICAS:
            inlineData: { mimeType: 'image/jpeg', data: imageUrlBase64 }
         });
       }
-      
-      const result = await model.generateContent(parts);
-      const text = await result.response.text();
-      return res.status(200).json({ title: text.trim() });
+
+      for (const modelName of modelsToTry) {
+        try {
+          const model = genAI.getGenerativeModel({ model: modelName });
+          const result = await model.generateContent(parts);
+          const text = await result.response.text();
+          return res.status(200).json({ title: text.trim() });
+        } catch (err) {
+          lastError = err;
+          const isQuotaError = err.status === 429 || err.message?.includes('429') || err.message?.includes('quota');
+          if (isQuotaError && modelName !== modelsToTry[modelsToTry.length - 1]) {
+            console.warn(`[Gemini Fallback] Quota exceeded for ${modelName}. Trying next...`);
+            continue;
+          }
+          throw err;
+        }
+      }
     }
 
     // 3. Analyze Product
     if (action === 'analyze_product') {
       const { imageBase64 } = payload;
+      const modelsToTry = ["gemini-3.1", "gemini-2.5-flash"];
+      
       const analysisPrompt = `Eres un experto comercial de productos 3D y corte láser en Argentina.
 Analiza este producto en base a esta imagen. 
 Devuelve ESTRICTAMENTE un JSON con esta estructura (nada más):
@@ -87,36 +117,57 @@ Devuelve ESTRICTAMENTE un JSON con esta estructura (nada más):
   }
 }`;
         
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [ { text: analysisPrompt }, { inlineData: { mimeType: "image/jpeg", data: imageBase64 } } ] }],
-          generationConfig: { responseMimeType: "application/json" }
-        })
-      });
-      const data = await response.json();
-      const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text;
-      return res.status(200).json({ analysis: JSON.parse(rawText) });
+      for (const modelName of modelsToTry) {
+        try {
+          const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [{ parts: [ { text: analysisPrompt }, { inlineData: { mimeType: "image/jpeg", data: imageBase64 } } ] }],
+              generationConfig: { responseMimeType: "application/json" }
+            })
+          });
+          const data = await response.json();
+          if (data.error && (data.error.code === 429 || data.error.message?.includes('quota'))) {
+            if (modelName !== modelsToTry[modelsToTry.length - 1]) continue;
+          }
+          const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+          return res.status(200).json({ analysis: JSON.parse(rawText) });
+        } catch (err) {
+          if (modelName !== modelsToTry[modelsToTry.length - 1]) continue;
+          throw err;
+        }
+      }
     }
 
     // 4. Generate Ambient
     if (action === 'generate_ambient') {
        const { imageBase64, scenarioDescription } = payload;
+       const modelsToTry = ["gemini-3.1", "gemini-2.5-flash"];
        const prompt = `KEEP THE ORIGINAL PRODUCT EXACTLY AS IT IS (SHAPE, COLOR, TEXTURE). Place it naturally and seamlessly in this environment: ${scenarioDescription}. High quality product photography, realistic lighting, shadows, 4k resolution.`;
        
-       const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${apiKey}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [ { text: prompt }, { inlineData: { mimeType: "image/jpeg", data: imageBase64 } } ] }],
-          generationConfig: { responseModalities: ['TEXT', 'IMAGE'] }
-        })
-       });
-       
-       const data = await response.json();
-       const base64Img = data.candidates?.[0]?.content?.parts?.find(p => p.inlineData)?.inlineData?.data;
-       return res.status(200).json({ imageBase64: base64Img ? `data:image/jpeg;base64,${base64Img}` : null });
+       for (const modelName of modelsToTry) {
+         try {
+           const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [{ parts: [ { text: prompt }, { inlineData: { mimeType: "image/jpeg", data: imageBase64 } } ] }],
+              generationConfig: { responseModalities: ['TEXT', 'IMAGE'] }
+            })
+           });
+           
+           const data = await response.json();
+           if (data.error && (data.error.code === 429 || data.error.message?.includes('quota'))) {
+             if (modelName !== modelsToTry[modelsToTry.length - 1]) continue;
+           }
+           const base64Img = data.candidates?.[0]?.content?.parts?.find(p => p.inlineData)?.inlineData?.data;
+           return res.status(200).json({ imageBase64: base64Img ? `data:image/jpeg;base64,${base64Img}` : null });
+         } catch (err) {
+            if (modelName !== modelsToTry[modelsToTry.length - 1]) continue;
+            throw err;
+         }
+       }
     }
 
     return res.status(400).json({ error: 'Invalid action' });

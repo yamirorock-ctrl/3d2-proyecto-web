@@ -218,78 +218,71 @@ async function findProductWithAI(
   imageUrl,
   optimizeFor,
 ) {
-  // ⚡🚀 USAMOS GEMINI 2.5 FLASH - SINGLE SHOT MODE
-  // ESTRATEGIA "PAPELITO": Pedimos el NOMBRE EXACTO, no el ID.
-  const model = genAI.getGenerativeModel({
-    model: "gemini-2.5-flash",
-    generationConfig: { responseMimeType: "application/json" },
-  });
+  // ⚡🚀 USAMOS GEMINI CON PLAN DE RESPALDO
+  const modelsToTry = ["gemini-3.1", "gemini-2.5-flash"];
+  let lastError = null;
 
-  // Solo enviamos nombres para que la IA no se confunda con IDs raros.
-  const productsList = products.map((p) => p.name).join("\n");
+  for (const modelName of modelsToTry) {
+    try {
+      const model = genAI.getGenerativeModel({
+        model: modelName,
+        generationConfig: { responseMimeType: "application/json" },
+      });
 
-  let parts = [];
+      // Solo enviamos nombres para que la IA no se confunda con IDs raros.
+      const productsList = products.map((p) => p.name).join("\n");
 
-  const generateDescription = optimizeFor === "pinterest";
+      let parts = [];
+      const generateDescription = optimizeFor === "pinterest";
 
-  const prompt = `
-    Actúa como un experto en inventario y SEO para Pinterest.
-    
-    CATÁLOGO DE PRODUCTOS (Nombres Exactos):
-    ${productsList}
-    
-    ENTRADA:
-    Texto: "${queryText.slice(0, 5000)}"
-    Imagen: ${imageUrl ? "SÍ" : "NO"}
-    
-    TU MISIÓN:
-    1. Mira la entrada.
-    2. Busca en el CATÁLOGO el nombre que MEJOR describa esa entrada.
-    3. IMPORTANTE: El nombre debe ser IDÉNTICO, letra por letra, al de la lista.
-    4. Si no estás seguro o no hay coincidencia, devuelve null.
-    
-    ${
-      generateDescription
-        ? `
-    TU SEGUNDA MISIÓN (SEO & Copywriting):
-    - Si encontraste el producto, genera dos textos optimizados para Pinterest:
-      A. TÍTULO SEO (pinterest_title): Máximo 100 caracteres. Atractivo, incluye keywords como "Regalo", "Decoración", "3D", "Original". Ej: "Escudo River Plate 3D - El Regalo Perfecto para Fanáticos".
-      B. DESCRIPCIÓN (pinterest_description): Máximo 750 caracteres. Tono inspirador. Incluye 5-7 HASHTAGS de nicho al final.
-    `
-        : ""
+      const prompt = `
+        Actúa como un experto en inventario y SEO para Pinterest.
+        CATÁLOGO DE PRODUCTOS:
+        ${productsList}
+        ENTRADA:
+        Texto: "${queryText.slice(0, 5000)}"
+        TU MISIÓN:
+        1. Busca en el CATÁLOGO el nombre que MEJOR describa esa entrada.
+        2. El nombre debe ser IDÉNTICO al de la lista.
+        3. Si no hay coincidencia, devuelve null.
+        ${generateDescription ? '4. Genera título y descripción SEO para Pinterest.' : ''}
+        RESPUESTA JSON:
+        { "product_name": "...", "pinterest_title": "...", "pinterest_description": "..." }
+      `;
+
+      parts.push(prompt);
+      if (imageUrl) {
+        const imagePart = await urlToGenerativePart(imageUrl);
+        if (imagePart) parts.push(imagePart);
+      }
+
+      const result = await model.generateContent(parts);
+      const response = await result.response;
+      const text = response.text().trim();
+      console.log(`AI [${modelName}] Response:`, text);
+
+      try {
+        const cleanJson = text.replace(/```json|```/g, "").trim();
+        return JSON.parse(cleanJson);
+      } catch (e) {
+        console.error("Error parsing AI JSON:", e);
+        if (modelName !== modelsToTry[modelsToTry.length - 1]) continue;
+      }
+    } catch (err) {
+      lastError = err;
+      const isQuotaError = err.status === 429 || err.message?.includes('429') || err.message?.includes('quota');
+      if (isQuotaError && modelName !== modelsToTry[modelsToTry.length - 1]) {
+        console.warn(`[FindLink Fallback] Quota exceeded for ${modelName}. Trying next...`);
+        continue;
+      }
+      throw err;
     }
-
-    RESPUESTA JSON OBLIGATORIA:
-    { 
-      "product_name": "NOMBRE_EXACTO_DE_LA_LISTA_O_NULL",
-      "pinterest_title": "${generateDescription ? "TEXTO_TITULO_SEO_O_NULL" : "null"}",
-      "pinterest_description": "${generateDescription ? "TEXTO_DESCRIPCION_O_NULL" : "null"}"
-    }
-  `;
-
-  parts.push(prompt);
-
-  if (imageUrl) {
-    const imagePart = await urlToGenerativePart(imageUrl);
-    if (imagePart) parts.push(imagePart);
   }
-
-  const result = await model.generateContent(parts);
-  const response = await result.response;
-  const text = response.text().trim();
-  console.log("AI Raw JSON Response:", text);
-
-  try {
-    const cleanJson = text.replace(/```json|```/g, "").trim();
-    return JSON.parse(cleanJson);
-  } catch (e) {
-    console.error("Error parsing AI JSON:", e);
-    return {
-      product_name: null,
-      pinterest_title: null,
-      pinterest_description: null,
-    };
-  }
+  return {
+    product_name: null,
+    pinterest_title: null,
+    pinterest_description: null,
+  };
 }
 
 function performManualFuzzySearch(normalizedText, products) {
