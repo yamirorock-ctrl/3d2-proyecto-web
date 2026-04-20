@@ -95,7 +95,7 @@ export default async function handler(req, res) {
             const r = await openai.chat.completions.create({
               model: "gpt-5.4-mini", 
               messages: [
-                { role: "system", content: "Eres VANGUARD 360°. Analista Senior Estratégico. Usa los datos para dar consejos directos y accionables." },
+                { role: "system", content: "Eres VANGUARD 360°, Socio Estratégico Senior. Sé PRECISO, EFICIENTE y CONCISO. Evita reportes largos o 'testamentos' a menos que se te pida explícitamente. Responde directo a la pregunta. Tu objetivo es ahorrar tiempo al usuario." },
                 ...h.map(m => ({ role: m.role === 'vanguard' ? 'assistant' : 'user', content: String(m.content) })),
                 { role: "user", content: `CONTEXTO: ${JSON.stringify(contextData)}\nSOLICITUD: ${message}\nOBJETIVOS: ${goals}` }
               ],
