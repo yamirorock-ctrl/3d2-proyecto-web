@@ -13,16 +13,12 @@ if (OPENAI_API_KEY) {
   try { openai = new OpenAI({ apiKey: OPENAI_API_KEY }); } catch (e) { console.error("OpenAI Init Error"); }
 }
 
-// Función auxiliar para parsear JSON de forma segura
 async function safeJson(response) {
   try {
     const text = await response.text();
     if (!text) return {};
     return JSON.parse(text);
-  } catch (e) {
-    console.error("JSON Parse Error:", e.message);
-    return {};
-  }
+  } catch (e) { return {}; }
 }
 
 export default async function handler(req, res) {
@@ -36,9 +32,7 @@ export default async function handler(req, res) {
   const action = actionRaw ? String(actionRaw).trim() : null;
   const userId = req.query.userId || req.body?.userId;
 
-  if (!action || !userId) {
-    return res.status(400).json({ error: 'Missing action/userId' });
-  }
+  if (!action || !userId) return res.status(400).json({ error: 'Missing action/userId' });
 
   try {
     const needsToken = ['get-metrics', 'strategic-analysis', 'suggest-title', 'bulk-sync-stock', 'sync-product', 'get-promotions', 'auto-link', 'execute-hitl'].includes(action);
@@ -53,6 +47,7 @@ export default async function handler(req, res) {
           dbToken = gData;
       } else { dbToken = data; }
       accessToken = dbToken.access_token;
+      
       const now = new Date();
       const expiresAt = new Date(new Date(dbToken.updated_at || 0).getTime() + (dbToken.expires_in || 21600) * 1000);
       if (now >= expiresAt || (expiresAt - now < 1800000)) {
@@ -75,13 +70,10 @@ export default async function handler(req, res) {
       case 'get-vanguard-state': {
         const { data } = await supabase.from('vanguard_memory').select('*').eq('user_id', String(userId));
         const history = data?.find(d => d.event_type === 'chat_history')?.content || [];
-        const rollingLimit = new Date();
-        rollingLimit.setHours(rollingLimit.getHours() - 24);
-        const activeChat = history.filter(h => !h.timestamp || new Date(h.timestamp) > rollingLimit);
         return res.status(200).json({
           analysis: data?.find(d => d.event_type === 'latest_analysis')?.content?.analysis || null,
           goals: data?.find(d => d.event_type === 'latest_analysis')?.content?.goals || null,
-          chat_history: activeChat
+          chat_history: history.slice(-10)
         });
       }
 
@@ -107,15 +99,13 @@ export default async function handler(req, res) {
                 ...h.map(m => ({ role: m.role === 'vanguard' ? 'assistant' : 'user', content: String(m.content) })),
                 { role: "user", content: `SOLICITUD: ${message}\nDATOS: ${JSON.stringify(globalStats)}\nOBJETIVOS: ${goals}` }
               ],
-              max_completion_tokens: 2500 // Aumentado para respuestas más completas
+              max_completion_tokens: 2500
             });
             const reply = r.choices[0].message.content;
             const newH = [...h, { role: 'user', content: message, timestamp: new Date().toISOString() }, { role: 'vanguard', content: reply, timestamp: new Date().toISOString() }];
             await supabase.from('app_settings').upsert({ key: 'vanguard_history', value: newH }, { onConflict: 'key' });
             return res.status(200).json({ reply, history: newH });
-          } catch (e) {
-            return res.status(200).json({ reply: "Error en IA: " + e.message, history: history || [] });
-          }
+          } catch (e) { return res.status(200).json({ reply: "Error IA: " + e.message, history: history || [] }); }
         } else {
           try {
             const r = await openai.chat.completions.create({
@@ -125,14 +115,12 @@ export default async function handler(req, res) {
                 { role: "user", content: `Analiza integralmente y devuelve JSON: ${JSON.stringify(globalStats)}` }
               ],
               response_format: { type: "json_object" },
-              max_completion_tokens: 4000 // Aumentado para evitar JSON truncado
+              max_completion_tokens: 4000
             });
             const obj = JSON.parse(r.choices[0].message.content);
             await supabase.from('vanguard_memory').upsert({ user_id: String(userId), event_type: 'latest_analysis', content: { analysis: obj, goals } }, { onConflict: 'user_id,event_type' });
             return res.status(200).json(obj);
-          } catch (e) {
-            return res.status(200).json({ summary: "Error en análisis: " + e.message });
-          }
+          } catch (e) { return res.status(200).json({ summary: "Error Análisis: " + e.message }); }
         }
       }
 
@@ -140,47 +128,52 @@ export default async function handler(req, res) {
         const mlUserId = dbToken.ml_user_id || dbToken.user_id;
         const headers = { Authorization: `Bearer ${accessToken}` };
         const dF = new Date(); dF.setDate(dF.getDate() - 30);
-        const dS = dF.toISOString().split('T')[0];
-        const tS = new Date().toISOString().split('T')[0];
-
-        const [sRes, oRes, uRes, qRes] = await Promise.all([
+        
+        // Peticiones base
+        const [sRes, oRes, uRes, qRes, mRes] = await Promise.all([
           fetch(`https://api.mercadolibre.com/users/${mlUserId}/items/search?status=active&limit=50`, { headers }),
           fetch(`https://api.mercadolibre.com/orders/search?seller=${mlUserId}&order.date_created.from=${dF.toISOString()}&limit=50`, { headers }),
           fetch(`https://api.mercadolibre.com/users/${mlUserId}`, { headers }),
-          fetch(`https://api.mercadolibre.com/questions/search?seller_id=${mlUserId}&status=unanswered`, { headers })
+          fetch(`https://api.mercadolibre.com/questions/search?seller_id=${mlUserId}&status=unanswered`, { headers }),
+          fetch(`https://api.mercadolibre.com/merchant_orders/search?seller_id=${mlUserId}&date_created.from=${dF.toISOString()}`, { headers })
         ]);
 
-        const [sD, oD, uD, qD] = await Promise.all([safeJson(sRes), safeJson(oRes), safeJson(uRes), safeJson(qRes)]);
+        const [sD, oD, uD, qD, mD] = await Promise.all([safeJson(sRes), safeJson(oRes), safeJson(uRes), safeJson(qRes), safeJson(mRes)]);
 
+        // ADS - Recuperación profunda
         let ads = null;
         try {
             const aR = await fetch(`https://api.mercadolibre.com/advertising/advertisers?product_id=PADS`, { headers: { ...headers, 'api-version': '1' } });
             const aD = await safeJson(aR);
-            if (aR.ok && aD.advertisers && aD.advertisers.length > 0) {
+            if (aR.ok && aD.advertisers?.[0]) {
                 const advId = aD.advertisers[0].advertiser_id;
-                const cR = await fetch(`https://api.mercadolibre.com/advertising/MLA/advertisers/${advId}/product_ads/campaigns/search?date_from=${dS}&date_to=${tS}`, { headers: { ...headers, 'api-version': '2' } });
+                const cR = await fetch(`https://api.mercadolibre.com/advertising/MLA/advertisers/${advId}/product_ads/campaigns/search`, { headers: { ...headers, 'api-version': '2' } });
                 const cD = await safeJson(cR);
                 if (cR.ok && cD.results?.length > 0) {
                     const c = cD.results.find(x => x.status === 'active') || cD.results[0];
                     ads = { impressions: c.metrics?.impressions || 0, clicks: c.metrics?.clicks || 0, cost: c.metrics?.cost || 0, advertising_revenue: c.metrics?.advertising_revenue || 0, acos: c.metrics?.acos || 0, roas: c.metrics?.roas || 0, ctr: c.metrics?.ctr || 0 };
                 }
             }
-        } catch (e) { console.error("Ads Error:", e.message); }
+        } catch (e) {}
 
+        // FINANZAS Y LOGÍSTICA - Regreso a Merchant Orders (Ayer Style)
         let fin = { total_gross_amount: 0, accredited_amount: 0, pending_amount: 0 };
         let log = { handling: 0, ready_to_ship: 0, shipped: 0, delivered: 0, cancelled: 0 };
         
-        if (oD.results && Array.isArray(oD.results)) {
-            oD.results.forEach(order => {
-                const amount = order.total_amount || 0;
-                fin.total_gross_amount += amount;
-                if (order.status === 'paid' || order.status === 'closed') fin.accredited_amount += amount;
-                else if (order.status !== 'cancelled') fin.pending_amount += amount;
-                const shipStatus = order.shipping?.status;
-                if (shipStatus && log.hasOwnProperty(shipStatus)) log[shipStatus]++;
+        if (mD.results && Array.isArray(mD.results)) {
+            mD.results.forEach(order => {
+                fin.total_gross_amount += (order.total_amount || 0);
+                if (order.status === 'paid' || order.status === 'closed') fin.accredited_amount += (order.total_amount || 0);
+                else if (order.status !== 'cancelled') fin.pending_amount += (order.total_amount || 0);
+                
+                const ship = order.shipments?.[0];
+                if (ship && ship.status) {
+                    if (log.hasOwnProperty(ship.status)) log[ship.status]++;
+                }
             });
         }
 
+        // CATÁLOGO - Enriquecido con sold_quantity
         const ids = sD.results || [];
         const itemsM = await Promise.all(ids.map(async (id) => {
           try {
@@ -201,39 +194,6 @@ export default async function handler(req, res) {
       case 'save-goals': {
         await supabase.from('vanguard_memory').upsert({ user_id: String(userId), event_type: 'vanguard_goals', content: { text: req.body.goals }, updated_at: new Date().toISOString() }, { onConflict: 'user_id,event_type' });
         return res.status(200).json({ success: true });
-      }
-
-      case 'auto-link': {
-          const rRes = await fetch(`https://api.mercadolibre.com/users/${dbToken.user_id}/items/search?status=active`, { headers });
-          const rD = await safeJson(rRes);
-          if (!rD.results?.length) return res.status(200).json({ linked: 0 });
-          const detRes = await fetch(`https://api.mercadolibre.com/items?ids=${rD.results.join(',')}`, { headers });
-          const items = (await safeJson(detRes)).map(x => x.body).filter(Boolean);
-          const { data: prods } = await supabase.from('products').select('id, name');
-          let count = 0;
-          for (const i of items) {
-              const match = prods.find(p => i.title.toLowerCase().includes(p.name.toLowerCase()));
-              if (match) {
-                  await supabase.from('products').update({ ml_item_id: i.id, ml_permalink: i.permalink, ml_status: i.status }).eq('id', match.id);
-                  count++;
-              }
-          }
-          return res.status(200).json({ linked: count });
-      }
-
-      case 'bulk-sync-stock': {
-          const { productIds } = req.body;
-          let q = supabase.from('products').select('id, stock, ml_item_id');
-          if (productIds?.length) q = q.in('id', productIds);
-          else q = q.not('ml_item_id', 'is', null);
-          const { data: prods } = await q;
-          const resArr = [];
-          for (const p of prods) {
-              if (!p.ml_item_id) continue;
-              const r = await fetch(`https://api.mercadolibre.com/items/${p.ml_item_id}`, { method: 'PUT', headers, body: JSON.stringify({ available_quantity: Math.max(0, p.stock || 0) }) });
-              resArr.push({ id: p.id, ok: r.ok });
-          }
-          return res.status(200).json({ results: resArr });
       }
 
       case 'oauth': {
