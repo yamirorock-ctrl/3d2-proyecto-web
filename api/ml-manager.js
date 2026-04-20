@@ -184,7 +184,6 @@ export default async function handler(req, res) {
         const dateStr = dateFrom.toISOString().split('T')[0];
         const todayStr = new Date().toISOString().split('T')[0];
 
-        // 📡 LLAMADAS EN PARALELO INICIALES
         const [searchRes, ordersRes, userRes, questionsRes] = await Promise.all([
           fetch(`https://api.mercadolibre.com/users/${mlUserId}/items/search?status=active&limit=50`, { headers }),
           fetch(`https://api.mercadolibre.com/orders/search?seller=${mlUserId}&order.date_created.from=${dateFrom.toISOString()}&limit=50`, { headers }),
@@ -199,42 +198,29 @@ export default async function handler(req, res) {
           questionsRes.json()
         ]);
 
-        // 🚀 FLUJO DE ADS ROBUSTO (Búsqueda de Campaña + Métricas)
+        // 🚀 CORRECCIÓN DE ADS: Probando endpoint sin seller_id explícito (Type Mismatch fix)
         let ads_summary = null;
         try {
-            // 1. Buscar la campaña de Product Ads del vendedor
-            const campaignsRes = await fetch(`https://api.mercadolibre.com/advertising/product_ads/campaigns/search?seller_id=${mlUserId}`, { headers });
-            const campaignsData = await campaignsRes.json();
+            // ML a veces prefiere el endpoint v2 o simplemente /campaigns sin filtros de tipo
+            const adsResp = await fetch(`https://api.mercadolibre.com/advertising/product_ads/campaigns?date_from=${dateStr}&date_to=${todayStr}`, { headers });
+            const adsData = await adsResp.json();
             
-            if (campaignsRes.ok && campaignsData.results && campaignsData.results.length > 0) {
-                // Tomamos la primera campaña activa (generalmente solo hay una de Product Ads)
-                const activeCampaign = campaignsData.results.find(c => c.status === 'active') || campaignsData.results[0];
-                const campaignId = activeCampaign.id;
-
-                // 2. Pedir métricas específicas de esa campaña
-                const adsMetricsRes = await fetch(`https://api.mercadolibre.com/advertising/product_ads/campaigns/${campaignId}/metrics?date_from=${dateStr}&date_to=${todayStr}`, { headers });
-                const adsMetrics = await adsMetricsRes.json();
-
-                if (adsMetricsRes.ok) {
-                    ads_summary = {
-                        campaign_id: campaignId,
-                        impressions: adsMetrics.impressions || 0,
-                        clicks: adsMetrics.clicks || 0,
-                        cost: adsMetrics.cost || 0,
-                        sales_count: adsMetrics.sales_count || 0,
-                        revenue: adsMetrics.advertising_revenue || 0,
-                        acos: adsMetrics.acos ? (adsMetrics.acos * 100).toFixed(2) + '%' : '0%',
-                        roas: adsMetrics.roas || 0,
-                        ctr: adsMetrics.ctr ? (adsMetrics.ctr * 100).toFixed(2) + '%' : '0%'
-                    };
-                } else {
-                    console.error("[ML Ads] Failed to fetch metrics for campaign", campaignId, adsMetrics);
-                }
-            } else {
-                console.warn("[ML Ads] No active campaigns found for seller", mlUserId);
+            if (adsResp.ok && adsData.results && adsData.results.length > 0) {
+                const mainCampaign = adsData.results.find(c => c.status === 'active') || adsData.results[0];
+                // Las métricas suelen estar ya en la respuesta de la campaña si se pasan las fechas
+                ads_summary = {
+                    impressions: mainCampaign.metrics?.impressions || 0,
+                    clicks: mainCampaign.metrics?.clicks || 0,
+                    cost: mainCampaign.metrics?.cost || 0,
+                    sales_count: mainCampaign.metrics?.sales_count || 0,
+                    revenue: mainCampaign.metrics?.advertising_revenue || 0,
+                    acos: mainCampaign.metrics?.acos ? (mainCampaign.metrics.acos * 100).toFixed(2) + '%' : '0%',
+                    roas: mainCampaign.metrics?.roas || 0,
+                    ctr: mainCampaign.metrics?.ctr ? (mainCampaign.metrics.ctr * 100).toFixed(2) + '%' : '0%'
+                };
             }
         } catch (adsErr) {
-            console.error("[ML Ads] Error in ads flow:", adsErr);
+            console.error("[ML Ads] Error:", adsErr);
         }
 
         const mlIds = searchData.results || [];
@@ -260,7 +246,7 @@ export default async function handler(req, res) {
           items_count: searchData.paging?.total || 0,
           recent_orders: ordersData.results?.length || 0,
           top_items: itemsMetrics,
-          ads_summary: ads_summary // ¡Vanguard ahora tiene una conexión de Ads mucho más robusta!
+          ads_summary: ads_summary
         });
       }
 
