@@ -28,15 +28,10 @@ export default async function handler(req, res) {
 
   if (req.method === "OPTIONS") return res.status(200).end();
   
-  // Búsqueda flexible de parámetros para evitar errores 400
   const action = req.query.action || req.body?.action;
   const userId = req.query.userId || req.body?.userId;
 
-  if (!action || !userId) {
-    console.error("[ML Manager] Missing params:", { action, userId, method: req.method });
-    return res.status(400).json({ error: 'Missing action or userId' });
-  }
-  
+  if (!action || !userId) return res.status(400).json({ error: 'Missing action or userId' });
   if (!supabase) return res.status(500).json({ error: 'Supabase not configured' });
 
   try {
@@ -110,81 +105,53 @@ export default async function handler(req, res) {
 
       case 'strategic-analysis': {
         const { metrics, goals, isChat, history, message } = req.body;
-        
-        if (!openai) {
-            return res.status(200).json({ reply: "⚠️ Vanguard está en mantenimiento.", history: history || [] });
-        }
-
-        const fullCompactCatalog = (metrics?.top_items || []).map(i => ({
-            id: i.id, t: i.title, p: i.price, s: i.stock, v: i.visits_30d, st: i.status
-        }));
+        if (!openai) return res.status(200).json({ reply: "⚠️ Vanguard en mantenimiento.", history: history || [] });
 
         const globalStats = {
             reputation: metrics?.reputation || 'N/A',
-            stats: {
-                active_items: metrics?.items_count || 0,
-                orders_30d: metrics?.recent_orders || 0,
-                pending_questions: metrics?.unanswered_questions || 0
-            },
-            advertising: metrics?.ads_summary || { message: "Sin datos de ads." },
+            stats: { active_items: metrics?.items_count || 0, orders_30d: metrics?.recent_orders || 0, pending_questions: metrics?.unanswered_questions || 0 },
+            advertising: metrics?.ads_summary || { message: "Sin datos ads." },
             finance: metrics?.finance_summary || { message: "Sin datos financieros." },
             logistics: metrics?.logistics_summary || { message: "Sin datos logísticos." },
-            catalog: fullCompactCatalog 
+            catalog: (metrics?.top_items || []).map(i => ({ id: i.id, t: i.title, p: i.price, s: i.stock, v: i.visits_30d, st: i.status }))
         };
 
         if (isChat) {
-          try {
-            const activeHistory = (history || []).slice(-8);
-            const response = await openai.chat.completions.create({
-              model: "gpt-5.4-mini",
-              messages: [
-                { role: "system", content: "Eres VANGUARD. Analista Senior 360°. Tienes datos de VENTAS, ADS, FINANZAS y LOGÍSTICA. Sé estratégico y directo. Max 150 palabras." },
-                ...activeHistory.map(m => ({ 
-                  role: m.role === 'vanguard' ? 'assistant' : 'user', 
-                  content: String(m.content) 
-                })),
-                { role: "user", content: `SOLICITUD: ${message}\nESTADO 360: ${JSON.stringify(globalStats)}\nOBJETIVOS: ${goals}` }
-              ],
-              max_completion_tokens: 350, 
-              temperature: 0.7
-            });
-            const reply = response.choices[0].message.content;
-            const newHistory = [...activeHistory, { role: 'user', content: message, timestamp: new Date().toISOString() }, { role: 'vanguard', content: reply, timestamp: new Date().toISOString() }];
-            await supabase.from('app_settings').upsert({ key: 'vanguard_history', value: newHistory });
-            return res.status(200).json({ reply, history: newHistory });
-          } catch (err) {
-            return res.status(500).json({ error: "Error chat: " + err.message });
-          }
+          const activeHistory = (history || []).slice(-8);
+          const response = await openai.chat.completions.create({
+            model: "gpt-5.4-mini",
+            messages: [
+              { role: "system", content: "VANGUARD 360°. Analista Senior. Sé estratégico y directo. Max 150 palabras." },
+              ...activeHistory.map(m => ({ role: m.role === 'vanguard' ? 'assistant' : 'user', content: String(m.content) })),
+              { role: "user", content: `SOLICITUD: ${message}\nESTADO: ${JSON.stringify(globalStats)}\nOBJETIVOS: ${goals}` }
+            ],
+            max_completion_tokens: 350
+          });
+          const reply = response.choices[0].message.content;
+          const newHistory = [...activeHistory, { role: 'user', content: message, timestamp: new Date().toISOString() }, { role: 'vanguard', content: reply, timestamp: new Date().toISOString() }];
+          await supabase.from('app_settings').upsert({ key: 'vanguard_history', value: newHistory });
+          return res.status(200).json({ reply, history: newHistory });
         } else {
-          try {
-            const response = await openai.chat.completions.create({
-              model: "gpt-5.4-mini",
-              messages: [
-                { role: "system", content: "Consultor 360°. Genera reporte táctico JSON analizando ventas, publicidad, finanzas y logística." },
-                { role: "user", content: `Analiza y devuelve JSON { "summary": "...", "performance_score": 0-100, "strategic_plan": "...", "ads_analysis": "...", "financial_health": "..." }: ${JSON.stringify(globalStats)}` }
-              ],
-              response_format: { type: "json_object" },
-              max_completion_tokens: 2000
-            });
-            const content = response.choices[0].message.content;
-            try {
-              const finalObj = JSON.parse(content);
-              await supabase.from('vanguard_memory').upsert({ user_id: String(userId), event_type: 'latest_analysis', content: { analysis: finalObj, goals } }, { onConflict: 'user_id,event_type' });
-              return res.status(200).json(finalObj);
-            } catch (pErr) {
-              return res.status(200).json({ summary: "Reporte 360 (Manual)", performance_score: 80, strategic_plan: content.substring(0, 1000) });
-            }
-          } catch (err) {
-            return res.status(500).json({ error: "Error estático: " + err.message });
-          }
+          const response = await openai.chat.completions.create({
+            model: "gpt-5.4-mini",
+            messages: [
+              { role: "system", content: "Consultor 360°. Genera reporte táctico JSON." },
+              { role: "user", content: `Analiza y devuelve JSON { "summary": "...", "performance_score": 0-100, "strategic_plan": "...", "ads_analysis": "...", "financial_health": "..." }: ${JSON.stringify(globalStats)}` }
+            ],
+            response_format: { type: "json_object" },
+            max_completion_tokens: 2000
+          });
+          const content = response.choices[0].message.content;
+          const finalObj = JSON.parse(content);
+          await supabase.from('vanguard_memory').upsert({ user_id: String(userId), event_type: 'latest_analysis', content: { analysis: finalObj, goals } }, { onConflict: 'user_id,event_type' });
+          return res.status(200).json(finalObj);
         }
       }
 
       case 'get-metrics': {
         const mlUserId = dbToken.ml_user_id || dbToken.user_id;
         const headers = { Authorization: `Bearer ${accessToken}` };
-        const dateFrom = new Date();
-        dateFrom.setDate(dateFrom.getDate() - 30);
+        const dateFrom = new Date(); dateFrom.setDate(dateFrom.getDate() - 30);
         const dateStr = dateFrom.toISOString().split('T')[0];
         const todayStr = new Date().toISOString().split('T')[0];
 
@@ -216,7 +183,6 @@ export default async function handler(req, res) {
 
         let finance_summary = { total_gross: 0, accredited: 0, pending: 0 };
         let logistics_summary = { handling: 0, ready_to_ship: 0, shipped: 0, delivered: 0 };
-        
         if (mOrdersData.results) {
             mOrdersData.results.forEach(order => {
                 finance_summary.total_gross += order.total_amount || 0;
@@ -234,14 +200,68 @@ export default async function handler(req, res) {
           return { id, title: detData.title, visits_30d: vData.total_visits || 0, price: detData.price, stock: detData.available_quantity, status: detData.status };
         }));
 
-        return res.status(200).json({
-          reputation: userData.seller_reputation,
-          unanswered_questions: questionsData.total || 0,
-          items_count: searchData.paging?.total || 0,
-          recent_orders: ordersData.results?.length || 0,
-          top_items: itemsMetrics,
-          ads_summary, finance_summary, logistics_summary
-        });
+        return res.status(200).json({ reputation: userData.seller_reputation, unanswered_questions: questionsData.total || 0, items_count: searchData.paging?.total || 0, recent_orders: ordersData.results?.length || 0, top_items: itemsMetrics, ads_summary, finance_summary, logistics_summary });
+      }
+
+      case 'auto-link': {
+        const mlUserId = dbToken.user_id;
+        const searchRes = await fetch(`https://api.mercadolibre.com/users/${mlUserId}/items/search?status=active`, { headers: { Authorization: `Bearer ${accessToken}` } });
+        const searchData = await searchRes.json();
+        const mlIds = searchData.results || [];
+        if (mlIds.length === 0) return res.status(200).json({ message: 'No hay publicaciones activas', linked: 0 });
+        const detailsRes = await fetch(`https://api.mercadolibre.com/items?ids=${mlIds.join(',')}`, { headers: { Authorization: `Bearer ${accessToken}` } });
+        const detailsData = await detailsRes.json();
+        const mlItems = detailsData.map(d => d.body).filter(Boolean);
+        const { data: localProducts } = await supabase.from('products').select('id, name, ml_item_id');
+        let linkedCount = 0;
+        for (const item of mlItems) {
+          const mlTitle = item.title.toLowerCase();
+          const match = localProducts.find(p => {
+            if (p.ml_item_id === item.id) return false;
+            return mlTitle === p.name.toLowerCase() || mlTitle.includes(p.name.toLowerCase());
+          });
+          if (match) {
+            await supabase.from('products').update({ ml_item_id: item.id, ml_permalink: item.permalink, ml_status: item.status }).eq('id', match.id);
+            linkedCount++;
+          }
+        }
+        return res.status(200).json({ message: 'Búsqueda completada', linked: linkedCount });
+      }
+
+      case 'bulk-sync-stock': {
+        const { productIds } = req.body;
+        let query = supabase.from('products').select('id, name, stock, ml_item_id');
+        if (productIds && productIds.length > 0) query = query.in('id', productIds);
+        else query = query.not('ml_item_id', 'is', null);
+        const { data: products } = await query;
+        const results = [];
+        for (const prod of products) {
+          if (!prod.ml_item_id) continue;
+          try {
+            const mlResp = await fetch(`https://api.mercadolibre.com/items/${prod.ml_item_id}`, { method: 'PUT', headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ available_quantity: Math.max(0, prod.stock || 0) }) });
+            results.push({ id: prod.id, status: mlResp.ok ? 'success' : 'error' });
+          } catch (err) { results.push({ id: prod.id, status: 'error' }); }
+        }
+        return res.status(200).json({ results });
+      }
+
+      case 'sync-product': {
+        const { productId, productData, markupPercentage } = req.body;
+        const { data: product } = await supabase.from('products').select('*').eq('id', productId).single();
+        const price = Math.floor(Number(productData?.price || product.price) * (1 + (markupPercentage || 25) / 100));
+        const itemBody = { title: (product.ml_title || product.name).slice(0, 60), category_id: product.ml_category_id || "MLA3530", price, currency_id: "ARS", available_quantity: product.stock || 0, buying_mode: "buy_it_now", condition: "new", listing_type_id: "gold_special", pictures: (product.images || []).map(img => ({ source: typeof img === 'string' ? img : img.url })), attributes: [{ id: "BRAND", value_name: "3D2Store" }, { id: "MODEL", value_name: "Personalizado" }] };
+        if (product.ml_item_id) {
+          await fetch(`https://api.mercadolibre.com/items/${product.ml_item_id}`, { method: 'PUT', headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ price, available_quantity: product.stock }) });
+          return res.status(200).json({ success: true, ml_id: product.ml_item_id });
+        } else {
+          const createResp = await fetch(`https://api.mercadolibre.com/items`, { method: 'POST', headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' }, body: JSON.stringify(itemBody) });
+          const createData = await createResp.json();
+          if (createResp.ok) {
+            await supabase.from('products').update({ ml_item_id: createData.id, ml_status: createData.status }).eq('id', productId);
+            return res.status(200).json({ success: true, ml_id: createData.id });
+          }
+          return res.status(400).json({ error: createData.message });
+        }
       }
 
       case 'get-goals': {
@@ -252,6 +272,22 @@ export default async function handler(req, res) {
       case 'save-goals': {
         await supabase.from('vanguard_memory').upsert({ user_id: String(userId), event_type: 'vanguard_goals', content: { text: req.body.goals }, updated_at: new Date().toISOString() }, { onConflict: 'user_id,event_type' });
         return res.status(200).json({ success: true });
+      }
+
+      case 'execute-hitl': {
+        const { intent, item_id, value } = req.body;
+        const body = intent === 'update_price' ? { price: Number(value) } : { status: intent === 'paused' ? 'paused' : 'active' };
+        const mlResponse = await fetch(`https://api.mercadolibre.com/items/${item_id}`, { method: 'PUT', headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+        return res.status(200).json({ success: mlResponse.ok });
+      }
+
+      case 'oauth': {
+        const { code, userId: supabaseUserId } = req.body;
+        const r = await fetch('https://api.mercadolibre.com/oauth/token', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ grant_type: 'authorization_code', client_id: process.env.VITE_ML_APP_ID || process.env.ML_APP_ID, client_secret: process.env.VITE_ML_APP_SECRET || process.env.VITE_ML_APP_SECRET, code, redirect_uri: process.env.VITE_ML_REDIRECT_URI || process.env.ML_REDIRECT_URI }) });
+        const data = await r.json();
+        if (!r.ok) return res.status(r.status).json(data);
+        await supabase.from('ml_tokens').upsert({ user_id: supabaseUserId || String(data.user_id), ml_user_id: String(data.user_id), access_token: data.access_token, refresh_token: data.refresh_token, expires_in: data.expires_in, updated_at: new Date().toISOString() }, { onConflict: 'user_id' });
+        return res.status(200).json({ ok: true });
       }
 
       default: return res.status(400).json({ error: 'Unsupported action' });
