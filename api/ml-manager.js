@@ -138,8 +138,9 @@ export default async function handler(req, res) {
         try {
             const aR = await fetch(`https://api.mercadolibre.com/advertising/advertisers?product_id=PADS`, { headers: { ...headers, 'api-version': '1' } });
             const aD = await aR.json();
-            if (aR.ok && aD.id) {
-                const cR = await fetch(`https://api.mercadolibre.com/advertising/MLA/advertisers/${aD.id}/product_ads/campaigns/search?date_from=${dS}&date_to=${tS}`, { headers: { ...headers, 'api-version': '2' } });
+            if (aR.ok && aD.advertisers && aD.advertisers.length > 0) {
+                const advId = aD.advertisers[0].advertiser_id;
+                const cR = await fetch(`https://api.mercadolibre.com/advertising/MLA/advertisers/${advId}/product_ads/campaigns/search?date_from=${dS}&date_to=${tS}`, { headers: { ...headers, 'api-version': '2' } });
                 const cD = await cR.json();
                 if (cR.ok && cD.results?.length > 0) {
                     const c = cD.results.find(x => x.status === 'active') || cD.results[0];
@@ -149,14 +150,24 @@ export default async function handler(req, res) {
         } catch (e) {}
 
         let fin = { total_gross_amount: 0, accredited_amount: 0, pending_amount: 0 };
-        let log = { handling: 0, ready_to_ship: 0, shipped: 0, delivered: 0 };
-        if (mD.results) {
-            mD.results.forEach(order => {
-                fin.total_gross_amount += order.total_amount || 0;
-                if (order.status === 'paid' || order.status === 'closed') fin.accredited_amount += order.total_amount || 0;
-                else fin.pending_amount += order.total_amount || 0;
-                const shipStatus = order.shipments?.[0]?.status;
-                if (shipStatus && log.hasOwnProperty(shipStatus)) log[shipStatus]++;
+        let log = { handling: 0, ready_to_ship: 0, shipped: 0, delivered: 0, cancelled: 0 };
+        
+        // Usamos las Órdenes (oD) que sabemos que devuelven data correcta
+        if (oD.results) {
+            oD.results.forEach(order => {
+                const amount = order.total_amount || 0;
+                fin.total_gross_amount += amount;
+                
+                if (order.status === 'paid' || order.status === 'closed') {
+                    fin.accredited_amount += amount;
+                } else if (order.status !== 'cancelled') {
+                    fin.pending_amount += amount;
+                }
+                
+                const shipStatus = order.shipping?.status;
+                if (shipStatus && log.hasOwnProperty(shipStatus)) {
+                    log[shipStatus]++;
+                }
             });
         }
 
@@ -164,7 +175,15 @@ export default async function handler(req, res) {
         const itemsM = await Promise.all(ids.map(async (id) => {
           const [vR, dR] = await Promise.all([fetch(`https://api.mercadolibre.com/items/${id}/visits/time_window?last=30&unit=day`, { headers }), fetch(`https://api.mercadolibre.com/items/${id}`, { headers })]);
           const [vD, dD] = await Promise.all([vR.json(), dR.json()]);
-          return { id, title: dD.title, visits_30d: vD.total_visits || 0, price: dD.price, stock: dD.available_quantity, status: dD.status };
+          return { 
+              id, 
+              title: dD.title, 
+              sold_quantity: dD.sold_quantity || 0, // Clave para tasa de conversión 
+              visits_30d: vD.total_visits || 0, 
+              price: dD.price, 
+              stock: dD.available_quantity, 
+              status: dD.status 
+          };
         }));
 
         return res.status(200).json({ reputation: uD.seller_reputation, unanswered_questions: qD.total || 0, items_count: sD.paging?.total || 0, recent_orders: oD.results?.length || 0, top_items: itemsM, ads_summary: ads, finance_summary: fin, logistics_summary: log });
