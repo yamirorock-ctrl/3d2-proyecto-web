@@ -11,7 +11,6 @@ if (SUPABASE_URL && SUPABASE_SERVICE_KEY) {
   supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 }
 
-// Inicialización segura de OpenAI
 let openai = null;
 try {
   if (OPENAI_API_KEY) {
@@ -108,8 +107,8 @@ export default async function handler(req, res) {
         const { metrics, goals, isChat, history, message } = req.body;
         
         if (!openai) {
-            console.error("OPENAI_API_KEY is missing in environment variables.");
-            return res.status(200).json({ reply: "⚠️ Vanguard está en modo mantenimiento (Falta API Key). Verifica las variables en Vercel y haz un redeploy.", history: history || [] });
+            console.error("OPENAI_API_KEY is missing.");
+            return res.status(200).json({ reply: "⚠️ Vanguard está en mantenimiento.", history: history || [] });
         }
 
         const compactMetrics = {
@@ -122,28 +121,25 @@ export default async function handler(req, res) {
         if (isChat) {
           try {
             const activeHistory = (history || []).slice(-5);
-            
             const response = await openai.chat.completions.create({
               model: "gpt-5.4-mini",
               messages: [
-                { role: "system", content: "Eres VANGUARD, analista senior de 3D2 Store. Sé ULTRA-CONCISO. Responde en max 100 palabras. No rellenos. Sé directo y estratégico." },
+                { role: "system", content: "Eres VANGUARD. Sé ULTRA-CONCISO. Responde en max 100 palabras." },
                 ...activeHistory.map(m => ({ 
                   role: m.role === 'vanguard' ? 'assistant' : 'user', 
                   content: String(m.content) 
                 })),
                 { role: "user", content: `REQ: ${message}\nDATA: ${JSON.stringify(compactMetrics)}\nOBJ: ${goals}` }
               ],
-              max_completion_tokens: 150,
+              max_completion_tokens: 200, // Aumentado ligeramente para seguridad
               temperature: 0.7
             });
-
             const reply = response.choices[0].message.content;
             const newHistory = [...activeHistory, { role: 'user', content: message, timestamp: new Date().toISOString() }, { role: 'vanguard', content: reply, timestamp: new Date().toISOString() }];
             await supabase.from('app_settings').upsert({ key: 'vanguard_history', value: newHistory });
             return res.status(200).json({ reply, history: newHistory });
           } catch (err) {
-            console.error("OpenAI Execution Error:", err);
-            return res.status(500).json({ error: "Error en el cerebro de Vanguard: " + err.message });
+            return res.status(500).json({ error: "Error chat: " + err.message });
           }
         } else {
           try {
@@ -151,18 +147,23 @@ export default async function handler(req, res) {
               model: "gpt-5.4-mini",
               messages: [
                 { role: "system", content: "Analista E-commerce. Genera reporte estratégico JSON." },
-                { role: "user", content: `Analiza y devuelve JSON { summary, performance_score, strategic_plan }: ${JSON.stringify(compactMetrics)}` }
+                { role: "user", content: `Analiza y devuelve JSON { "summary": "...", "performance_score": 0-100, "strategic_plan": "..." }: ${JSON.stringify(compactMetrics)}` }
               ],
               response_format: { type: "json_object" },
-              max_completion_tokens: 500
+              max_completion_tokens: 1000 // Aumentado a 1000 para evitar que el JSON se corte
             });
 
-            const finalObj = JSON.parse(response.choices[0].message.content);
-            await supabase.from('vanguard_memory').upsert({ user_id: String(userId), event_type: 'latest_analysis', content: { analysis: finalObj, goals } }, { onConflict: 'user_id,event_type' });
-            return res.status(200).json(finalObj);
+            try {
+              const content = response.choices[0].message.content;
+              const finalObj = JSON.parse(content);
+              await supabase.from('vanguard_memory').upsert({ user_id: String(userId), event_type: 'latest_analysis', content: { analysis: finalObj, goals } }, { onConflict: 'user_id,event_type' });
+              return res.status(200).json(finalObj);
+            } catch (parseErr) {
+              console.error("JSON Parse Error:", parseErr);
+              return res.status(200).json({ summary: "Análisis completado (Error de formato)", performance_score: 50, strategic_plan: "La IA generó un reporte demasiado largo. Reintenta en unos momentos." });
+            }
           } catch (err) {
-            console.error("OpenAI Static Error:", err);
-            return res.status(500).json({ error: "Error en el análisis estático: " + err.message });
+            return res.status(500).json({ error: "Error estático: " + err.message });
           }
         }
       }
@@ -252,7 +253,7 @@ export default async function handler(req, res) {
 
       case 'execute-hitl': {
         const { intent, item_id, value } = req.body;
-        const body = intent === 'update_price' ? { price: Number(value) } : { status: intent === 'pause_item' ? 'paused' : 'active' };
+        const body = intent === 'update_price' ? { price: Number(value) } : { status: intent === 'paused' ? 'paused' : 'active' };
         const mlResponse = await fetch(`https://api.mercadolibre.com/items/${item_id}`, { method: 'PUT', headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
         return res.status(200).json({ success: mlResponse.ok });
       }
