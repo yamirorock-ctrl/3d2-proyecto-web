@@ -78,7 +78,7 @@ export default async function handler(req, res) {
       }
 
       case 'strategic-analysis': {
-        const { metrics, goals, isChat, history, message } = req.body;
+        const { metrics, goals, isChat, history, message, attachments } = req.body;
         if (!openai) return res.status(200).json({ reply: "Vanguard Offline" });
         const contextData = {
             reputation: metrics?.reputation || {},
@@ -92,12 +92,22 @@ export default async function handler(req, res) {
         if (isChat) {
           const h = (history || []).slice(-8);
           try {
+            // Construir contenido del mensaje actual (Multimodal si hay adjuntos)
+            let currentContent = [];
+            currentContent.push({ type: "text", text: `CONTEXTO TIENDA: ${JSON.stringify(contextData)}\nOBJETIVOS: ${goals}\n\nSOLICITUD DEL USUARIO: ${message}` });
+            
+            if (attachments && attachments.length > 0) {
+              attachments.forEach(url => {
+                currentContent.push({ type: "image_url", image_url: { url: url } });
+              });
+            }
+
             const r = await openai.chat.completions.create({
               model: "gpt-5.4-mini", 
               messages: [
                 { role: "system", content: "Eres VANGUARD 360°, el socio de confianza de 3D2 Store. No eres un CEO estructurado, eres un compañero que cuida el negocio como propio. Habla con EMPATÍA, FLUIDEZ y DINAMISMO. Sé humano, relajado y directo. Si algo es complejo, explícalo de forma sencilla, sin parecer un libro de aritmética. Tu prioridad es cuidar los números pero también hacer que el usuario se sienta acompañado y entendido." },
                 ...h.map(m => ({ role: m.role === 'vanguard' ? 'assistant' : 'user', content: String(m.content) })),
-                { role: "user", content: `CONTEXTO: ${JSON.stringify(contextData)}\nSOLICITUD: ${message}\nOBJETIVOS: ${goals}` }
+                { role: "user", content: currentContent }
               ],
               max_completion_tokens: 2500
             });
