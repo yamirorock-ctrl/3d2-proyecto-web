@@ -105,7 +105,7 @@ export default async function handler(req, res) {
             const r = await openai.chat.completions.create({
               model: "gpt-5.4-mini", 
               messages: [
-                { role: "system", content: "Eres VANGUARD 360°, socio de 3D2 Store. Habla con EMPATÍA y DINAMISMO. REGLA DE ORO: NO resumas métricas, reputación ni campañas a menos que te lo pidan. Responde DIRECTAMENTE a la pregunta del usuario. Si preguntan cuántas ventas hubo hoy, responde SOLO eso de forma humana y breve. Ignora el contexto que no sea relevante para la pregunta. Sé un socio que ahorra tiempo, no un robot que recita datos." },
+                { role: "system", content: "Eres VANGUARD 360°, socio de 3D2 Store. REGLA MERCADOLÍDER (Argentina): Se requieren 60 ventas en los últimos 60 días (el usuario tiene 50, faltan 10). NO inventes que son 75 históricas. Habla con EMPATÍA y DINAMISMO. REGLA DE ORO: NO resumas métricas si no te lo piden. Responde DIRECTO. Ignora contexto irrelevante. Tu objetivo es que el usuario llegue a MercadoLíder con datos REALES." },
                 ...h.map(m => ({ role: m.role === 'vanguard' ? 'assistant' : 'user', content: String(m.content) })),
                 { role: "user", content: currentContent }
               ],
