@@ -20,11 +20,14 @@ export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
   if (req.method === "OPTIONS") return res.status(200).end();
   
-  const action = req.query.action || req.body?.action;
+  // Limpieza agresiva de parámetros
+  const actionRaw = req.query.action || req.body?.action;
+  const action = actionRaw ? String(actionRaw).trim() : null;
   const userId = req.query.userId || req.body?.userId;
 
-  if (!action || !userId) return res.status(400).json({ error: 'Missing action/userId' });
-  if (!supabase) return res.status(500).json({ error: 'Supabase Offline' });
+  if (!action || !userId) {
+    return res.status(400).json({ error: 'Missing action/userId', received: { action, userId } });
+  }
 
   try {
     const needsToken = ['get-metrics', 'strategic-analysis', 'suggest-title', 'bulk-sync-stock', 'sync-product', 'get-promotions', 'auto-link', 'execute-hitl'].includes(action);
@@ -39,10 +42,8 @@ export default async function handler(req, res) {
           dbToken = gData;
       } else { dbToken = data; }
       accessToken = dbToken.access_token;
-
       const now = new Date();
       const expiresAt = new Date(new Date(dbToken.updated_at || 0).getTime() + (dbToken.expires_in || 21600) * 1000);
-      
       if (now >= expiresAt || (expiresAt - now < 1800000)) {
         const client_id = process.env.VITE_ML_APP_ID || process.env.ML_APP_ID;
         const client_secret = process.env.VITE_ML_APP_SECRET || process.env.ML_APP_SECRET;
@@ -60,29 +61,29 @@ export default async function handler(req, res) {
     }
 
     switch (action) {
+      case 'get-vanguard-state': {
+        const { data } = await supabase.from('vanguard_memory').select('*').eq('user_id', String(userId));
+        const history = data?.find(d => d.event_type === 'chat_history')?.content || [];
+        const rollingLimit = new Date();
+        rollingLimit.setHours(rollingLimit.getHours() - 24);
+        const activeChat = history.filter(h => !h.timestamp || new Date(h.timestamp) > rollingLimit);
+        return res.status(200).json({
+          analysis: data?.find(d => d.event_type === 'latest_analysis')?.content?.analysis || null,
+          goals: data?.find(d => d.event_type === 'latest_analysis')?.content?.goals || null,
+          chat_history: activeChat
+        });
+      }
+
       case 'strategic-analysis': {
         const { metrics, goals, isChat, history, message } = req.body;
         if (!openai) return res.status(200).json({ reply: "Vanguard Offline" });
-
-        // INFORMACIÓN COMPLETA Y DETALLADA (Sin reducciones para máxima precisión)
         const globalStats = {
             reputation: metrics?.reputation || 'N/A',
-            general_stats: {
-                total_active_items: metrics?.items_count || 0,
-                orders_last_30_days: metrics?.recent_orders || 0,
-                unanswered_questions: metrics?.unanswered_questions || 0
-            },
-            advertising_summary: metrics?.ads_summary || { message: "No hay datos de publicidad disponibles." },
-            finance_summary: metrics?.finance_summary || { message: "No hay datos financieros disponibles." },
-            logistics_summary: metrics?.logistics_summary || { message: "No hay datos logísticos disponibles." },
-            catalog_detail: (metrics?.top_items || []).slice(0, 50).map(i => ({
-                id: i.id,
-                title: i.title,
-                price: i.price,
-                available_quantity: i.stock,
-                visits_30d: i.visits_30d,
-                status: i.status
-            }))
+            general_stats: { total_active_items: metrics?.items_count || 0, orders_last_30_days: metrics?.recent_orders || 0, unanswered_questions: metrics?.unanswered_questions || 0 },
+            advertising_summary: metrics?.ads_summary || { message: "Sin datos ads." },
+            finance_summary: metrics?.finance_summary || { message: "Sin datos financieros." },
+            logistics_summary: metrics?.logistics_summary || { message: "Sin datos logísticos." },
+            catalog_detail: (metrics?.top_items || []).slice(0, 50).map(i => ({ id: i.id, title: i.title, price: i.price, available_quantity: i.stock, visits_30d: i.visits_30d, status: i.status }))
         };
 
         if (isChat) {
@@ -90,11 +91,11 @@ export default async function handler(req, res) {
           const r = await openai.chat.completions.create({
             model: "gpt-5.4-mini",
             messages: [
-              { role: "system", content: "Eres VANGUARD 360°. El cerebro analítico de 3D2 Store. Tu misión es maximizar rentabilidad y reputación. Analiza Ventas, Ads, Finanzas y Logística con profundidad. Sé estratégico y directo." },
+              { role: "system", content: "VANGUARD 360°. Analista Senior 3D2. Sé estratégico y directo." },
               ...h.map(m => ({ role: m.role === 'vanguard' ? 'assistant' : 'user', content: String(m.content) })),
-              { role: "user", content: `CONSULTA: ${message}\nDATOS REALES DEL NEGOCIO: ${JSON.stringify(globalStats)}\nOBJETIVOS DEL DUEÑO: ${goals}` }
+              { role: "user", content: `SOLICITUD: ${message}\nDATOS: ${JSON.stringify(globalStats)}\nOBJETIVOS: ${goals}` }
             ],
-            max_completion_tokens: 1500 // Espacio para reportes detallados
+            max_completion_tokens: 1500
           });
           const reply = r.choices[0].message.content;
           const newH = [...h, { role: 'user', content: message, timestamp: new Date().toISOString() }, { role: 'vanguard', content: reply, timestamp: new Date().toISOString() }];
@@ -104,8 +105,8 @@ export default async function handler(req, res) {
           const r = await openai.chat.completions.create({
             model: "gpt-5.4-mini",
             messages: [
-              { role: "system", content: "Consultor Senior 360°. Genera un reporte estratégico profundo en formato JSON." },
-              { role: "user", content: `Analiza integralmente y devuelve JSON { "summary": "...", "performance_score": 0-100, "strategic_plan": "...", "ads_analysis": "...", "financial_health": "...", "logistics_status": "..." }: ${JSON.stringify(globalStats)}` }
+              { role: "system", content: "Consultor Senior 360°. JSON profundo." },
+              { role: "user", content: `Analiza y devuelve JSON: ${JSON.stringify(globalStats)}` }
             ],
             response_format: { type: "json_object" },
             max_completion_tokens: 2000
@@ -119,64 +120,72 @@ export default async function handler(req, res) {
       case 'get-metrics': {
         const mlUserId = dbToken.ml_user_id || dbToken.user_id;
         const headers = { Authorization: `Bearer ${accessToken}` };
-        const dateFrom = new Date(); dateFrom.setDate(dateFrom.getDate() - 30);
-        const dateStr = dateFrom.toISOString().split('T')[0];
-        const todayStr = new Date().toISOString().split('T')[0];
+        const dF = new Date(); dF.setDate(dF.getDate() - 30);
+        const dS = dF.toISOString().split('T')[0];
+        const tS = new Date().toISOString().split('T')[0];
 
-        const [searchRes, ordersRes, userRes, questionsRes, mOrdersRes] = await Promise.all([
+        const [sRes, oRes, uRes, qRes, mRes] = await Promise.all([
           fetch(`https://api.mercadolibre.com/users/${mlUserId}/items/search?status=active&limit=50`, { headers }),
-          fetch(`https://api.mercadolibre.com/orders/search?seller=${mlUserId}&order.date_created.from=${dateFrom.toISOString()}&limit=50`, { headers }),
+          fetch(`https://api.mercadolibre.com/orders/search?seller=${mlUserId}&order.date_created.from=${dF.toISOString()}&limit=50`, { headers }),
           fetch(`https://api.mercadolibre.com/users/${mlUserId}`, { headers }),
           fetch(`https://api.mercadolibre.com/questions/search?seller_id=${mlUserId}&status=unanswered`, { headers }),
-          fetch(`https://api.mercadolibre.com/merchant_orders/search?seller_id=${mlUserId}&date_created.from=${dateFrom.toISOString()}`, { headers })
+          fetch(`https://api.mercadolibre.com/merchant_orders/search?seller_id=${mlUserId}&date_created.from=${dF.toISOString()}`, { headers })
         ]);
 
-        const [searchData, ordersData, userData, questionsData, mOrdersData] = await Promise.all([
-          searchRes.json(), ordersRes.json(), userRes.json(), questionsRes.json(), mOrdersRes.json()
-        ]);
+        const [sD, oD, uD, qD, mD] = await Promise.all([sRes.json(), oRes.json(), uRes.json(), qRes.json(), mRes.json()]);
 
-        let ads_summary = null;
+        let ads = null;
         try {
-            const advRes = await fetch(`https://api.mercadolibre.com/advertising/advertisers?product_id=PADS`, { headers: { ...headers, 'api-version': '1' } });
-            const advData = await advRes.json();
-            if (advRes.ok && advData.id) {
-                const campaignsRes = await fetch(`https://api.mercadolibre.com/advertising/MLA/advertisers/${advData.id}/product_ads/campaigns/search?date_from=${dateStr}&date_to=${todayStr}`, { headers: { ...headers, 'api-version': '2' } });
-                const campaignsData = await campaignsRes.json();
-                if (campaignsRes.ok && campaignsData.results?.length > 0) {
-                    const c = campaignsData.results.find(x => x.status === 'active') || campaignsData.results[0];
-                    ads_summary = { impressions: c.metrics?.impressions || 0, clicks: c.metrics?.clicks || 0, cost: c.metrics?.cost || 0, advertising_revenue: c.metrics?.advertising_revenue || 0, acos: c.metrics?.acos || 0, roas: c.metrics?.roas || 0, ctr: c.metrics?.ctr || 0 };
+            const aR = await fetch(`https://api.mercadolibre.com/advertising/advertisers?product_id=PADS`, { headers: { ...headers, 'api-version': '1' } });
+            const aD = await aR.json();
+            if (aR.ok && aD.id) {
+                const cR = await fetch(`https://api.mercadolibre.com/advertising/MLA/advertisers/${aD.id}/product_ads/campaigns/search?date_from=${dS}&date_to=${tS}`, { headers: { ...headers, 'api-version': '2' } });
+                const cD = await cR.json();
+                if (cR.ok && cD.results?.length > 0) {
+                    const c = cD.results.find(x => x.status === 'active') || cD.results[0];
+                    ads = { impressions: c.metrics?.impressions || 0, clicks: c.metrics?.clicks || 0, cost: c.metrics?.cost || 0, advertising_revenue: c.metrics?.advertising_revenue || 0, acos: c.metrics?.acos || 0, roas: c.metrics?.roas || 0, ctr: c.metrics?.ctr || 0 };
                 }
             }
         } catch (e) {}
 
-        let finance_summary = { total_gross_amount: 0, accredited_amount: 0, pending_amount: 0 };
-        let logistics_summary = { handling: 0, ready_to_ship: 0, shipped: 0, delivered: 0 };
-        if (mOrdersData.results) {
-            mOrdersData.results.forEach(order => {
-                finance_summary.total_gross_amount += order.total_amount || 0;
-                if (order.status === 'paid' || order.status === 'closed') finance_summary.accredited_amount += order.total_amount || 0;
-                else finance_summary.pending_amount += order.total_amount || 0;
+        let fin = { total_gross_amount: 0, accredited_amount: 0, pending_amount: 0 };
+        let log = { handling: 0, ready_to_ship: 0, shipped: 0, delivered: 0 };
+        if (mD.results) {
+            mD.results.forEach(order => {
+                fin.total_gross_amount += order.total_amount || 0;
+                if (order.status === 'paid' || order.status === 'closed') fin.accredited_amount += order.total_amount || 0;
+                else fin.pending_amount += order.total_amount || 0;
                 const shipStatus = order.shipments?.[0]?.status;
-                if (shipStatus && logistics_summary.hasOwnProperty(shipStatus)) logistics_summary[shipStatus]++;
+                if (shipStatus && log.hasOwnProperty(shipStatus)) log[shipStatus]++;
             });
         }
 
-        const ids = searchData.results || [];
-        const itemsMetrics = await Promise.all(ids.map(async (id) => {
-          const [vRes, detRes] = await Promise.all([fetch(`https://api.mercadolibre.com/items/${id}/visits/time_window?last=30&unit=day`, { headers }), fetch(`https://api.mercadolibre.com/items/${id}`, { headers })]);
-          const [vData, detData] = await Promise.all([vRes.json(), detRes.json()]);
-          return { id, title: detData.title, visits_30d: vData.total_visits || 0, price: detData.price, stock: detData.available_quantity, status: detData.status };
+        const ids = sD.results || [];
+        const itemsM = await Promise.all(ids.map(async (id) => {
+          const [vR, dR] = await Promise.all([fetch(`https://api.mercadolibre.com/items/${id}/visits/time_window?last=30&unit=day`, { headers }), fetch(`https://api.mercadolibre.com/items/${id}`, { headers })]);
+          const [vD, dD] = await Promise.all([vR.json(), dR.json()]);
+          return { id, title: dD.title, visits_30d: vD.total_visits || 0, price: dD.price, stock: dD.available_quantity, status: dD.status };
         }));
 
-        return res.status(200).json({ reputation: userData.seller_reputation, unanswered_questions: questionsData.total || 0, items_count: searchData.paging?.total || 0, recent_orders: ordersData.results?.length || 0, top_items: itemsMetrics, ads_summary, finance_summary, logistics_summary });
+        return res.status(200).json({ reputation: uD.seller_reputation, unanswered_questions: qD.total || 0, items_count: sD.paging?.total || 0, recent_orders: oD.results?.length || 0, top_items: itemsM, ads_summary: ads, finance_summary: fin, logistics_summary: log });
+      }
+
+      case 'get-goals': {
+        const { data } = await supabase.from('vanguard_memory').select('content').eq('user_id', String(userId)).eq('event_type', 'vanguard_goals').maybeSingle();
+        return res.status(200).json(data?.content || { text: "" });
+      }
+      
+      case 'save-goals': {
+        await supabase.from('vanguard_memory').upsert({ user_id: String(userId), event_type: 'vanguard_goals', content: { text: req.body.goals }, updated_at: new Date().toISOString() }, { onConflict: 'user_id,event_type' });
+        return res.status(200).json({ success: true });
       }
 
       case 'auto-link': {
-          const r = await fetch(`https://api.mercadolibre.com/users/${dbToken.user_id}/items/search?status=active`, { headers });
-          const d = await r.json();
-          if (!d.results?.length) return res.status(200).json({ linked: 0 });
-          const det = await fetch(`https://api.mercadolibre.com/items?ids=${d.results.join(',')}`, { headers });
-          const items = (await det.json()).map(x => x.body).filter(Boolean);
+          const rRes = await fetch(`https://api.mercadolibre.com/users/${dbToken.user_id}/items/search?status=active`, { headers });
+          const rD = await rRes.json();
+          if (!rD.results?.length) return res.status(200).json({ linked: 0 });
+          const detRes = await fetch(`https://api.mercadolibre.com/items?ids=${rD.results.join(',')}`, { headers });
+          const items = (await detRes.json()).map(x => x.body).filter(Boolean);
           const { data: prods } = await supabase.from('products').select('id, name');
           let count = 0;
           for (const i of items) {
@@ -204,16 +213,6 @@ export default async function handler(req, res) {
           return res.status(200).json({ results: resArr });
       }
 
-      case 'get-goals': {
-        const { data } = await supabase.from('vanguard_memory').select('content').eq('user_id', String(userId)).eq('event_type', 'vanguard_goals').maybeSingle();
-        return res.status(200).json(data?.content || { text: "" });
-      }
-
-      case 'save-goals': {
-        await supabase.from('vanguard_memory').upsert({ user_id: String(userId), event_type: 'vanguard_goals', content: { text: req.body.goals }, updated_at: new Date().toISOString() }, { onConflict: 'user_id,event_type' });
-        return res.status(200).json({ success: true });
-      }
-
       case 'oauth': {
         const { code, userId: sId } = req.body;
         const r = await fetch('https://api.mercadolibre.com/oauth/token', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ grant_type: 'authorization_code', client_id: process.env.VITE_ML_APP_ID || process.env.ML_APP_ID, client_secret: process.env.VITE_ML_APP_SECRET || process.env.VITE_ML_APP_SECRET, code, redirect_uri: process.env.VITE_ML_REDIRECT_URI || process.env.ML_REDIRECT_URI }) });
@@ -223,7 +222,7 @@ export default async function handler(req, res) {
         return res.status(200).json({ ok: true });
       }
 
-      default: return res.status(400).json({ error: 'Action?' });
+      default: return res.status(400).json({ error: 'Action?', received: action });
     }
   } catch (err) {
     console.error("Global Error:", err);
