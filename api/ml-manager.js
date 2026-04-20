@@ -13,6 +13,18 @@ if (OPENAI_API_KEY) {
   try { openai = new OpenAI({ apiKey: OPENAI_API_KEY }); } catch (e) { console.error("OpenAI Init Error"); }
 }
 
+// Función auxiliar para parsear JSON de forma segura
+async function safeJson(response) {
+  try {
+    const text = await response.text();
+    if (!text) return {};
+    return JSON.parse(text);
+  } catch (e) {
+    console.error("JSON Parse Error:", e.message);
+    return {};
+  }
+}
+
 export default async function handler(req, res) {
   const origin = req.headers.origin || "*";
   res.setHeader("Access-Control-Allow-Origin", origin);
@@ -51,8 +63,8 @@ export default async function handler(req, res) {
           headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
           body: new URLSearchParams({ grant_type: 'refresh_token', client_id, client_secret, refresh_token: dbToken.refresh_token })
         });
-        const rData = await rResp.json();
-        if (rResp.ok) {
+        const rData = await safeJson(rResp);
+        if (rResp.ok && rData.access_token) {
           accessToken = rData.access_token;
           await supabase.from('ml_tokens').update({ access_token: rData.access_token, refresh_token: rData.refresh_token, expires_in: rData.expires_in, updated_at: new Date().toISOString() }).eq('user_id', dbToken.user_id);
         }
@@ -102,7 +114,7 @@ export default async function handler(req, res) {
             await supabase.from('app_settings').upsert({ key: 'vanguard_history', value: newH }, { onConflict: 'key' });
             return res.status(200).json({ reply, history: newH });
           } catch (e) {
-            return res.status(500).json({ error: "OpenAI Error: " + e.message });
+            return res.status(200).json({ reply: "Error en IA: " + e.message, history: history || [] });
           }
         } else {
           try {
@@ -119,7 +131,7 @@ export default async function handler(req, res) {
             await supabase.from('vanguard_memory').upsert({ user_id: String(userId), event_type: 'latest_analysis', content: { analysis: obj, goals } }, { onConflict: 'user_id,event_type' });
             return res.status(200).json(obj);
           } catch (e) {
-            return res.status(500).json({ error: "OpenAI Static Error: " + e.message });
+            return res.status(200).json({ summary: "Error en análisis: " + e.message });
           }
         }
       }
@@ -138,22 +150,22 @@ export default async function handler(req, res) {
           fetch(`https://api.mercadolibre.com/questions/search?seller_id=${mlUserId}&status=unanswered`, { headers })
         ]);
 
-        const [sD, oD, uD, qD] = await Promise.all([sRes.json(), oRes.json(), uRes.json(), qRes.json()]);
+        const [sD, oD, uD, qD] = await Promise.all([safeJson(sRes), safeJson(oRes), safeJson(uRes), safeJson(qRes)]);
 
         let ads = null;
         try {
             const aR = await fetch(`https://api.mercadolibre.com/advertising/advertisers?product_id=PADS`, { headers: { ...headers, 'api-version': '1' } });
-            const aD = await aR.json();
+            const aD = await safeJson(aR);
             if (aR.ok && aD.advertisers && aD.advertisers.length > 0) {
                 const advId = aD.advertisers[0].advertiser_id;
                 const cR = await fetch(`https://api.mercadolibre.com/advertising/MLA/advertisers/${advId}/product_ads/campaigns/search?date_from=${dS}&date_to=${tS}`, { headers: { ...headers, 'api-version': '2' } });
-                const cD = await cR.json();
+                const cD = await safeJson(cR);
                 if (cR.ok && cD.results?.length > 0) {
                     const c = cD.results.find(x => x.status === 'active') || cD.results[0];
                     ads = { impressions: c.metrics?.impressions || 0, clicks: c.metrics?.clicks || 0, cost: c.metrics?.cost || 0, advertising_revenue: c.metrics?.advertising_revenue || 0, acos: c.metrics?.acos || 0, roas: c.metrics?.roas || 0, ctr: c.metrics?.ctr || 0 };
                 }
             }
-        } catch (e) {}
+        } catch (e) { console.error("Ads Error:", e.message); }
 
         let fin = { total_gross_amount: 0, accredited_amount: 0, pending_amount: 0 };
         let log = { handling: 0, ready_to_ship: 0, shipped: 0, delivered: 0, cancelled: 0 };
@@ -173,12 +185,12 @@ export default async function handler(req, res) {
         const itemsM = await Promise.all(ids.map(async (id) => {
           try {
             const [vR, dR] = await Promise.all([fetch(`https://api.mercadolibre.com/items/${id}/visits/time_window?last=30&unit=day`, { headers }), fetch(`https://api.mercadolibre.com/items/${id}`, { headers })]);
-            const [vD, dD] = await Promise.all([vR.json(), dR.json()]);
-            return { id, title: dD.title, sold_quantity: dD.sold_quantity || 0, visits_30d: vD.total_visits || 0, price: dD.price, stock: dD.available_quantity, status: dD.status };
+            const [vD, dD] = await Promise.all([safeJson(vR), safeJson(dR)]);
+            return { id, title: dD.title || "Sin título", sold_quantity: dD.sold_quantity || 0, visits_30d: vD.total_visits || 0, price: dD.price || 0, stock: dD.available_quantity || 0, status: dD.status || "active" };
           } catch(e) { return { id, title: "Error", visits_30d: 0 }; }
         }));
 
-        return res.status(200).json({ reputation: uD.seller_reputation, unanswered_questions: qD.total || 0, items_count: sD.paging?.total || 0, recent_orders: oD.results?.length || 0, top_items: itemsM, ads_summary: ads, finance_summary: fin, logistics_summary: log });
+        return res.status(200).json({ reputation: uD.seller_reputation || {}, unanswered_questions: qD.total || 0, items_count: sD.paging?.total || 0, recent_orders: oD.results?.length || 0, top_items: itemsM, ads_summary: ads, finance_summary: fin, logistics_summary: log });
       }
 
       case 'get-goals': {
@@ -193,10 +205,10 @@ export default async function handler(req, res) {
 
       case 'auto-link': {
           const rRes = await fetch(`https://api.mercadolibre.com/users/${dbToken.user_id}/items/search?status=active`, { headers });
-          const rD = await rRes.json();
+          const rD = await safeJson(rRes);
           if (!rD.results?.length) return res.status(200).json({ linked: 0 });
           const detRes = await fetch(`https://api.mercadolibre.com/items?ids=${rD.results.join(',')}`, { headers });
-          const items = (await detRes.json()).map(x => x.body).filter(Boolean);
+          const items = (await safeJson(detRes)).map(x => x.body).filter(Boolean);
           const { data: prods } = await supabase.from('products').select('id, name');
           let count = 0;
           for (const i of items) {
@@ -227,7 +239,7 @@ export default async function handler(req, res) {
       case 'oauth': {
         const { code, userId: sId } = req.body;
         const r = await fetch('https://api.mercadolibre.com/oauth/token', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ grant_type: 'authorization_code', client_id: process.env.VITE_ML_APP_ID || process.env.ML_APP_ID, client_secret: process.env.VITE_ML_APP_SECRET || process.env.VITE_ML_APP_SECRET, code, redirect_uri: process.env.VITE_ML_REDIRECT_URI || process.env.ML_REDIRECT_URI }) });
-        const d = await r.json();
+        const d = await safeJson(r);
         if (!r.ok) return res.status(r.status).json(d);
         await supabase.from('ml_tokens').upsert({ user_id: sId || String(d.user_id), ml_user_id: String(d.user_id), access_token: d.access_token, refresh_token: d.refresh_token, expires_in: d.expires_in, updated_at: new Date().toISOString() }, { onConflict: 'user_id' });
         return res.status(200).json({ ok: true });
@@ -237,6 +249,6 @@ export default async function handler(req, res) {
     }
   } catch (err) {
     console.error("Global Error:", err);
-    return res.status(500).json({ error: err.message });
+    return res.status(200).json({ error: "Fallo global: " + err.message });
   }
 }
