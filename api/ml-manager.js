@@ -164,7 +164,7 @@ export default async function handler(req, res) {
         ]);
 
         const [searchData, ordersData, userData, questionsData, mOrdersData] = await Promise.all([
-          searchRes.json(), ordersData.json(), userRes.json(), questionsRes.json(), mOrdersData.json()
+          searchRes.json(), ordersRes.json(), userRes.json(), questionsRes.json(), mOrdersRes.json()
         ]);
 
         let ads_summary = null;
