@@ -28,10 +28,15 @@ export default async function handler(req, res) {
 
   if (req.method === "OPTIONS") return res.status(200).end();
   
-  const action = req.method === 'GET' ? req.query.action : req.body.action;
-  const userId = req.method === 'GET' ? req.query.userId : req.body.userId;
+  // Búsqueda flexible de parámetros para evitar errores 400
+  const action = req.query.action || req.body?.action;
+  const userId = req.query.userId || req.body?.userId;
 
-  if (!action || !userId) return res.status(400).json({ error: 'Missing action or userId' });
+  if (!action || !userId) {
+    console.error("[ML Manager] Missing params:", { action, userId, method: req.method });
+    return res.status(400).json({ error: 'Missing action or userId' });
+  }
+  
   if (!supabase) return res.status(500).json({ error: 'Supabase not configured' });
 
   try {
@@ -110,19 +115,21 @@ export default async function handler(req, res) {
             return res.status(200).json({ reply: "⚠️ Vanguard está en mantenimiento.", history: history || [] });
         }
 
+        const fullCompactCatalog = (metrics?.top_items || []).map(i => ({
+            id: i.id, t: i.title, p: i.price, s: i.stock, v: i.visits_30d, st: i.status
+        }));
+
         const globalStats = {
             reputation: metrics?.reputation || 'N/A',
-            general: {
+            stats: {
                 active_items: metrics?.items_count || 0,
                 orders_30d: metrics?.recent_orders || 0,
-                pending_q: metrics?.unanswered_questions || 0
+                pending_questions: metrics?.unanswered_questions || 0
             },
             advertising: metrics?.ads_summary || { message: "Sin datos de ads." },
-            finance: metrics?.finance_summary || { message: "Sin datos financieros." }, // 🚀 Nuevo
-            logistics: metrics?.logistics_summary || { message: "Sin datos logísticos." }, // 🚀 Nuevo
-            catalog: (metrics?.top_items || []).map(i => ({
-                t: i.title, p: i.price, s: i.stock, v: i.visits_30d, st: i.status
-            }))
+            finance: metrics?.finance_summary || { message: "Sin datos financieros." },
+            logistics: metrics?.logistics_summary || { message: "Sin datos logísticos." },
+            catalog: fullCompactCatalog 
         };
 
         if (isChat) {
@@ -181,8 +188,7 @@ export default async function handler(req, res) {
         const dateStr = dateFrom.toISOString().split('T')[0];
         const todayStr = new Date().toISOString().split('T')[0];
 
-        // 📡 LLAMADAS CORE
-        const [searchRes, ordersRes, userRes, questionsRes, merchantOrdersRes] = await Promise.all([
+        const [searchRes, ordersRes, userRes, questionsRes, mOrdersRes] = await Promise.all([
           fetch(`https://api.mercadolibre.com/users/${mlUserId}/items/search?status=active&limit=50`, { headers }),
           fetch(`https://api.mercadolibre.com/orders/search?seller=${mlUserId}&order.date_created.from=${dateFrom.toISOString()}&limit=50`, { headers }),
           fetch(`https://api.mercadolibre.com/users/${mlUserId}`, { headers }),
@@ -191,10 +197,9 @@ export default async function handler(req, res) {
         ]);
 
         const [searchData, ordersData, userData, questionsData, mOrdersData] = await Promise.all([
-          searchRes.json(), ordersData.json(), userRes.json(), questionsRes.json(), merchantOrdersRes.json()
+          searchRes.json(), ordersData.json(), userRes.json(), questionsRes.json(), mOrdersData.json()
         ]);
 
-        // 🚀 PROCESAMIENTO ADS V2 (Mandatorio Biblia Meli)
         let ads_summary = null;
         try {
             const advRes = await fetch(`https://api.mercadolibre.com/advertising/advertisers?product_id=PADS`, { headers: { ...headers, 'api-version': '1' } });
@@ -209,7 +214,6 @@ export default async function handler(req, res) {
             }
         } catch (e) {}
 
-        // 💰 PROCESAMIENTO FINANZAS Y LOGÍSTICA (Merchant Orders)
         let finance_summary = { total_gross: 0, accredited: 0, pending: 0 };
         let logistics_summary = { handling: 0, ready_to_ship: 0, shipped: 0, delivered: 0 };
         
@@ -218,7 +222,6 @@ export default async function handler(req, res) {
                 finance_summary.total_gross += order.total_amount || 0;
                 if (order.status === 'paid' || order.status === 'closed') finance_summary.accredited += order.total_amount || 0;
                 else finance_summary.pending += order.total_amount || 0;
-
                 const shipStatus = order.shipments?.[0]?.status;
                 if (shipStatus && logistics_summary.hasOwnProperty(shipStatus)) logistics_summary[shipStatus]++;
             });
@@ -237,10 +240,18 @@ export default async function handler(req, res) {
           items_count: searchData.paging?.total || 0,
           recent_orders: ordersData.results?.length || 0,
           top_items: itemsMetrics,
-          ads_summary,
-          finance_summary,
-          logistics_summary
+          ads_summary, finance_summary, logistics_summary
         });
+      }
+
+      case 'get-goals': {
+        const { data } = await supabase.from('vanguard_memory').select('content').eq('user_id', String(userId)).eq('event_type', 'vanguard_goals').maybeSingle();
+        return res.status(200).json(data?.content || { text: "" });
+      }
+
+      case 'save-goals': {
+        await supabase.from('vanguard_memory').upsert({ user_id: String(userId), event_type: 'vanguard_goals', content: { text: req.body.goals }, updated_at: new Date().toISOString() }, { onConflict: 'user_id,event_type' });
+        return res.status(200).json({ success: true });
       }
 
       default: return res.status(400).json({ error: 'Unsupported action' });
