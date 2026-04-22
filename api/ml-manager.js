@@ -318,7 +318,7 @@ export default async function handler(req, res) {
 
               const publishBody = {
                   family_name: p.name.slice(0, 50),
-                  title: (p.ml_title || p.name).slice(0, 60),
+                  // title: (p.ml_title || p.name).slice(0, 60), // ELIMINADO: MercadoLibre lo autogenera con el family_name y atributos.
                   category_id: catId || 'MLA3530', 
                   price: finalPrice,
                   currency_id: 'ARS',
