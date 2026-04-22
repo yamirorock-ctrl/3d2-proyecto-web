@@ -404,8 +404,8 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
             <input id="product-name" name="name" autoComplete="off" value={form.name} onChange={e=>handleChange('name', e.target.value)} className="mt-1 block w-full rounded-md border-gray-200" />
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700">Precio</label>
-            <input id="product-price" name="price" type="number" value={form.price} onChange={e=>handleChange('price', Number(e.target.value))} className="mt-1 block w-full rounded-md border-gray-200" />
+            <label htmlFor="product-price" className="block text-sm font-medium text-slate-700">Precio</label>
+            <input id="product-price" name="price" type="number" placeholder="0.00" value={form.price} onChange={e=>handleChange('price', Number(e.target.value))} className="mt-1 block w-full rounded-md border-gray-200" />
           </div>
           <div className="flex items-center gap-2">
             <input id="product-featured" type="checkbox" checked={!!form.featured} onChange={(e)=>handleChange('featured', e.target.checked)} />
@@ -416,7 +416,7 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
             {localCats.length > 0 ? (
               <>
                 <div className="flex gap-2 items-center">
-                  <select id="product-category-select" value={form.category || '__none'} onChange={e => {
+                  <select id="product-category-select" title="Categoría del Producto" value={form.category || '__none'} onChange={e => {
                     const v = e.target.value;
                     if (v === '__other') {
                       setCategoryMode('other');
@@ -461,8 +461,10 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
             
             {/* Selector de Plantilla */}
             <div className="bg-yellow-50 p-3 rounded-md border border-yellow-100 mb-3">
-               <label className="block text-xs font-medium text-yellow-800 mb-1">Tipo de Producto (Plantilla ML)</label>
+               <label htmlFor="ml-template-select" className="block text-xs font-medium text-yellow-800 mb-1">Tipo de Producto (Plantilla ML)</label>
                 <select 
+                  id="ml-template-select"
+                  title="Seleccionar Plantilla de Mercado Libre"
                   className="block w-full rounded-md border-yellow-200 text-sm"
                   value={mlTemplate} 
                   onChange={(e) => {
@@ -532,18 +534,24 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
                   {(mlTemplate === 'Muñecos' || mlTemplate === 'Adornos' || form.category?.toLowerCase().includes('muñeco') || form.category?.toLowerCase().includes('figura') || form.category?.toLowerCase().includes('adorno')) && (
                       <>
                         <div>
-                            <label className="block text-xs font-medium text-slate-600">Personaje</label>
+                            <label htmlFor="ml-character-input" className="block text-xs font-medium text-slate-600">Personaje</label>
                             <input 
+                                id="ml-character-input"
                                 type="text" 
+                                title="Nombre del Personaje"
+                                placeholder="Ej: Spider-Man"
                                 value={form.ml_attributes?.['CHARACTER'] || ''}
                                 onChange={e => handleChange('ml_attributes', { ...form.ml_attributes, 'CHARACTER': e.target.value })}
                                 className="mt-1 block w-full rounded-md border-gray-200 text-sm" 
                             />
                         </div>
                         <div>
-                            <label className="block text-xs font-medium text-slate-600">Fabricante (MANUFACTURER)</label>
+                            <label htmlFor="ml-manufacturer-input" className="block text-xs font-medium text-slate-600">Fabricante (MANUFACTURER)</label>
                             <input 
+                                id="ml-manufacturer-input"
                                 type="text" 
+                                title="Nombre del Fabricante"
+                                placeholder="Ej: 3D2"
                                 value={form.ml_attributes?.['MANUFACTURER'] || '3D2'}
                                 onChange={e => handleChange('ml_attributes', { ...form.ml_attributes, 'MANUFACTURER': e.target.value })}
                                 className="mt-1 block w-full rounded-md border-gray-200 text-sm" 
@@ -658,6 +666,8 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
                   className="block w-full rounded-md border border-gray-300 px-3 py-2"
                 />
                 <select 
+                  id="new-img-color-select"
+                  title="Seleccionar Color para esta imagen"
                   className="block w-40 rounded-md border border-gray-300 px-3 py-2 bg-white text-sm"
                   value={newImgColor}
                   onChange={(e)=>setNewImgColor(e.target.value)}
@@ -794,8 +804,10 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
               />
               {form.technology === 'Láser' && (
                 <div className="mt-2">
-                  <label className="block text-xs font-medium text-slate-600">Grosor (mm)</label>
+                  <label htmlFor="laser-thickness-select" className="block text-xs font-medium text-slate-600">Grosor (mm)</label>
                   <select
+                    id="laser-thickness-select"
+                    title="Grosor del material para corte láser"
                     className="mt-1 block w-full rounded-md border-gray-200"
                     value={form.dimensions?.height ? Math.round((form.dimensions.height || 0) * 10) : ''}
                     onChange={e => {
@@ -1225,8 +1237,10 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
 
                 <div className="flex gap-2 items-end">
                    <div className="flex-1">
-                     <label className="text-xs text-slate-500">Material</label>
+                     <label htmlFor="consumable-material-select" className="text-xs text-slate-500">Material</label>
                      <select 
+                       id="consumable-material-select"
+                       title="Seleccionar Material Consumible"
                        className="w-full text-sm border rounded px-2 py-1.5"
                        value={itemMaterial}
                        onChange={e => setItemMaterial(e.target.value)}
@@ -1240,8 +1254,16 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
                      </select>
                    </div>
                    <div className="w-20">
-                     <label className="text-xs text-slate-500">Cant.</label>
-                     <input type="number" min="1" className="w-full text-sm border rounded px-2 py-1.5" value={itemQuantity} onChange={e => setItemQuantity(Number(e.target.value))} />
+                     <label htmlFor="consumable-quantity-input" className="text-xs text-slate-500">Cant.</label>
+                     <input 
+                        id="consumable-quantity-input"
+                        type="number" 
+                        title="Cantidad a descontar"
+                        min="1" 
+                        className="w-full text-sm border rounded px-2 py-1.5" 
+                        value={itemQuantity} 
+                        onChange={e => setItemQuantity(Number(e.target.value))} 
+                     />
                    </div>
                    <button type="button" onClick={() => {
                         if (!itemMaterial) return;
@@ -1351,20 +1373,24 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
                            <p className="text-sm font-semibold">${(form.price || 0).toLocaleString('es-AR')}</p>
                         </div>
                         <div className="flex flex-col">
-                           <label className="text-[10px] uppercase font-bold text-yellow-700">Margen P/ ML (%)</label>
+                           <label htmlFor="ml-markup-input" className="text-[10px] uppercase font-bold text-yellow-700">Margen P/ ML (%)</label>
                            <input 
+                              id="ml-markup-input"
                               type="number" 
+                              title="Margen para Mercado Libre"
                               className="w-20 text-sm border-yellow-300 rounded focus:ring-yellow-500 py-1"
                               value={mlMarkup}
                               onChange={e => setMlMarkup(e.target.value)}
                            />
                         </div>
                         <div className="flex flex-col">
-                           <label className="text-[10px] uppercase text-blue-700 font-bold">Precio a Publicar (ML)</label>
+                           <label htmlFor="ml-published-price-input" className="text-[10px] uppercase text-blue-700 font-bold">Precio a Publicar (ML)</label>
                            <div className="flex items-center">
                               <span className="text-sm text-slate-500 mr-1">$</span>
                               <input 
+                                 id="ml-published-price-input"
                                  type="number" 
+                                 title="Precio publicado en Mercado Libre"
                                  className="w-24 text-sm border-blue-300 rounded focus:ring-blue-500 py-1 font-bold text-blue-700"
                                  value={mlProjection.classic.publishedPrice} // Es el mismo para ambos
                                  onChange={e => {
@@ -1417,7 +1443,7 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
                              <span className="font-bold text-rose-400">-${mlProjection.premium.breakdown.comm.toLocaleString('es-AR')}</span>
                           </p>
                           <p className="text-[10px] text-slate-500 flex justify-between mt-1">
-                             <span>Costo por ofrecer cuotas <select className="ml-1 text-[10px] bg-transparent border-b border-rose-300 py-0 pl-0 pr-2 focus:ring-0 w-20" value={mlInstallments} onChange={e=>setMlInstallments(Number(e.target.value))}><option value={3}>3 cuotas</option><option value={6}>6 cuotas</option><option value={9}>9 cuotas</option><option value={12}>12 cuotas</option></select>:</span>
+                             <span>Costo por ofrecer cuotas <select id="ml-installments-select" title="Cantidad de cuotas a financiar" className="ml-1 text-[10px] bg-transparent border-b border-rose-300 py-0 pl-0 pr-2 focus:ring-0 w-20" value={mlInstallments} onChange={e=>setMlInstallments(Number(e.target.value))}><option value={3}>3 cuotas</option><option value={6}>6 cuotas</option><option value={9}>9 cuotas</option><option value={12}>12 cuotas</option></select>:</span>
                              <span className="font-bold text-rose-400">-${mlProjection.premium.breakdown.cuotas.toLocaleString('es-AR')}</span>
                           </p>
                           {mlProjection.premium.breakdown.fixed > 0 && (
@@ -1632,15 +1658,18 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
                      </button>
                  )}
 
-                 <div className="flex flex-col ml-2">
-                    <label className="text-[10px] text-slate-500 font-bold uppercase">Margen ML (%)</label>
-                    <input 
-                      type="number" 
-                      value={mlMarkup} 
-                      onChange={(e) => setMlMarkup(e.target.value)}
-                      className="w-16 h-8 text-sm px-1 border border-yellow-400 rounded-md text-center focus:ring-yellow-500"
-                    />
-                 </div>
+                  <div className="flex flex-col ml-2">
+                     <label htmlFor="final-ml-markup-input" className="text-[10px] text-slate-500 font-bold uppercase">Margen ML (%)</label>
+                     <input 
+                       id="final-ml-markup-input"
+                       type="number" 
+                       title="Margen de ganancia final para Mercado Libre"
+                       placeholder="25"
+                       value={mlMarkup} 
+                       onChange={(e) => setMlMarkup(e.target.value)}
+                       className="w-16 h-8 text-sm px-1 border border-yellow-400 rounded-md text-center focus:ring-yellow-500"
+                     />
+                  </div>
              </div>
           )}
           <button type="button" onClick={onClose} className="px-4 py-2 rounded-md bg-gray-100 hover:bg-gray-200">Cancelar</button>
