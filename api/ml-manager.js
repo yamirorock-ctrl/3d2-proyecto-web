@@ -23,6 +23,14 @@ async function safeJson(response) {
   } catch (e) { return {}; }
 }
 
+function getPublicUrl(path) {
+  if (!path) return null;
+  if (path.startsWith('http')) return path;
+  // Limpiar el path si ya trae el bucket
+  const cleanPath = path.replace('vanguard-products/', '');
+  return `${SUPABASE_URL}/storage/v1/object/public/vanguard-products/${cleanPath}`;
+}
+
 export default async function handler(req, res) {
   const origin = req.headers.origin || "*";
   res.setHeader("Access-Control-Allow-Origin", origin);
@@ -299,8 +307,8 @@ export default async function handler(req, res) {
                       plain_text: (p.description || `Producto ${p.name} por 3D2 Project.`).slice(0, 20000)
                   },
                   pictures: p.images?.length 
-                    ? p.images.map(img => ({ source: img.url || img })) 
-                    : (p.image || p.image_url) ? [{ source: p.image || p.image_url }] : [],
+                    ? p.images.map(img => ({ source: getPublicUrl(img.url || img) })).filter(x => x.source) 
+                    : (p.image || p.image_url) ? [{ source: getPublicUrl(p.image || p.image_url) }].filter(x => x.source) : [],
                   attributes: Object.entries(p.ml_attributes || {}).map(([key, val]) => ({
                       id: key,
                       value_name: String(val)
