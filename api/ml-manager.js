@@ -295,6 +295,7 @@ export default async function handler(req, res) {
               }
 
               const publishBody = {
+                  family_name: p.name.slice(0, 50), // Requisito nuevo de ML "User Products"
                   title: (p.ml_title || p.name).slice(0, 60),
                   category_id: catId || 'MLA3530', 
                   price: finalPrice,
