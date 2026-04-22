@@ -72,24 +72,27 @@ export default async function handler(req, res) {
       case 'get-vanguard-state': {
         const { data } = await supabase.from('vanguard_memory').select('*').eq('user_id', String(userId));
         const history = data?.find(d => d.event_type === 'chat_history')?.content || [];
+        const blackBox = data?.find(d => d.event_type === 'black_box')?.content || { text: "" };
         return res.status(200).json({
           analysis: data?.find(d => d.event_type === 'latest_analysis')?.content?.analysis || null,
           goals: data?.find(d => d.event_type === 'latest_analysis')?.content?.goals || null,
-          chat_history: history.slice(-10)
+          chat_history: history.slice(-10),
+          black_box: blackBox
         });
       }
 
       case 'strategic-analysis': {
         const { metrics, goals, isChat, history, message, attachments } = req.body;
         if (!openai) return res.status(200).json({ reply: "Vanguard Offline" });
+
+        // LEER CAJA NEGRA DESDE SUPABASE
+        const { data: bbData } = await supabase.from('vanguard_memory').select('content').eq('user_id', String(userId)).eq('event_type', 'black_box').maybeSingle();
+        const currentBlackBox = bbData?.content?.text || "";
+
         const contextData = {
-            reputation: metrics?.reputation || {},
-            orders_30d: metrics?.recent_orders || 0,
-            orders_detail: metrics?.orders_summary || [],
-            advertising: metrics?.ads || [],
-            competition: metrics?.competition || [],
-            catalog: (metrics?.top_items || []).map(i => ({ id: i.id, title: i.title, visits: i.visits_30d, sales: i.sold_quantity, price: i.price, status: i.status })),
-            finances: metrics?.finance_summary || {}
+            ...metrics,
+            black_box: currentBlackBox,
+            goals: goals
         };
         if (isChat) {
           const h = (history || []).slice(-20);
@@ -107,16 +110,31 @@ export default async function handler(req, res) {
             const r = await openai.chat.completions.create({
               model: "gpt-5.4-mini", 
               messages: [
-                { role: "system", content: "Eres VANGUARD 360°, socio de 3D2 Store. Habla como un HUMANO en un chat: corto, directo, sin encabezados (##) ni listas largas. PROHIBIDO repetir cálculos o datos que ya se discutieron (si ya sabes el costo o el precio, NO lo vuelvas a listar). No seas técnico ni estructurado. Si el usuario te da un dato, acéptalo y avanza a la conclusión estratégica. No actúes como un libro de aritmética. Sé empático, fluido y ahorra tiempo. Faltan 10 ventas para MercadoLíder (60 en 60 días)." },
+                { role: "system", content: "Eres VANGUARD 360°, socio de 3D2 Store. Habla como un HUMANO en un chat: corto, directo, sin encabezados (##) ni listas largas. Tienes una CAJA NEGRA de memoria persistente. Si el usuario te pide guardar algo ahí (ej: 'guarda esta estrategia en la caja negra'), tu respuesta DEBE empezar con [SAVE_TO_BLACK_BOX] seguido del contenido a guardar. Si pide borrarla, empieza con [DELETE_BLACK_BOX]. Sé empático, fluido y ahorra tiempo. Faltan 10 ventas para MercadoLíder (60 en 60 días)." },
                 ...h.map(m => ({ role: m.role === 'vanguard' ? 'assistant' : 'user', content: String(m.content) })),
                 { role: "user", content: currentContent }
               ],
               max_completion_tokens: 1500
             });
-            const reply = r.choices[0].message.content;
+
+            let reply = r.choices[0].message.content;
+            let updateBlackBox = null;
+
+            if (reply.startsWith("[SAVE_TO_BLACK_BOX]")) {
+                const contentToSave = reply.replace("[SAVE_TO_BLACK_BOX]", "").trim();
+                const newBB = currentBlackBox + "\n" + contentToSave;
+                await supabase.from('vanguard_memory').upsert({ user_id: String(userId), event_type: 'black_box', content: { text: newBB }, updated_at: new Date().toISOString() }, { onConflict: 'user_id,event_type' });
+                reply = "Hecho, socio. Ya guardé esa información en la Caja Negra para tenerla siempre a mano. 🧠📦";
+                updateBlackBox = { text: newBB };
+            } else if (reply.startsWith("[DELETE_BLACK_BOX]")) {
+                await supabase.from('vanguard_memory').upsert({ user_id: String(userId), event_type: 'black_box', content: { text: "" }, updated_at: new Date().toISOString() }, { onConflict: 'user_id,event_type' });
+                reply = "Caja Negra reseteada. Empezamos de cero con ese hemisferio. 🧹📦";
+                updateBlackBox = { text: "" };
+            }
+
             const newH = [...h, { role: 'user', content: message, timestamp: new Date().toISOString() }, { role: 'vanguard', content: reply, timestamp: new Date().toISOString() }];
             await supabase.from('vanguard_memory').upsert({ user_id: String(userId), event_type: 'chat_history', content: newH }, { onConflict: 'user_id,event_type' });
-            return res.status(200).json({ reply, history: newH });
+            return res.status(200).json({ reply, history: newH, black_box: updateBlackBox });
           } catch (e) { return res.status(200).json({ reply: "Error IA: " + e.message, history: history || [] }); }
         } else {
           try {
@@ -196,6 +214,16 @@ export default async function handler(req, res) {
       
       case 'save-goals': {
         await supabase.from('vanguard_memory').upsert({ user_id: String(userId), event_type: 'vanguard_goals', content: { text: req.body.goals }, updated_at: new Date().toISOString() }, { onConflict: 'user_id,event_type' });
+        return res.status(200).json({ success: true });
+      }
+
+      case 'save-black-box': {
+        await supabase.from('vanguard_memory').upsert({ 
+          user_id: String(userId), 
+          event_type: 'black_box', 
+          content: { text: req.body.text }, 
+          updated_at: new Date().toISOString() 
+        }, { onConflict: 'user_id,event_type' });
         return res.status(200).json({ success: true });
       }
 

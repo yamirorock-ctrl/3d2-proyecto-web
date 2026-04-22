@@ -112,27 +112,48 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
   const chatEndRef = useRef<HTMLDivElement>(null);
   const [goals, setGoals] = useState("");
   const [isGoalsSaved, setIsGoalsSaved] = useState(true);
+  const [blackBox, setBlackBox] = useState("");
+  const [isBlackBoxSaved, setIsBlackBoxSaved] = useState(true);
 
-  // Load saved goals on mount (Safe via Backend API)
+  // Load saved state (Goals + Black Box) on mount
   useEffect(() => {
-    const loadGoals = async () => {
+    const loadState = async () => {
       try {
-        const resp = await fetch(`/api/ml-manager?action=get-goals&userId=${userId}`);
+        const resp = await fetch(`/api/ml-manager?action=get-vanguard-state&userId=${userId}`);
         const data = await resp.json();
 
-        if (data?.text) {
-          setGoals(data.text);
+        if (data?.goals) {
+          setGoals(data.goals.text || data.goals);
           setIsGoalsSaved(true);
-        } else {
-          setGoals("Ej: Conseguir un promedio de 2 ventas por dia. Llegar a MercadoLíder Gold antes de fin de mes.");
-          setIsGoalsSaved(false);
+        }
+        
+        if (data?.black_box?.text) {
+          setBlackBox(data.black_box.text);
+          setIsBlackBoxSaved(true);
         }
       } catch (e) {
-        console.error("Error cargando objetivos", e);
+        console.error("Error cargando estado de Vanguard", e);
       }
     };
-    if (userId) loadGoals();
+    if (userId) loadState();
   }, [userId]);
+
+  const handleSaveBlackBox = async () => {
+    setIsBlackBoxSaved(true);
+    toast.info("Anclando información en la Caja Negra...", { id: 'bb_save' });
+    try {
+      const resp = await fetch('/api/ml-manager', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'save-black-box', userId, text: blackBox })
+      });
+      if (!resp.ok) throw new Error("Error en servidor");
+      toast.success("Memoria estratégica anclada 🧠📦", { id: 'bb_save' });
+    } catch (e: any) {
+      toast.error("Fallo al guardar en la Caja Negra");
+      setIsBlackBoxSaved(false);
+    }
+  };
 
   const handleSaveGoals = async () => {
     setIsGoalsSaved(true);
@@ -281,6 +302,13 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
       });
       const data = await resp.json();
       setMessages(prev => [...prev, { role: 'vanguard', content: data.reply }]);
+      
+      // Si Vanguard actualizó la Caja Negra, la reflejamos aquí
+      if (data.black_box) {
+          setBlackBox(data.black_box.text);
+          setIsBlackBoxSaved(true);
+      }
+      
       if (!isChatOpen) setUnreadCount(prev => prev + 1);
     } catch (e) {
       toast.error('Vanguard perdió la conexión temporalmente.');
@@ -511,32 +539,59 @@ const MLStrategist: React.FC<Props> = ({ userId }) => {
               </div>
           </div>
 
-          <div className="bg-[#131826] p-8 rounded-3xl border border-white/5 h-64 overflow-y-auto custom-scrollbar">
-              <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest flex items-center gap-2 mb-6">
-                 <Zap className="w-5 h-5 text-cyan-400" /> Acciones Ejecutivas
-              </h3>
-              <div className="space-y-3">
-                  {(analysis?.recommended_actions || []).map((act, i) => (
-                       <div key={i} className="flex items-center gap-4 p-4 rounded-2xl bg-[#0b0f19] border border-[#1e293b] hover:border-violet-500/30 transition-all">
-                           <div className="shrink-0 w-2 h-2 rounded-full bg-cyan-400 shadow-[0_0_8px_#22d3ee]"></div>
-                           <div className="flex-1">
-                               <h4 className="text-xs font-bold text-white mb-1 uppercase">{act.action}</h4>
-                               <p className="text-[11px] text-slate-400">{act.reason}</p>
-                           </div>
-                           {act.intent && (
-                             <button 
-                               onClick={() => handleExecuteAction(act)}
-                               className="shrink-0 bg-cyan-500 hover:bg-cyan-400 text-black px-3 py-2 rounded-xl text-[10px] font-black transition-all shadow-[0_0_15px_rgba(34,211,238,0.2)]"
-                             >
-                               APROBAR
-                             </button>
-                           )}
-                       </div>
-                  ))}
-                  {(!analysis?.recommended_actions || analysis.recommended_actions.length === 0) && (
-                      <p className="text-sm text-slate-500 italic">No hay acciones pendientes.</p>
-                  )}
+          <div className="bg-[#131826] p-8 rounded-3xl border border-white/5 flex flex-col group relative overflow-hidden">
+              <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-30 transition-opacity">
+                  <Maximize2 size={60} className="text-violet-500" />
               </div>
+              
+              <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest flex items-center gap-2 mb-6">
+                 <ShieldCheck className="w-5 h-5 text-violet-500" /> Caja Negra (Memoria Estratégica)
+              </h3>
+              
+              <p className="text-xs text-slate-500 mb-4">
+                  Hemisferio de memoria persistente. Guarda aquí planes, capturas de estrategias o datos útiles que Vanguard debe recordar siempre.
+              </p>
+
+              <textarea 
+                 value={blackBox}
+                 onChange={(e) => { setBlackBox(e.target.value); setIsBlackBoxSaved(false); }}
+                 onPaste={(e) => {
+                    const items = Array.from(e.clipboardData.items);
+                    items.forEach(item => {
+                        if (item.type.includes('image')) {
+                            toast.info("Para compartir imágenes con Vanguard, usa el clip del Chat. Aquí guardamos el plan estratégico.");
+                        }
+                    });
+                 }}
+                 className="flex-1 bg-[#0b0f19] border border-white/10 rounded-2xl p-4 text-[13px] text-slate-300 font-medium focus:outline-none focus:border-violet-500/50 resize-none transition-all placeholder:text-slate-600 custom-scrollbar mb-4 h-32 leading-relaxed"
+                 placeholder="Escribe aquí los planes, datos de competencia o cualquier información que quieras que Vanguard guarde en su cerebro..."
+              />
+
+              <div className="flex justify-between items-center mt-auto">
+                 <button 
+                    onClick={() => { if(confirm("¿Seguro quieres vaciar la Caja Negra? Esta acción es irreversible.")) { setBlackBox(""); handleSaveBlackBox(); } }}
+                    className="text-[10px] text-slate-600 hover:text-rose-400 transition-colors uppercase font-bold tracking-tighter"
+                 >
+                    [ Vaciar Cerebro ]
+                 </button>
+                 
+                 <div className="flex items-center gap-3">
+                    {!isBlackBoxSaved && (
+                        <span className="text-[10px] font-black text-violet-400 animate-pulse uppercase">Memoria por anclar</span>
+                    )}
+                    <button 
+                        onClick={handleSaveBlackBox}
+                        className={`px-5 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 ${
+                        isBlackBoxSaved 
+                        ? 'bg-white/5 text-slate-500 border border-white/10 cursor-default'
+                        : 'bg-violet-600 hover:bg-violet-500 text-white shadow-[0_0_20px_rgba(124,58,237,0.3)] cursor-pointer active:scale-95'
+                        }`}
+                    >
+                        {isBlackBoxSaved ? 'Memoria Anclada' : 'Anclar Memoria'}
+                    </button>
+                 </div>
+              </div>
+          </div>
           </div>
       </div>
 
