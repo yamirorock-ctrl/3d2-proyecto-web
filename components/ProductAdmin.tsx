@@ -1007,6 +1007,7 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
                         <button 
                           type="button" 
                           onClick={() => setForm(prev => ({ ...prev, wholesaleImage: undefined }))}
+                          title="Eliminar imagen mayorista"
                           className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
                         >
                           <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
@@ -1334,9 +1335,27 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
                         </button>
                       </div>
                       {colorDistMode === 'percent' ? (
-                        <input type="number" min="1" max="100" className="w-full text-sm border rounded px-2 py-1.5" value={newColorDistPercent} onChange={e => setNewColorDistPercent(Number(e.target.value))} />
+                        <input 
+                          type="number" 
+                          min="1" 
+                          max="100" 
+                          title="Porcentaje de color"
+                          placeholder="10"
+                          className="w-full text-sm border rounded px-2 py-1.5" 
+                          value={newColorDistPercent} 
+                          onChange={e => setNewColorDistPercent(Number(e.target.value))} 
+                        />
                       ) : (
-                        <input type="number" min="0" step="0.1" className="w-full text-sm border rounded px-2 py-1.5" value={newColorDistGrams} onChange={e => setNewColorDistGrams(Number(e.target.value))} />
+                        <input 
+                          type="number" 
+                          min="0" 
+                          step="0.1" 
+                          title="Gramos de color"
+                          placeholder="0.0"
+                          className="w-full text-sm border rounded px-2 py-1.5" 
+                          value={newColorDistGrams} 
+                          onChange={e => setNewColorDistGrams(Number(e.target.value))} 
+                        />
                       )}
                    </div>
                    <button type="button" onClick={() => {
