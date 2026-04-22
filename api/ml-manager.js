@@ -289,11 +289,17 @@ export default async function handler(req, res) {
                   pictures: p.images?.length 
                     ? p.images.map(img => ({ source: img.url || img })) 
                     : (p.image || p.image_url) ? [{ source: p.image || p.image_url }] : [],
-                  attributes: [
-                      { id: 'BRAND', value_name: p.brand || '3D2' },
-                      { id: 'MODEL', value_name: p.model || 'Standard' }
-                  ]
+                  attributes: Object.entries(p.ml_attributes || {}).map(([key, val]) => ({
+                      id: key,
+                      value_name: String(val)
+                  }))
               };
+
+              // Si no hay atributos básicos, agregamos los mínimos por seguridad si no existen en ml_attributes
+              const hasBrand = publishBody.attributes.some(a => a.id === 'BRAND');
+              const hasModel = publishBody.attributes.some(a => a.id === 'MODEL');
+              if (!hasBrand) publishBody.attributes.push({ id: 'BRAND', value_name: p.brand || '3D2' });
+              if (!hasModel) publishBody.attributes.push({ id: 'MODEL', value_name: p.model || 'Standard' });
 
               const r = await fetch('https://api.mercadolibre.com/items', {
                   method: 'POST',
