@@ -294,33 +294,65 @@ export default async function handler(req, res) {
                   if (cD && cD[0]) catId = cD[0].category_id;
               }
 
+              const variations = [];
+              if ((p.availModels?.length || 0) > 0 || (p.availColors?.length || 0) > 0) {
+                  const models = p.availModels?.length ? p.availModels : ['Estándar'];
+                  const colors = p.availColors?.length ? p.availColors : ['Único'];
+                  
+                  for (const m of models) {
+                      for (const c of colors) {
+                          variations.push({
+                              attribute_combinations: [
+                                  { id: 'COLOR', value_name: c },
+                                  { id: 'MODEL', value_name: m }
+                              ],
+                              available_quantity: Math.max(1, Math.floor((p.stock || 0) / (models.length * colors.length)) || 1),
+                              price: finalPrice,
+                              pictures: p.images?.length 
+                                ? p.images.map(img => getPublicUrl(img.url || img)).filter(Boolean) 
+                                : (p.image || p.image_url) ? [getPublicUrl(p.image || p.image_url)].filter(Boolean) : []
+                          });
+                      }
+                  }
+              }
+
               const publishBody = {
-                  family_name: p.name.slice(0, 50), // Requisito nuevo de ML "User Products"
+                  family_name: p.name.slice(0, 50),
                   title: (p.ml_title || p.name).slice(0, 60),
                   category_id: catId || 'MLA3530', 
                   price: finalPrice,
                   currency_id: 'ARS',
-                  available_quantity: Math.max(1, p.stock || 0),
+                  available_quantity: variations.length > 0 ? undefined : Math.max(1, p.stock || 0),
                   buying_mode: 'buy_it_now',
                   listing_type_id: 'gold_special', 
                   condition: 'new',
                   description: {
                       plain_text: (p.description || `Producto ${p.name} por 3D2 Project.`).slice(0, 20000)
                   },
-                  pictures: p.images?.length 
-                    ? p.images.map(img => ({ source: getPublicUrl(img.url || img) })).filter(x => x.source) 
-                    : (p.image || p.image_url) ? [{ source: getPublicUrl(p.image || p.image_url) }].filter(x => x.source) : [],
+                  pictures: variations.length > 0 ? undefined : (
+                    p.images?.length 
+                        ? p.images.map(img => ({ source: getPublicUrl(img.url || img) })).filter(x => x.source) 
+                        : (p.image || p.image_url) ? [{ source: getPublicUrl(p.image || p.image_url) }].filter(x => x.source) : []
+                  ),
+                  variations: variations.length > 0 ? variations : undefined,
                   attributes: Object.entries(p.ml_attributes || {}).map(([key, val]) => ({
                       id: key,
                       value_name: String(val)
-                  }))
+                  })).filter(a => a.id !== 'COLOR' && a.id !== 'MODEL') // Evitar duplicar en variaciones
               };
 
-              // Si no hay atributos básicos, agregamos los mínimos por seguridad si no existen en ml_attributes
-              const hasBrand = publishBody.attributes.some(a => a.id === 'BRAND');
-              const hasModel = publishBody.attributes.some(a => a.id === 'MODEL');
-              if (!hasBrand) publishBody.attributes.push({ id: 'BRAND', value_name: p.brand || '3D2' });
-              if (!hasModel) publishBody.attributes.push({ id: 'MODEL', value_name: p.model || 'Standard' });
+              // Atributos base si no hay variaciones
+              if (variations.length === 0) {
+                const hasBrand = publishBody.attributes.some(a => a.id === 'BRAND');
+                const hasModel = publishBody.attributes.some(a => a.id === 'MODEL');
+                if (!hasBrand) publishBody.attributes.push({ id: 'BRAND', value_name: p.brand || '3D2' });
+                if (!hasModel) publishBody.attributes.push({ id: 'MODEL', value_name: p.model || 'Standard' });
+              } else {
+                // Si hay variaciones, BRAND debe estar en el root attributes
+                if (!publishBody.attributes.some(a => a.id === 'BRAND')) {
+                   publishBody.attributes.push({ id: 'BRAND', value_name: p.brand || '3D2' });
+                }
+              }
 
               const r = await fetch('https://api.mercadolibre.com/items', {
                   method: 'POST',

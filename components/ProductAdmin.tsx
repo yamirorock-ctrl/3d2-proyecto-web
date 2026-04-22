@@ -1513,7 +1513,7 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
                         Desvincular ID
                     </button>
                  )}
-                 <button 
+                  <button 
                     type="button" 
                     onClick={async () => {
                         if(!user?.id) return toast.error('No estás autenticado para esta acción');
@@ -1526,8 +1526,7 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
                            }
                            let minAge = form.ml_attributes?.MIN_RECOMMENDED_AGE?.trim();
                            if (minAge && !isNaN(Number(minAge))) {
-                              // Auto-fix: si solo puso un número, asumimos meses
-                              form.ml_attributes.MIN_RECOMMENDED_AGE = `${minAge} meses`;
+                               form.ml_attributes.MIN_RECOMMENDED_AGE = `${minAge} meses`;
                            }
                         }
                         if (currentTemplate === 'Vasos') {
@@ -1539,16 +1538,19 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
                         if(!confirm(`¿Sincronizar este producto con MercadoLibre con un aumento del ${mlMarkup}%?`)) return;
                         setIsSyncing(true);
                         const markupValue = Number(mlMarkup) || 0;
-                        const res = await syncProductToML(form.id, user.id, markupValue, form);
+                        
+                        // SOLUCIÓN DEFINITIVA: Enviar variantes (Modelos y Colores)
+                        const res = await syncProductToML(form.id, user.id, markupValue, { 
+                            ...form, 
+                            availModels, 
+                            availColors 
+                        });
+                        
                         setIsSyncing(false);
                         if(res.ok) {
                             toast.success('¡Sincronización enviada con éxito!');
                             if (res.data.ml_id) {
-                               // Force UI refresh with newly acquired ML ID
                                handleChange('ml_item_id', res.data.ml_id);
-                            }
-                            if (res.data.permalink) {
-                                console.log('ML Link:', res.data.permalink);
                             }
                         } else {
                             console.error(res.data);
@@ -1556,7 +1558,6 @@ const ProductAdmin: React.FC<Props> = ({ onClose, onSave, product, nextId, categ
                             const causeMsg = res.data.causes && res.data.causes.length > 0 ? `: ${res.data.causes[0].message}` : '';
                             const suggestion = res.data.suggestion ? `\nSugerencia: ${res.data.suggestion}` : '';
                             
-                            // Si hay restricciones, mostrarlas
                             if (res.data.restrictions && res.data.restrictions.length > 0) {
                                 const restText = res.data.restrictions.map((r: any) => `- ${r.message}`).join('\n');
                                 toast.error(`Error ML: ${errorMsg}${causeMsg}${suggestion}\nRestricciones:\n${restText}`, { duration: 10000 });
