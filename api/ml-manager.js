@@ -227,6 +227,90 @@ export default async function handler(req, res) {
         return res.status(200).json({ success: true });
       }
 
+      case 'sync-product': {
+          const { productId, markupPercentage = 25, productData } = req.body;
+          // Si no viene productData, lo traemos de la DB
+          let p = productData;
+          if (!p) {
+              const { data } = await supabase.from('products').select('*').eq('id', productId).single();
+              p = data;
+          }
+          if (!p) return res.status(404).json({ error: 'Producto no encontrado' });
+
+          const finalPrice = Math.round((p.price || 0) * (1 + (markupPercentage / 100)));
+          const headers = { 
+            Authorization: `Bearer ${accessToken}`,
+            'Content-Type': 'application/json'
+          };
+
+          // Si YA tiene ML ID, actualizamos (Stock y Precio)
+          if (p.ml_item_id) {
+              const updateBody = {
+                  price: finalPrice,
+                  available_quantity: Math.max(0, p.stock || 0)
+              };
+              const r = await fetch(`https://api.mercadolibre.com/items/${p.ml_item_id}`, {
+                  method: 'PUT',
+                  headers,
+                  body: JSON.stringify(updateBody)
+              });
+              const d = await safeJson(r);
+              if (!r.ok) return res.status(r.status).json(d);
+              
+              // Actualizamos db local por si acaso
+              await supabase.from('products').update({ 
+                  ml_status: d.status,
+                  ml_sync_at: new Date().toISOString()
+              }).eq('id', productId);
+
+              return res.status(200).json({ success: true, mode: 'update', data: d });
+          } else {
+              // Si NO tiene ML ID, publicamos nuevo
+              // 1. Predecir categoría si no tiene
+              let catId = p.ml_category_id;
+              if (!catId) {
+                  const cR = await fetch(`https://api.mercadolibre.com/sites/MLA/domain_discovery/search?q=${encodeURIComponent(p.name)}`);
+                  const cD = await safeJson(cR);
+                  if (cD && cD[0]) catId = cD[0].category_id;
+              }
+
+              const publishBody = {
+                  title: (p.ml_title || p.name).slice(0, 60),
+                  category_id: catId || 'MLA3530', 
+                  price: finalPrice,
+                  currency_id: 'ARS',
+                  available_quantity: Math.max(1, p.stock || 0),
+                  buying_mode: 'buy_it_now',
+                  listing_type_id: 'gold_special', 
+                  condition: 'new',
+                  description: {
+                      plain_text: (p.description || `Producto ${p.name} por 3D2 Project.`).slice(0, 20000)
+                  },
+                  pictures: p.images?.length 
+                    ? p.images.map(img => ({ source: img.url || img })) 
+                    : (p.image || p.image_url) ? [{ source: p.image || p.image_url }] : []
+              };
+
+              const r = await fetch('https://api.mercadolibre.com/items', {
+                  method: 'POST',
+                  headers,
+                  body: JSON.stringify(publishBody)
+              });
+              const d = await safeJson(r);
+              if (!r.ok) return res.status(r.status).json(d);
+
+              // Guardamos el nuevo ML ID en Supabase
+              await supabase.from('products').update({
+                  ml_item_id: d.id,
+                  ml_permalink: d.permalink,
+                  ml_status: d.status,
+                  ml_sync_at: new Date().toISOString()
+              }).eq('id', productId);
+
+              return res.status(200).json({ success: true, mode: 'create', data: d });
+          }
+      }
+
       case 'auto-link': {
           const rRes = await fetch(`https://api.mercadolibre.com/users/${dbToken.user_id}/items/search?status=active`, { headers });
           const rD = await safeJson(rRes);
