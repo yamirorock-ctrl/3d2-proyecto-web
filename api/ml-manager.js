@@ -243,6 +243,18 @@ export default async function handler(req, res) {
             'Content-Type': 'application/json'
           };
 
+          // Si NO tiene ML ID, publicamos nuevo
+          if (!p.ml_item_id) {
+              // Validación de fotos: ML no permite publicar sin fotos
+              const hasPhotos = p.images?.length || p.image || p.image_url;
+              if (!hasPhotos) {
+                  return res.status(400).json({ 
+                      error: 'validation_error', 
+                      message: 'El producto debe tener al menos una imagen para ser publicado en Mercado Libre.' 
+                  });
+              }
+          }
+
           // Si YA tiene ML ID, actualizamos (Stock y Precio)
           if (p.ml_item_id) {
               const updateBody = {
