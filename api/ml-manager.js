@@ -1,6 +1,8 @@
 import { createClient } from '@supabase/supabase-js';
 import OpenAI from "openai";
 
+// VANGUARD STABLE BUILD v2.1.0 - Force Vercel Deploy
+
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_TOKEN;
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
