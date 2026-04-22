@@ -288,7 +288,11 @@ export default async function handler(req, res) {
                   },
                   pictures: p.images?.length 
                     ? p.images.map(img => ({ source: img.url || img })) 
-                    : (p.image || p.image_url) ? [{ source: p.image || p.image_url }] : []
+                    : (p.image || p.image_url) ? [{ source: p.image || p.image_url }] : [],
+                  attributes: [
+                      { id: 'BRAND', value_name: p.brand || '3D2' },
+                      { id: 'MODEL', value_name: p.model || 'Standard' }
+                  ]
               };
 
               const r = await fetch('https://api.mercadolibre.com/items', {
@@ -297,7 +301,14 @@ export default async function handler(req, res) {
                   body: JSON.stringify(publishBody)
               });
               const d = await safeJson(r);
-              if (!r.ok) return res.status(r.status).json(d);
+              if (!r.ok) {
+                  return res.status(r.status).json({ 
+                      error: d.error, 
+                      message: d.message, 
+                      causes: d.cause || d.causes || [], 
+                      mlError: d.message 
+                  });
+              }
 
               // Guardamos el nuevo ML ID en Supabase
               await supabase.from('products').update({
