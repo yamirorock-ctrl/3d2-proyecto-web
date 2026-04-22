@@ -354,6 +354,35 @@ export default async function handler(req, res) {
                 }
               }
 
+              // INYECCIÓN AUTOMÁTICA DE DIMENSIONES (Producto y Paquete ME2)
+              const injectAttribute = (id, val) => {
+                  if (val && !publishBody.attributes.some(a => a.id === id)) {
+                      publishBody.attributes.push({ id, value_name: String(val) });
+                  }
+              };
+              
+              // 1. Peso (asumiendo que p.weight está en gramos desde Vanguard)
+              if (p.weight) {
+                  injectAttribute('WEIGHT', `${Math.round(p.weight)} g`);
+                  injectAttribute('PACKAGE_WEIGHT_G', Math.round(p.weight));
+              }
+              // 2. Ancho
+              if (p.dimensions?.width) {
+                  injectAttribute('WIDTH', `${p.dimensions.width} cm`);
+                  injectAttribute('PACKAGE_WIDTH', Math.ceil(p.dimensions.width));
+              }
+              // 3. Alto
+              if (p.dimensions?.height) {
+                  injectAttribute('HEIGHT', `${p.dimensions.height} cm`);
+                  injectAttribute('PACKAGE_HEIGHT', Math.ceil(p.dimensions.height));
+              }
+              // 4. Largo / Profundidad
+              if (p.dimensions?.length) {
+                  injectAttribute('LENGTH', `${p.dimensions.length} cm`);
+                  injectAttribute('PACKAGE_LENGTH', Math.ceil(p.dimensions.length));
+              }
+
+
               const r = await fetch('https://api.mercadolibre.com/items', {
                   method: 'POST',
                   headers,
