@@ -383,6 +383,13 @@ export default async function handler(req, res) {
                   injectAttribute('LENGTH', `${p.dimensions.length} cm`);
               }
 
+              // Atributos específicos requeridos por categoría
+              if (publishBody.category_id === 'MLA10056') {
+                  injectAttribute('IS_EDIBLE', 'No');
+                  injectAttribute('OCCASIONS', 'Cumpleaños');
+                  injectAttribute('SOUVENIR_FORMAT', 'Souvenir');
+              }
+
 
               const r = await fetch('https://api.mercadolibre.com/items', {
                   method: 'POST',
