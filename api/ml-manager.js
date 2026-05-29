@@ -326,6 +326,11 @@ export default async function handler(req, res) {
                   buying_mode: 'buy_it_now',
                   listing_type_id: 'gold_special', 
                   condition: 'new',
+                  shipping: {
+                      mode: 'me2',
+                      local_pick_up: true,
+                      free_shipping: finalPrice >= 30000
+                  },
                   description: {
                       plain_text: (p.description || `Producto ${p.name} por 3D2 Project.`).slice(0, 20000)
                   },
