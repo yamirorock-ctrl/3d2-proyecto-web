@@ -389,6 +389,10 @@ export default async function handler(req, res) {
                   injectAttribute('OCCASIONS', 'Cumpleaños');
                   injectAttribute('SOUVENIR_FORMAT', 'Souvenir');
               }
+              
+              // Inyección para Juegos de Mesa (ML suele exigir "Nombre del juego de mesa")
+              injectAttribute('BOARD_GAME_NAME', p.name);
+              injectAttribute('GAME_NAME', p.name);
 
 
               const r = await fetch('https://api.mercadolibre.com/items', {
